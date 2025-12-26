@@ -210,6 +210,74 @@ class ResourceUpdateException(KubernetesResourceException):
         )
 
 
+class ResourceReadException(KubernetesResourceException):
+    """리소스 조회 실패 시 발생하는 예외"""
+
+    def __init__(
+        self,
+        resource_type: str,
+        resource_name: str,
+        reason: str,
+        namespace: Optional[str] = None,
+        detail: Optional[dict] = None
+    ):
+        """
+        Args:
+            resource_type: 리소스 타입
+            resource_name: 리소스 이름
+            reason: 실패 이유
+            namespace: 네임스페이스 (선택적)
+            detail: 추가 상세 정보
+        """
+        enhanced_detail = detail or {}
+        enhanced_detail["reason"] = reason
+        if namespace:
+            enhanced_detail["namespace"] = namespace
+
+        message = f"리소스 조회 실패: {reason}"
+
+        super().__init__(
+            message=message,
+            resource_type=resource_type,
+            resource_name=resource_name,
+            status_code=500,
+            detail=enhanced_detail
+        )
+
+
+class ResourceListException(KubernetesResourceException):
+    """리소스 목록 조회 실패 시 발생하는 예외"""
+
+    def __init__(
+        self,
+        resource_type: str,
+        reason: str,
+        namespace: Optional[str] = None,
+        detail: Optional[dict] = None
+    ):
+        """
+        Args:
+            resource_type: 리소스 타입
+            reason: 실패 이유
+            namespace: 네임스페이스 (선택적)
+            detail: 추가 상세 정보
+        """
+        enhanced_detail = detail or {}
+        enhanced_detail["reason"] = reason
+        if namespace:
+            enhanced_detail["namespace"] = namespace
+
+        message = f"리소스 목록 조회 실패: {reason}"
+
+        super().__init__(
+            message=message,
+            resource_type=resource_type,
+            resource_name="",  # 목록 조회는 특정 리소스명이 없음
+            status_code=500,
+            detail=enhanced_detail
+        )
+
+
 class KubernetesApiException(KubernetesResourceException):
     """Kubernetes API 호출 실패 시 발생하는 예외"""
 

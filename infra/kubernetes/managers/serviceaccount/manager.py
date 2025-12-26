@@ -167,7 +167,7 @@ class ServiceAccountManager:
 
         except Exception as e:
             self.logger.error(
-                f"ServiceAccount 조회 중 예외 발생: {name} - {str(e)}"
+                message=f"ServiceAccount 조회 중 예외 발생: {name} - {str(e)}"
             )
             raise ServiceAccountReadException(
                 service_account_name=name,
