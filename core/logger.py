@@ -44,23 +44,33 @@ class Logger:
 
     def error(
         self,
-        request: Request,
-        exc: Exception,
-        status_code: int,
-        message: Optional[str] = None
+        message: str,
+        request: Optional[Request] = None,
+        exc: Optional[Exception] = None,
+        status_code: Optional[int] = None,
     ) -> None:
-        """에러 로그 기록"""
-        error_message = message or str(exc)
+        """에러 로그 기록
 
-        self.logger.error(
-            f"[{status_code}] {request.method} {request.url.path} - {error_message}",
-            exc_info=True,
-            extra={
-                "method": request.method,
-                "path": request.url.path,
-                "status_code": status_code,
-            }
-        )
+        Args:
+            message: 에러 메시지
+            request: FastAPI Request 객체 (선택적)
+            exc: Exception 객체 (선택적)
+            status_code: HTTP 상태 코드 (선택적)
+        """
+        if request and status_code:
+            # API 레이어에서 호출: Request 정보 포함
+            self.logger.error(
+                f"[{status_code}] {request.method} {request.url.path} - {message}",
+                exc_info=exc is not None,
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": status_code,
+                }
+            )
+        else:
+            # 비즈니스 로직 레이어에서 호출: 단순 메시지
+            self.logger.error(message, exc_info=exc is not None)
 
     def info(self, message: str) -> None:
         """정보 로그 기록"""
