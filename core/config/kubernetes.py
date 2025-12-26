@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 class KubernetesConfig(BaseSettings):
     """Kubernetes 클라이언트 설정"""
