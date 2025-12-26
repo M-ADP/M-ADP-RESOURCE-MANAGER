@@ -352,6 +352,165 @@ class VaultClient:
         except Exception:
             return False
 
+    # ========== Secret 관리 (KV v2) ==========
+
+    async def create_secret(
+        self,
+        path: str,
+        secret: Dict[str, Any],
+        mount_point: str = "secret",
+    ) -> Dict[str, Any]:
+        """
+        Vault에 Secret 생성 또는 업데이트
+
+        Args:
+            path: Secret 경로 (예: "myapp/db")
+            secret: Secret 데이터 (예: {"username": "admin", "password": "secret"})
+            mount_point: KV 마운트 포인트 (기본: "secret")
+
+        Returns:
+            생성 결과
+
+        Raises:
+            VaultSecretException: Secret 생성 실패
+
+        Example:
+            >>> await vault_client.create_secret(
+            ...     path="myapp/db",
+            ...     secret={"username": "admin", "password": "Hashi123"}
+            ... )
+        """
+        self.logger.info(f"Vault Secret 생성: {mount_point}/data/{path}")
+
+        try:
+            result = await self._run_in_executor(
+                self.client.secrets.kv.v2.create_or_update_secret,
+                path=path,
+                secret=secret,
+                mount_point=mount_point,
+            )
+            self.logger.info(f"Vault Secret 생성 완료: {mount_point}/data/{path}")
+            return result or {}
+
+        except VaultError as e:
+            self.logger.error(f"Vault Secret 생성 실패: {path} - {str(e)}")
+            raise VaultSecretException(
+                secret_path=f"{mount_point}/data/{path}",
+                operation="생성",
+                reason=str(e),
+            )
+
+    async def get_secret(
+        self,
+        path: str,
+        mount_point: str = "secret",
+        version: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Vault에서 Secret 조회
+
+        Args:
+            path: Secret 경로 (예: "myapp/db")
+            mount_point: KV 마운트 포인트 (기본: "secret")
+            version: Secret 버전 (None이면 최신 버전)
+
+        Returns:
+            Secret 데이터 (없으면 None)
+
+        Example:
+            >>> secret = await vault_client.get_secret("myapp/db")
+            >>> print(secret)
+            {'username': 'admin', 'password': 'Hashi123'}
+        """
+        try:
+            result = await self._run_in_executor(
+                self.client.secrets.kv.v2.read_secret_version,
+                path=path,
+                version=version,
+                mount_point=mount_point,
+            )
+            if result and "data" in result and "data" in result["data"]:
+                return result["data"]["data"]
+            return None
+
+        except InvalidPath:
+            return None
+        except VaultError as e:
+            raise VaultSecretException(
+                secret_path=f"{mount_point}/data/{path}",
+                operation="조회",
+                reason=str(e),
+            )
+
+    async def delete_secret(
+        self,
+        path: str,
+        mount_point: str = "secret",
+    ) -> bool:
+        """
+        Vault에서 Secret 삭제 (모든 버전 삭제)
+
+        Args:
+            path: Secret 경로 (예: "myapp/db")
+            mount_point: KV 마운트 포인트 (기본: "secret")
+
+        Returns:
+            삭제 성공 여부
+        """
+        self.logger.info(f"Vault Secret 삭제: {mount_point}/data/{path}")
+
+        try:
+            await self._run_in_executor(
+                self.client.secrets.kv.v2.delete_metadata_and_all_versions,
+                path=path,
+                mount_point=mount_point,
+            )
+            self.logger.info(f"Vault Secret 삭제 완료: {mount_point}/data/{path}")
+            return True
+
+        except InvalidPath:
+            self.logger.info(f"Vault Secret이 이미 없음: {mount_point}/data/{path}")
+            return True
+        except VaultError as e:
+            raise VaultSecretException(
+                secret_path=f"{mount_point}/data/{path}",
+                operation="삭제",
+                reason=str(e),
+            )
+
+    async def list_secrets(
+        self,
+        path: str = "",
+        mount_point: str = "secret",
+    ) -> List[str]:
+        """
+        Vault에서 Secret 목록 조회
+
+        Args:
+            path: 디렉토리 경로 (예: "myapp/")
+            mount_point: KV 마운트 포인트 (기본: "secret")
+
+        Returns:
+            Secret 이름 리스트
+
+        Example:
+            >>> secrets = await vault_client.list_secrets("myapp/")
+            >>> print(secrets)
+            ['db', 'api-key', 'jwt-secret']
+        """
+        try:
+            result = await self._run_in_executor(
+                self.client.secrets.kv.v2.list_secrets,
+                path=path,
+                mount_point=mount_point,
+            )
+            if result and "data" in result and "keys" in result["data"]:
+                return result["data"]["keys"]
+            return []
+
+        except (InvalidPath, VaultError):
+            return []
+
     # ========== Policy HCL 생성 헬퍼 ==========
 
     @staticmethod
