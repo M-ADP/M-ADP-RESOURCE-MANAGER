@@ -23,6 +23,7 @@ def mock_logger():
     """Mock Logger 픽스처"""
     logger = MagicMock(spec=Logger)
     logger.info = MagicMock()
+    logger.warning = MagicMock()
     logger.error = MagicMock()
     return logger
 
