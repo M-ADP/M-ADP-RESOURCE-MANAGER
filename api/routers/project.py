@@ -2,10 +2,13 @@
 
 from fastapi import APIRouter, Depends
 
-from api.schmas.project import ProjectCreateRequest, ProjectCreateResponse
-from app.project.service import create_project as create_project_service
+from api.schmas.project import (
+    ProjectCreateRequest,
+    ProjectCreateResponse,
+    ProjectDeleteResponse,
+)
+from app.project.service import ProjectService
 from core.response import SuccessResponse
-from infra.kubernetes.client import KubernetesClient, get_kubernetes_client
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -13,10 +16,22 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 @router.post("", response_model=SuccessResponse[ProjectCreateResponse])
 async def create_project(
     payload: ProjectCreateRequest,
-    k8s_client: KubernetesClient = Depends(get_kubernetes_client),
+    service : ProjectService = Depends(ProjectService)
 ):
-    project_create_result = await create_project_service(payload, k8s_client)
+    project_create_result = await service.create_project(payload)
     return SuccessResponse(
         message="Project created",
-        data=project_create_result,
+        data=project_create_result
+    )
+
+
+@router.delete("/{name}", response_model=SuccessResponse[ProjectDeleteResponse])
+async def delete_project(
+    name: str,
+    service : ProjectService = Depends(ProjectService)
+):
+    project_delete_result = await service.delete_project(name)
+    return SuccessResponse(
+        message="Project deleted",
+        data=project_delete_result,
     )
