@@ -14,6 +14,10 @@ M-ADP Resource Manager Server의 Kubernetes 리소스 관리 계층 가이드입
   - [SecretManager](#secretmanager)
   - [DeploymentManager](#deploymentmanager)
   - [StatefulSetManager](#statefulsetmanager)
+  - [DaemonSetManager](#daemonsetmanager)
+  - [ReplicaSetManager](#replicasetmanager)
+  - [JobManager](#jobmanager)
+  - [CronJobManager](#cronjobmanager)
   - [ServiceManager](#servicemanager)
   - [PodManager](#podmanager)
 - [사용 패턴](#사용-패턴)
@@ -1152,6 +1156,772 @@ async def update_annotations(
 
 ---
 
+### DaemonSetManager
+
+**경로**: `infra/kubernetes/managers/daemonset/manager.py`
+
+#### 역할
+Kubernetes DaemonSet 리소스를 관리합니다. DaemonSet은 **모든 (또는 특정) Node에서 Pod를 자동으로 실행**하는 리소스입니다.
+
+#### Deployment와의 차이점
+
+| 특성 | Deployment | DaemonSet |
+|------|-----------|-----------|
+| Pod 배치 | 여러 Node에 분산 (스케줄러가 결정) | 모든 (또는 선택한) Node에 1개씩 |
+| 레플리카 수 | 명시적 지정 (replicas) | 자동 (Node 수에 따라) |
+| 스케일링 | 수동 조정 가능 | Node 추가/제거 시 자동 |
+| 사용 사례 | 애플리케이션 서비스 | 노드 레벨 서비스 (로깅, 모니터링) |
+
+#### 주요 기능
+
+##### 1. create_daemonset()
+```python
+async def create_daemonset(
+    name: str,
+    namespace: str,
+    containers: List[V1Container],
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None,
+    selector_labels: Optional[Dict[str, str]] = None,
+    pod_labels: Optional[Dict[str, str]] = None,
+    pod_annotations: Optional[Dict[str, str]] = None
+) -> V1DaemonSet
+```
+
+**기능**: DaemonSet 생성 (멱등성)
+- replicas 파라미터 없음 (Node 수에 따라 자동 결정)
+- 모든 Node에 자동 배포
+
+**사용 예시**:
+```python
+from kubernetes_asyncio.client import V1Container, V1VolumeMount, V1Volume, V1HostPathVolumeSource
+
+# 로그 수집 DaemonSet
+daemonset = await daemonset_manager.create_daemonset(
+    name="log-collector",
+    namespace="kube-system",
+    containers=[
+        V1Container(
+            name="fluentd",
+            image="fluent/fluentd:latest",
+            volume_mounts=[
+                V1VolumeMount(
+                    name="varlog",
+                    mount_path="/var/log",
+                    read_only=True
+                ),
+                V1VolumeMount(
+                    name="varlibdockercontainers",
+                    mount_path="/var/lib/docker/containers",
+                    read_only=True
+                )
+            ]
+        )
+    ],
+    labels={"app": "log-collector"},
+    # Pod Template에 볼륨 추가
+    pod_spec_volumes=[
+        V1Volume(
+            name="varlog",
+            host_path=V1HostPathVolumeSource(path="/var/log")
+        ),
+        V1Volume(
+            name="varlibdockercontainers",
+            host_path=V1HostPathVolumeSource(path="/var/lib/docker/containers")
+        )
+    ]
+)
+```
+
+##### 2. get_daemonset_status()
+```python
+async def get_daemonset_status(
+    name: str,
+    namespace: str
+) -> Optional[Dict[str, any]]
+```
+
+**기능**: DaemonSet 상태 조회
+
+**반환 예시**:
+```python
+{
+    "current_number_scheduled": 5,   # 현재 실행 중인 Pod 수
+    "desired_number_scheduled": 5,   # 목표 Pod 수 (Node 수)
+    "number_available": 5,           # 사용 가능한 Pod 수
+    "number_ready": 5,               # 준비된 Pod 수
+    "number_misscheduled": 0,        # 잘못 스케줄된 Pod 수
+    "number_unavailable": 0,         # 사용 불가능한 Pod 수
+    "updated_number_scheduled": 5,   # 업데이트된 Pod 수
+    "conditions": [
+        {
+            "type": "Available",
+            "status": "True",
+            "reason": "MinimumAvailable",
+            "message": "DaemonSet has minimum availability."
+        }
+    ]
+}
+```
+
+##### 3. update_labels()
+```python
+async def update_labels(
+    name: str,
+    namespace: str,
+    labels: Dict[str, str],
+    merge: bool = True
+) -> V1DaemonSet
+```
+
+**기능**: DaemonSet 레이블 업데이트
+- merge=True: 기존 레이블과 병합
+- merge=False: 기존 레이블 전체 교체
+
+#### Node Selector를 사용한 선택적 배포
+
+DaemonSet을 특정 Node에만 배포하려면 nodeSelector 사용:
+
+```python
+daemonset = await daemonset_manager.create_daemonset(
+    name="nvidia-driver",
+    namespace="kube-system",
+    containers=[...],
+    node_selector={"gpu": "nvidia"}  # gpu=nvidia 레이블이 있는 Node에만 배포
+)
+```
+
+#### 특징
+- **자동 스케일링**: Node 추가 시 자동으로 Pod 생성
+- **Node 레벨 서비스**: 모든 Node에서 실행되어야 하는 서비스에 적합
+- **Rolling Update**: 순차적 업데이트 지원
+- **Host 리소스 접근**: hostPath, hostNetwork 등으로 Node 리소스 접근 가능
+
+#### 사용 시나리오
+- **로그 수집**: Fluentd, Filebeat (각 Node의 로그 수집)
+- **모니터링 에이전트**: Prometheus Node Exporter, Datadog Agent
+- **네트워크 플러그인**: CNI 플러그인 (Calico, Flannel)
+- **스토리지 플러그인**: CSI 드라이버
+- **보안 에이전트**: 침입 탐지 시스템 (Falco)
+
+---
+
+### ReplicaSetManager
+
+**경로**: `infra/kubernetes/managers/replicaset/manager.py`
+
+#### 역할
+Kubernetes ReplicaSet 리소스를 관리합니다. ReplicaSet은 **지정된 수의 Pod 레플리카를 유지**하는 리소스입니다.
+
+**중요**: 일반적으로 ReplicaSet을 **직접 생성하지 않습니다**. Deployment가 내부적으로 ReplicaSet을 관리합니다.
+
+#### Deployment와의 관계
+
+```
+Deployment (상위 컨트롤러)
+  └── ReplicaSet (중간 컨트롤러, 버전별로 생성)
+        └── Pod (실제 워크로드)
+```
+
+- **Deployment**: 롤아웃, 롤백, 업데이트 전략 관리
+- **ReplicaSet**: 특정 버전의 Pod 레플리카 수 관리
+- **Pod**: 실제 컨테이너 실행
+
+#### 언제 직접 사용하는가?
+
+ReplicaSet을 직접 사용하는 경우는 매우 드물지만, 다음 시나리오에서 필요할 수 있습니다:
+- 단순 레플리카 관리만 필요하고 롤아웃 기능이 불필요한 경우
+- 레거시 애플리케이션 호환성
+- 매우 세밀한 ReplicaSet 제어가 필요한 경우
+
+**권장**: 대부분의 경우 **Deployment를 사용**하는 것이 좋습니다.
+
+#### 주요 기능
+
+##### 1. create_replicaset()
+```python
+async def create_replicaset(
+    name: str,
+    namespace: str,
+    containers: List[V1Container],
+    replicas: int = 1,
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None,
+    selector_labels: Optional[Dict[str, str]] = None,
+    pod_labels: Optional[Dict[str, str]] = None,
+    pod_annotations: Optional[Dict[str, str]] = None
+) -> V1ReplicaSet
+```
+
+**기능**: ReplicaSet 생성 (멱등성)
+- Deployment와 거의 동일한 파라미터
+- 직접 생성은 권장하지 않음
+
+**사용 예시**:
+```python
+# 일반적으로 직접 생성하지 않지만, 필요한 경우:
+replicaset = await replicaset_manager.create_replicaset(
+    name="myapp-rs",
+    namespace="student-1234",
+    replicas=3,
+    containers=[
+        V1Container(
+            name="app",
+            image="myapp:v1.0.0"
+        )
+    ],
+    labels={"app": "myapp", "version": "v1"}
+)
+```
+
+##### 2. update_replicas()
+```python
+async def update_replicas(
+    name: str,
+    namespace: str,
+    replicas: int
+) -> V1ReplicaSet
+```
+
+**기능**: 레플리카 수 변경 (스케일링)
+
+**사용 예시**:
+```python
+# 스케일 아웃
+await replicaset_manager.update_replicas("myapp-rs", "student-1234", replicas=5)
+```
+
+##### 3. get_replicaset_status()
+```python
+async def get_replicaset_status(
+    name: str,
+    namespace: str
+) -> Optional[Dict[str, any]]
+```
+
+**기능**: ReplicaSet 상태 조회
+
+**반환 예시**:
+```python
+{
+    "replicas": 3,              # 전체 레플리카 수
+    "ready_replicas": 3,        # 준비된 레플리카 수
+    "available_replicas": 3,    # 사용 가능한 레플리카 수
+    "fully_labeled_replicas": 3,# 레이블이 완전한 레플리카 수
+    "conditions": [
+        {
+            "type": "ReplicaFailure",
+            "status": "False",
+            "reason": "NoFailure",
+            "message": "All replicas are running"
+        }
+    ]
+}
+```
+
+#### Deployment가 ReplicaSet을 관리하는 방식
+
+```python
+# Deployment 생성 시
+deployment = await deployment_manager.create_deployment(
+    name="myapp",
+    namespace="student-1234",
+    replicas=3,
+    containers=[V1Container(name="app", image="myapp:v1.0.0")]
+)
+# Deployment가 자동으로 myapp-xxxxx ReplicaSet 생성
+
+# 이미지 업데이트 시
+# 1. Deployment가 새로운 ReplicaSet 생성 (myapp-yyyyy)
+# 2. 새 ReplicaSet의 레플리카 수를 점진적으로 증가
+# 3. 기존 ReplicaSet의 레플리카 수를 점진적으로 감소
+# 4. 롤아웃 완료 후 기존 ReplicaSet은 0개 유지 (롤백 대비)
+```
+
+#### 특징
+- **레플리카 보장**: 지정된 수의 Pod를 항상 유지
+- **자동 복구**: Pod 장애 시 자동으로 새 Pod 생성
+- **레이블 Selector**: matchLabels로 관리할 Pod 식별
+- **Deployment보다 단순**: 롤아웃 전략 없음
+
+#### Deployment와 ReplicaSet의 선택
+
+| 기능 | Deployment | ReplicaSet |
+|------|-----------|-----------|
+| 롤링 업데이트 | ✅ 지원 | ❌ 미지원 |
+| 롤백 | ✅ 지원 | ❌ 미지원 |
+| 업데이트 전략 | RollingUpdate, Recreate | - |
+| ReplicaSet 관리 | 자동 (내부적으로 생성) | 수동 |
+| 권장 사용 | ✅ 대부분의 경우 | ⚠️ 특수한 경우만 |
+
+**결론**: 특별한 이유가 없다면 **Deployment를 사용**하세요.
+
+---
+
+### JobManager
+
+**경로**: `infra/kubernetes/managers/job/manager.py`
+
+#### 역할
+Kubernetes Job 리소스를 관리합니다. Job은 **한 번 실행하고 완료되는 작업(batch processing)**을 관리하는 리소스입니다.
+
+#### Deployment와의 차이점
+
+| 특성 | Deployment | Job |
+|------|-----------|-----|
+| 목적 | 장기 실행 서비스 | 일회성 작업 |
+| 완료 개념 | 없음 (계속 실행) | 있음 (성공 완료 후 종료) |
+| 재시작 | Pod 실패 시 항상 재시작 | backoffLimit까지만 재시도 |
+| 스케일링 | replicas로 지정 | completions와 parallelism으로 제어 |
+| 사용 사례 | 웹 서버, API 서버 | 데이터 처리, 백업, 마이그레이션 |
+
+#### 주요 기능
+
+##### 1. create_job()
+```python
+async def create_job(
+    name: str,
+    namespace: str,
+    containers: List[V1Container],
+    completions: Optional[int] = None,
+    parallelism: Optional[int] = None,
+    backoff_limit: Optional[int] = None,
+    active_deadline_seconds: Optional[int] = None,
+    ttl_seconds_after_finished: Optional[int] = None,
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None,
+    pod_labels: Optional[Dict[str, str]] = None,
+    pod_annotations: Optional[Dict[str, str]] = None,
+    restart_policy: str = "Never"
+) -> V1Job
+```
+
+**기능**: Job 생성 (멱등성)
+
+**주요 파라미터**:
+- **completions**: 성공적으로 완료해야 할 Pod 수 (기본값: 1)
+- **parallelism**: 동시에 실행할 수 있는 최대 Pod 수 (기본값: 1)
+- **backoff_limit**: 실패 시 재시도 횟수 (기본값: 6)
+- **active_deadline_seconds**: Job의 최대 실행 시간 (초)
+- **ttl_seconds_after_finished**: 완료 후 자동 삭제까지의 시간 (초)
+- **restart_policy**: Pod 재시작 정책 ("Never" 또는 "OnFailure")
+
+**사용 예시**:
+
+**단순 일회성 작업**:
+```python
+from kubernetes_asyncio.client import V1Container, V1EnvVar
+
+# 데이터베이스 백업 Job
+job = await job_manager.create_job(
+    name="db-backup",
+    namespace="production",
+    containers=[
+        V1Container(
+            name="backup",
+            image="mysql:8.0",
+            command=["mysqldump"],
+            args=[
+                "-h", "mysql.default.svc.cluster.local",
+                "-u", "root",
+                "--all-databases"
+            ]
+        )
+    ],
+    completions=1,
+    backoff_limit=3,
+    ttl_seconds_after_finished=3600,  # 1시간 후 자동 삭제
+    restart_policy="OnFailure"
+)
+```
+
+**병렬 처리 작업**:
+```python
+# 10개의 작업을 3개씩 병렬로 처리
+job = await job_manager.create_job(
+    name="data-processing",
+    namespace="analytics",
+    containers=[
+        V1Container(
+            name="processor",
+            image="data-processor:latest",
+            command=["python", "process.py"]
+        )
+    ],
+    completions=10,      # 총 10번 성공적으로 완료
+    parallelism=3,       # 동시에 최대 3개 Pod 실행
+    backoff_limit=5,
+    active_deadline_seconds=3600,  # 최대 1시간 내에 완료
+    ttl_seconds_after_finished=86400  # 24시간 후 삭제
+)
+```
+
+**제한 시간이 있는 작업**:
+```python
+# 최대 30분 내에 완료되어야 하는 마이그레이션
+job = await job_manager.create_job(
+    name="db-migration",
+    namespace="production",
+    containers=[
+        V1Container(
+            name="migrate",
+            image="migrate:latest",
+            command=["./migrate", "up"]
+        )
+    ],
+    active_deadline_seconds=1800,  # 30분
+    backoff_limit=0,  # 재시도 없음 (한 번만 실행)
+    ttl_seconds_after_finished=7200  # 2시간 후 삭제
+)
+```
+
+##### 2. get_job_status()
+```python
+async def get_job_status(
+    name: str,
+    namespace: str
+) -> Optional[Dict[str, any]]
+```
+
+**기능**: Job 상태 조회
+
+**반환 예시**:
+```python
+{
+    "active": 2,           # 현재 실행 중인 Pod 수
+    "succeeded": 3,        # 성공한 Pod 수
+    "failed": 1,           # 실패한 Pod 수
+    "start_time": "2025-01-15T10:00:00Z",
+    "completion_time": None,  # 완료되지 않았으면 None
+    "conditions": [
+        {
+            "type": "Complete",
+            "status": "False",
+            "reason": "JobRunning",
+            "message": "Job is still running"
+        }
+    ]
+}
+```
+
+##### 3. is_completed()
+```python
+async def is_completed(
+    name: str,
+    namespace: str
+) -> bool
+```
+
+**기능**: Job 완료 여부 확인
+
+**사용 예시**:
+```python
+# Job 완료 대기
+import asyncio
+
+while not await job_manager.is_completed("db-backup", "production"):
+    await asyncio.sleep(5)
+
+print("백업 완료!")
+```
+
+#### Job 패턴
+
+##### 패턴 1: 단일 작업 (Single Job)
+```python
+completions=1, parallelism=1
+```
+- 하나의 Pod가 실행되어 작업 완료
+- 실패 시 backoffLimit까지 재시도
+
+##### 패턴 2: 고정 완료 횟수 (Fixed Completion Count)
+```python
+completions=10, parallelism=3
+```
+- 총 10번 성공적으로 완료
+- 동시에 최대 3개 Pod 실행
+- 큐에서 작업을 가져오는 경우에 유용
+
+##### 패턴 3: 작업 큐 패턴 (Work Queue)
+```python
+completions=None, parallelism=5
+```
+- completions 미지정
+- Pod가 작업 큐에서 작업을 가져와 처리
+- 큐가 비면 Pod가 자동 종료
+
+#### Restart Policy
+
+| 정책 | 동작 | 사용 시나리오 |
+|------|------|---------------|
+| **Never** | 실패 시 Pod를 재시작하지 않음 | 재시도가 의미 없는 작업 |
+| **OnFailure** | 실패 시 같은 Pod를 재시작 | 일시적 오류로 인한 실패 가능성 |
+
+#### 특징
+- **완료 보장**: completions만큼 성공적으로 완료
+- **병렬 처리**: parallelism으로 동시 실행 제어
+- **재시도 제한**: backoffLimit로 무한 재시도 방지
+- **자동 정리**: ttlSecondsAfterFinished로 완료된 Job 자동 삭제
+- **타임아웃**: activeDeadlineSeconds로 실행 시간 제한
+
+#### 사용 시나리오
+- **데이터 처리**: 배치 처리, ETL 작업
+- **백업/복원**: 데이터베이스 백업, 파일 백업
+- **마이그레이션**: 스키마 마이그레이션, 데이터 이전
+- **리포트 생성**: 일일/주간 리포트
+- **미디어 처리**: 이미지/비디오 변환, 썸네일 생성
+
+---
+
+### CronJobManager
+
+**경로**: `infra/kubernetes/managers/cronjob/manager.py`
+
+#### 역할
+Kubernetes CronJob 리소스를 관리합니다. CronJob은 **정해진 스케줄에 따라 주기적으로 Job을 실행**하는 리소스입니다.
+
+#### Job과의 관계
+
+```
+CronJob (스케줄러)
+  └── Job (작업 실행 단위, CronJob이 스케줄에 따라 생성)
+        └── Pod (실제 워크로드)
+```
+
+- **CronJob**: 스케줄 정의 및 Job 생성 관리
+- **Job**: 각 스케줄 시점에 생성되어 작업 실행
+- **Pod**: Job이 관리하는 실제 컨테이너
+
+#### 주요 기능
+
+##### 1. create_cronjob()
+```python
+async def create_cronjob(
+    name: str,
+    namespace: str,
+    schedule: str,
+    containers: List[V1Container],
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None,
+    suspend: bool = False,
+    concurrency_policy: str = "Allow",
+    successful_jobs_history_limit: Optional[int] = 3,
+    failed_jobs_history_limit: Optional[int] = 1,
+    starting_deadline_seconds: Optional[int] = None,
+    restart_policy: str = "OnFailure"
+) -> V1CronJob
+```
+
+**기능**: CronJob 생성 (멱등성)
+
+**주요 파라미터**:
+- **schedule**: Cron 표현식 (예: "0 */2 * * *")
+- **suspend**: CronJob 일시 중지 여부 (기본값: False)
+- **concurrency_policy**: 동시 실행 정책 (Allow, Forbid, Replace)
+- **successful_jobs_history_limit**: 성공한 Job 보관 개수 (기본값: 3)
+- **failed_jobs_history_limit**: 실패한 Job 보관 개수 (기본값: 1)
+- **starting_deadline_seconds**: Job 시작 데드라인 (초)
+- **restart_policy**: Pod 재시작 정책 (OnFailure, Never)
+
+**사용 예시**:
+
+**데이터베이스 백업 (매일 새벽 2시)**:
+```python
+from kubernetes_asyncio.client import V1Container
+
+cronjob = await cronjob_manager.create_cronjob(
+    name="daily-backup",
+    namespace="production",
+    schedule="0 2 * * *",  # 매일 02:00
+    containers=[
+        V1Container(
+            name="backup",
+            image="mysql:8.0",
+            command=["sh", "-c"],
+            args=[
+                "mysqldump -h $DB_HOST -u $DB_USER --all-databases > /backup/$(date +%Y%m%d).sql"
+            ]
+        )
+    ],
+    concurrency_policy="Forbid",  # 이전 백업이 진행 중이면 건너뜀
+    successful_jobs_history_limit=7,  # 최근 7일간의 성공한 Job 보관
+    failed_jobs_history_limit=3,
+    restart_policy="OnFailure"
+)
+```
+
+**로그 정리 (매주 일요일 자정)**:
+```python
+cronjob = await cronjob_manager.create_cronjob(
+    name="weekly-log-cleanup",
+    namespace="logging",
+    schedule="0 0 * * 0",  # 매주 일요일 00:00
+    containers=[
+        V1Container(
+            name="cleanup",
+            image="busybox:latest",
+            command=["sh", "-c"],
+            args=[
+                "find /logs -name '*.log' -mtime +30 -delete"
+            ]
+        )
+    ],
+    concurrency_policy="Replace",  # 이전 작업을 중단하고 새 작업 시작
+    successful_jobs_history_limit=4,  # 최근 4주 보관
+    failed_jobs_history_limit=2
+)
+```
+
+**리포트 생성 (매시간)**:
+```python
+cronjob = await cronjob_manager.create_cronjob(
+    name="hourly-report",
+    namespace="analytics",
+    schedule="0 * * * *",  # 매시간 정각
+    containers=[
+        V1Container(
+            name="report-generator",
+            image="report-gen:latest",
+            command=["python", "generate_report.py"]
+        )
+    ],
+    concurrency_policy="Allow",  # 동시 실행 허용
+    successful_jobs_history_limit=24,  # 최근 24시간 보관
+    starting_deadline_seconds=300  # 5분 내에 시작하지 못하면 건너뜀
+)
+```
+
+**일시 중지된 CronJob**:
+```python
+# 나중에 활성화할 CronJob 미리 생성
+cronjob = await cronjob_manager.create_cronjob(
+    name="scheduled-maintenance",
+    namespace="production",
+    schedule="0 3 * * 6",  # 매주 토요일 03:00
+    containers=[...],
+    suspend=True  # 일시 중지 상태로 생성
+)
+
+# 필요할 때 활성화
+await cronjob_manager.resume_cronjob("scheduled-maintenance", "production")
+```
+
+##### 2. Cron 스케줄 표현식
+
+Cron 표현식: `분 시 일 월 요일`
+
+```
+┌───────────── 분 (0 - 59)
+│ ┌───────────── 시 (0 - 23)
+│ │ ┌───────────── 일 (1 - 31)
+│ │ │ ┌───────────── 월 (1 - 12)
+│ │ │ │ ┌───────────── 요일 (0 - 6, 0=일요일)
+│ │ │ │ │
+* * * * *
+```
+
+**주요 예시**:
+```python
+"0 2 * * *"       # 매일 02:00
+"*/15 * * * *"    # 15분마다
+"0 */2 * * *"     # 2시간마다
+"0 9-17 * * 1-5"  # 평일 9시~17시 매시간
+"0 0 1 * *"       # 매월 1일 자정
+"0 0 * * 0"       # 매주 일요일 자정
+"30 3 * * 1"      # 매주 월요일 03:30
+```
+
+##### 3. Concurrency Policy (동시 실행 정책)
+
+| 정책 | 동작 | 사용 시나리오 |
+|------|------|---------------|
+| **Allow** | 이전 Job이 실행 중이어도 새 Job 생성 | 동시 실행이 안전한 작업 |
+| **Forbid** | 이전 Job이 실행 중이면 새 Job 건너뜀 | 동시 실행 불가능한 작업 (백업 등) |
+| **Replace** | 이전 Job을 중단하고 새 Job 시작 | 최신 데이터만 중요한 작업 |
+
+**예시**:
+```python
+# Allow: 데이터 수집 (동시 실행 가능)
+concurrency_policy="Allow"
+
+# Forbid: 데이터베이스 백업 (동시 실행 불가)
+concurrency_policy="Forbid"
+
+# Replace: 캐시 갱신 (최신 것만 필요)
+concurrency_policy="Replace"
+```
+
+##### 4. suspend_cronjob() / resume_cronjob()
+```python
+async def suspend_cronjob(
+    name: str,
+    namespace: str
+) -> V1CronJob
+
+async def resume_cronjob(
+    name: str,
+    namespace: str
+) -> V1CronJob
+```
+
+**기능**: CronJob 일시 중지/재개
+
+**사용 예시**:
+```python
+# 유지보수 기간 동안 백업 중지
+await cronjob_manager.suspend_cronjob("daily-backup", "production")
+
+# 유지보수 완료 후 재개
+await cronjob_manager.resume_cronjob("daily-backup", "production")
+```
+
+##### 5. get_cronjob_status()
+```python
+async def get_cronjob_status(
+    name: str,
+    namespace: str
+) -> Optional[Dict[str, any]]
+```
+
+**기능**: CronJob 상태 조회
+
+**반환 예시**:
+```python
+{
+    "last_schedule_time": "2025-01-15T02:00:00Z",
+    "last_successful_time": "2025-01-15T02:05:00Z",
+    "active": [
+        {"name": "daily-backup-28421650", "namespace": "production"}
+    ]
+}
+```
+
+#### 특징
+- **자동 스케줄링**: Cron 표현식으로 정확한 시간에 실행
+- **이력 관리**: 성공/실패한 Job 이력 자동 관리
+- **동시 실행 제어**: concurrencyPolicy로 동시 실행 제어
+- **일시 중지**: suspend로 스케줄 일시 중지 가능
+- **타임존**: Kubernetes 1.27+부터 timeZone 필드 지원
+
+#### 사용 시나리오
+- **정기 백업**: 데이터베이스, 파일 시스템 백업
+- **데이터 동기화**: 외부 시스템과 데이터 동기화
+- **정기 리포트**: 일일/주간/월간 리포트 생성
+- **정리 작업**: 오래된 로그/파일 삭제
+- **헬스 체크**: 주기적인 시스템 점검
+- **캐시 갱신**: 정기적인 캐시 데이터 갱신
+
+#### CronJob vs Job 선택
+
+| 사용 사례 | 선택 |
+|-----------|------|
+| 정기적으로 실행해야 하는 작업 | CronJob |
+| 한 번만 실행하면 되는 작업 | Job |
+| 특정 이벤트에 반응하는 작업 | Job (이벤트 트리거) |
+| 스케줄링이 필요한 작업 | CronJob |
+
+---
+
 ### PodManager
 
 **경로**: `infra/kubernetes/managers/pod/manager.py`
@@ -1707,6 +2477,10 @@ AppException (core/exception.py)
     │   ├── ConfigMapCreationException
     │   ├── DeploymentCreationException
     │   ├── StatefulSetCreationException
+    │   ├── DaemonSetCreationException
+    │   ├── ReplicaSetCreationException
+    │   ├── JobCreationException
+    │   ├── CronJobCreationException
     │   └── ServiceCreationException
     ├── ResourceReadException
     │   ├── NamespaceReadException
@@ -1716,6 +2490,10 @@ AppException (core/exception.py)
     │   ├── ConfigMapReadException
     │   ├── DeploymentReadException
     │   ├── StatefulSetReadException
+    │   ├── DaemonSetReadException
+    │   ├── ReplicaSetReadException
+    │   ├── JobReadException
+    │   ├── CronJobReadException
     │   ├── ServiceReadException
     │   └── PodReadException
     ├── ResourceUpdateException
@@ -1726,6 +2504,10 @@ AppException (core/exception.py)
     │   ├── ConfigMapUpdateException
     │   ├── DeploymentUpdateException
     │   ├── StatefulSetUpdateException
+    │   ├── DaemonSetUpdateException
+    │   ├── ReplicaSetUpdateException
+    │   ├── JobUpdateException
+    │   ├── CronJobUpdateException
     │   └── ServiceUpdateException
     ├── ResourceDeletionException
     │   ├── NamespaceDeletionException
@@ -1735,6 +2517,10 @@ AppException (core/exception.py)
     │   ├── ConfigMapDeletionException
     │   ├── DeploymentDeletionException
     │   ├── StatefulSetDeletionException
+    │   ├── DaemonSetDeletionException
+    │   ├── ReplicaSetDeletionException
+    │   ├── JobDeletionException
+    │   ├── CronJobDeletionException
     │   └── ServiceDeletionException
     ├── ResourceListException
     │   ├── NamespaceListException
@@ -1744,6 +2530,10 @@ AppException (core/exception.py)
     │   ├── ConfigMapListException
     │   ├── DeploymentListException
     │   ├── StatefulSetListException
+    │   ├── DaemonSetListException
+    │   ├── ReplicaSetListException
+    │   ├── JobListException
+    │   ├── CronJobListException
     │   ├── ServiceListException
     │   └── PodListException
     └── VaultException (infra/kubernetes/managers/secret/exceptions.py)
@@ -1822,12 +2612,16 @@ pytest tests/infra/kubernetes/managers/rolebinding/test_manager.py -v
 | ServiceAccountManager | test_manager.py | 초기화, CRUD, ImagePullSecret, 예외 처리 |
 | RoleManager | test_manager.py | 초기화, CRUD, PolicyRule, 예외 처리 |
 | RoleBindingManager | test_manager.py | 초기화, CRUD, Subject 관리, 예외 처리 |
-| ConfigMapManager | (예정) | 초기화, CRUD, 데이터 업데이트, 예외 처리 |
-| SecretManager | (예정) | Vault 바인딩, Injection, 예외 처리 |
-| DeploymentManager | (예정) | 초기화, CRUD, 스케일링, 상태 조회, 예외 처리 |
-| StatefulSetManager | (예정) | 초기화, CRUD, 스케일링, PVC, 예외 처리 |
-| ServiceManager | (예정) | 초기화, CRUD, Selector 업데이트, 예외 처리 |
-| PodManager | (예정) | 조회, 목록, 상태 조회, 로그, 예외 처리 |
+| ConfigMapManager | test_manager.py | 초기화, CRUD, 데이터 업데이트, 예외 처리 |
+| SecretManager | test_manager.py | Vault 바인딩, Injection, 예외 처리 |
+| DeploymentManager | test_manager.py | 초기화, CRUD, 스케일링, 상태 조회, 예외 처리 |
+| StatefulSetManager | test_manager.py | 초기화, CRUD, 스케일링, PVC, 예외 처리 |
+| DaemonSetManager | test_manager.py | 초기화, CRUD, 상태 조회, 예외 처리 |
+| ReplicaSetManager | test_manager.py | 초기화, CRUD, 스케일링, 상태 조회, 예외 처리 |
+| JobManager | test_manager.py | 초기화, CRUD, 상태 조회, 완료 확인, 예외 처리 |
+| CronJobManager | test_manager.py | 초기화, CRUD, Suspend/Resume, 예외 처리 |
+| ServiceManager | test_manager.py | 초기화, CRUD, Selector 업데이트, 예외 처리 |
+| PodManager | test_manager.py | 조회, 목록, 상태 조회, 로그, 예외 처리 |
 
 ---
 
