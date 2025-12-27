@@ -71,12 +71,12 @@ KubernetesClient는 Kubernetes 클러스터와의 **안정적이고 효율적인
 
 KubernetesClient는 다음 4가지 API 클라이언트를 제공합니다:
 
-| API 클라이언트 | 관리 리소스 | 사용 Manager |
-|---------------|------------|-------------|
+| API 클라이언트 | 관리 리소스 | 사용 Manager                                                                                           |
+|---------------|------------|------------------------------------------------------------------------------------------------------|
 | `core_v1` | Namespace, ServiceAccount, Pod, Service, ConfigMap, Secret | NamespaceManager, ServiceAccountManager, PodManager, ServiceManager, ConfigMapManager, SecretManager |
-| `apps_v1` | Deployment, StatefulSet, DaemonSet, ReplicaSet | DeploymentManager, StatefulSetManager |
-| `rbac_v1` | Role, RoleBinding, ClusterRole, ClusterRoleBinding | RoleManager, RoleBindingManager |
-| `batch_v1` | Job, CronJob | (향후 추가 예정) |
+| `apps_v1` | Deployment, StatefulSet, DaemonSet, ReplicaSet | DeploymentManager, StatefulSetManager, ReplicaSetManager, DaemonSetManager                           |
+| `rbac_v1` | Role, RoleBinding, ClusterRole, ClusterRoleBinding | RoleManager, RoleBindingManager                                                                      |
+| `batch_v1` | Job, CronJob | JobManager, CronJobManager                                                                           |
 
 ### 3. 설정 추상화
 
