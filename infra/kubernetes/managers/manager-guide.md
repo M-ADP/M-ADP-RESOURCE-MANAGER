@@ -12,6 +12,9 @@ M-ADP Resource Manager Server의 Kubernetes 리소스 관리 계층 가이드입
   - [RoleBindingManager](#rolebindingmanager)
   - [ConfigMapManager](#configmapmanager)
   - [SecretManager](#secretmanager)
+  - [PersistentVolumeClaimManager](#persistentvolumeclaimmanager)
+  - [LimitRangeManager](#limitrangemanager)
+  - [ResourceQuotaManager](#resourcequotamanager)
   - [DeploymentManager](#deploymentmanager)
   - [StatefulSetManager](#statefulsetmanager)
   - [DaemonSetManager](#daemonsetmanager)
@@ -666,6 +669,484 @@ await secret_manager.create_vault_role(
 - **Vault 중심**: 모든 Secret은 Vault에만 저장
 - **자동 주입**: Vault Agent Injector가 Pod에 Sidecar 자동 추가
 - **동적 Secret**: Vault의 동적 Secret 기능 활용 가능 (DB 크레덴셜 등)
+
+---
+
+### PersistentVolumeClaimManager
+
+**경로**: `infra/kubernetes/managers/persistentvolumeclaim/manager.py`
+
+#### 역할
+Kubernetes PersistentVolumeClaim(PVC) 리소스를 관리합니다. PVC는 **영구 스토리지 요청**을 나타내며, Pod가 데이터를 영구적으로 저장할 수 있도록 합니다.
+
+#### 주요 기능
+
+##### 1. create_pvc()
+```python
+async def create_pvc(
+    name: str,
+    namespace: str,
+    storage_size: str,
+    access_modes: Optional[List[str]] = None,
+    storage_class_name: Optional[str] = None,
+    volume_mode: Optional[str] = None,
+    selector: Optional[V1LabelSelector] = None,
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None
+) -> V1PersistentVolumeClaim
+```
+
+**기능**: PVC 생성
+- **storage_size**: 요청할 스토리지 크기 (예: "10Gi", "500Mi")
+- **access_modes**: 접근 모드 (기본값: `["ReadWriteOnce"]`)
+  - `ReadWriteOnce`: 단일 노드에서 읽기/쓰기
+  - `ReadOnlyMany`: 다중 노드에서 읽기 전용
+  - `ReadWriteMany`: 다중 노드에서 읽기/쓰기
+- **storage_class_name**: 사용할 스토리지 클래스 (동적 프로비저닝)
+- **volume_mode**: `Filesystem` (기본값) 또는 `Block`
+
+**사용 예시**:
+```python
+# 기본 PVC 생성 (10Gi, ReadWriteOnce)
+pvc = await pvc_manager.create_pvc(
+    name="data-pvc",
+    namespace="student-1234",
+    storage_size="10Gi"
+)
+
+# 특정 스토리지 클래스 사용
+pvc = await pvc_manager.create_pvc(
+    name="fast-storage",
+    namespace="production",
+    storage_size="100Gi",
+    storage_class_name="ssd",
+    access_modes=["ReadWriteOnce"]
+)
+
+# 다중 노드 읽기/쓰기 (NFS 등)
+pvc = await pvc_manager.create_pvc(
+    name="shared-data",
+    namespace="team-workspace",
+    storage_size="50Gi",
+    access_modes=["ReadWriteMany"],
+    storage_class_name="nfs"
+)
+```
+
+##### 2. get_pvc_status()
+```python
+async def get_pvc_status(
+    name: str,
+    namespace: str
+) -> Optional[Dict[str, any]]
+```
+
+**기능**: PVC 상태 조회
+
+**반환 예시**:
+```python
+{
+    "phase": "Bound",  # Pending, Bound, Lost
+    "access_modes": ["ReadWriteOnce"],
+    "capacity": {"storage": "10Gi"},
+    "conditions": [
+        {
+            "type": "Resizing",
+            "status": "False",
+            "reason": "N/A",
+            "message": "...",
+            "last_probe_time": None,
+            "last_transition_time": "2025-01-15T10:30:00Z"
+        }
+    ]
+}
+```
+
+##### 3. resize_pvc()
+```python
+async def resize_pvc(
+    name: str,
+    namespace: str,
+    new_storage_size: str
+) -> V1PersistentVolumeClaim
+```
+
+**기능**: PVC 스토리지 크기 변경
+
+**제약 사항**:
+- 크기는 **증가만 가능** (축소 불가)
+- StorageClass가 `allowVolumeExpansion: true` 설정 필요
+- 일부 볼륨 타입은 온라인 확장 미지원 (Pod 재시작 필요)
+
+**사용 예시**:
+```python
+# 10Gi → 20Gi로 확장
+pvc = await pvc_manager.resize_pvc(
+    name="data-pvc",
+    namespace="student-1234",
+    new_storage_size="20Gi"
+)
+```
+
+##### 4. is_bound()
+```python
+async def is_bound(name: str, namespace: str) -> bool
+```
+
+**기능**: PVC가 PV에 바인딩되었는지 확인
+
+**사용 예시**:
+```python
+if await pvc_manager.is_bound("data-pvc", "student-1234"):
+    print("PVC가 PV에 성공적으로 바인딩되었습니다")
+```
+
+#### PVC Phase
+
+| Phase | 의미 |
+|-------|------|
+| Pending | PV를 찾는 중 또는 동적 프로비저닝 대기 |
+| Bound | PV에 성공적으로 바인딩됨 |
+| Lost | PV를 잃어버림 (PV가 삭제됨) |
+
+#### Access Modes 비교
+
+| Mode | 약자 | 사용 케이스 |
+|------|------|-------------|
+| ReadWriteOnce | RWO | 단일 Pod 전용 스토리지 (DB, 로컬 캐시) |
+| ReadOnlyMany | ROX | 여러 Pod이 읽기만 필요 (정적 자산) |
+| ReadWriteMany | RWX | 여러 Pod이 동시에 쓰기 필요 (공유 파일 시스템) |
+
+#### 특징
+- **동적 프로비저닝**: StorageClass 지정 시 자동으로 PV 생성
+- **정적 프로비저닝**: selector로 특정 PV 선택 가능
+- **크기 확장**: resize_pvc()로 온라인 확장 (축소 불가)
+- **Reclaim Policy**: PVC 삭제 시 PV 처리 방식 (Delete, Retain)
+
+#### 사용 시나리오
+- 데이터베이스 영구 저장소 (MySQL, PostgreSQL)
+- StatefulSet 볼륨 (Kafka, Elasticsearch)
+- 공유 파일 시스템 (팀 협업 공간)
+- 로그 저장소 (장기 보관)
+
+---
+
+### LimitRangeManager
+
+**경로**: `infra/kubernetes/managers/limitrange/manager.py`
+
+#### 역할
+Kubernetes LimitRange 리소스를 관리합니다. LimitRange는 **네임스페이스 내 개별 리소스(Pod, Container)의 최소/최대 제한**을 설정합니다.
+
+#### 주요 기능
+
+##### 1. create_limitrange()
+```python
+async def create_limitrange(
+    name: str,
+    namespace: str,
+    limits: List[V1LimitRangeItem],
+    labels: Optional[dict] = None,
+    annotations: Optional[dict] = None
+) -> V1LimitRange
+```
+
+**기능**: LimitRange 생성
+
+**사용 예시**:
+```python
+from kubernetes_asyncio.client import V1LimitRangeItem
+
+# Container CPU/Memory 제한
+container_limits = V1LimitRangeItem(
+    type="Container",
+    max={"cpu": "2", "memory": "2Gi"},
+    min={"cpu": "100m", "memory": "128Mi"},
+    default={"cpu": "500m", "memory": "512Mi"},
+    default_request={"cpu": "200m", "memory": "256Mi"}
+)
+
+# Pod 전체 제한
+pod_limits = V1LimitRangeItem(
+    type="Pod",
+    max={"cpu": "4", "memory": "8Gi"},
+    min={"cpu": "200m", "memory": "256Mi"}
+)
+
+# PVC 제한
+pvc_limits = V1LimitRangeItem(
+    type="PersistentVolumeClaim",
+    max={"storage": "100Gi"},
+    min={"storage": "1Gi"}
+)
+
+limitrange = await limitrange_manager.create_limitrange(
+    name="student-limits",
+    namespace="student-1234",
+    limits=[container_limits, pod_limits, pvc_limits]
+)
+```
+
+##### 2. update_limits()
+```python
+async def update_limits(
+    name: str,
+    namespace: str,
+    limits: List[V1LimitRangeItem]
+) -> V1LimitRange
+```
+
+**기능**: LimitRange 제한 사항 업데이트
+
+**사용 예시**:
+```python
+# 제한 완화
+new_limits = [
+    V1LimitRangeItem(
+        type="Container",
+        max={"cpu": "4", "memory": "4Gi"},  # 증가
+        min={"cpu": "100m", "memory": "128Mi"},
+        default={"cpu": "1", "memory": "1Gi"}
+    )
+]
+
+limitrange = await limitrange_manager.update_limits(
+    name="student-limits",
+    namespace="student-1234",
+    limits=new_limits
+)
+```
+
+#### LimitRange Type
+
+| Type | 적용 대상 | 설정 가능 항목 |
+|------|----------|---------------|
+| Container | 개별 컨테이너 | cpu, memory, ephemeral-storage |
+| Pod | Pod 전체 (모든 컨테이너 합) | cpu, memory, ephemeral-storage |
+| PersistentVolumeClaim | PVC | storage |
+
+#### LimitRange vs ResourceQuota
+
+| 구분 | LimitRange | ResourceQuota |
+|------|-----------|---------------|
+| **범위** | 개별 리소스(Pod, Container) | 네임스페이스 전체 |
+| **목적** | 단일 리소스 제한 | 총합 제한 |
+| **강제 시점** | 리소스 생성 시 | 리소스 누적 시 |
+| **예시** | "Container는 최대 2Gi 메모리" | "Namespace 전체 최대 20Gi 메모리" |
+
+#### 특징
+- **기본값 주입**: default, defaultRequest로 요청하지 않은 값 자동 설정
+- **범위 제한**: min/max로 허용 범위 강제
+- **비율 제한**: maxLimitRequestRatio로 limit/request 비율 제한 가능
+- **즉시 적용**: 생성 시점에 검증 (기존 리소스는 영향 없음)
+
+#### 사용 시나리오
+- 학생/테넌트별 리소스 사용 제한
+- 컨테이너 리소스 요청 강제 (기본값 주입)
+- 과도한 리소스 요청 방지
+- PVC 스토리지 크기 제한
+
+---
+
+### ResourceQuotaManager
+
+**경로**: `infra/kubernetes/managers/resourcequota/manager.py`
+
+#### 역할
+Kubernetes ResourceQuota 리소스를 관리합니다. ResourceQuota는 **네임스페이스 전체의 리소스 사용량 총합**을 제한합니다.
+
+#### 주요 기능
+
+##### 1. create_resource_quota()
+```python
+async def create_resource_quota(
+    name: str,
+    namespace: str,
+    hard_limits: Dict[str, str],
+    scope_selector: Optional[Dict] = None,
+    scopes: Optional[List[str]] = None,
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None
+) -> V1ResourceQuota
+```
+
+**기능**: ResourceQuota 생성
+
+**사용 예시**:
+```python
+# 기본 리소스 제한 (Compute)
+quota = await resourcequota_manager.create_resource_quota(
+    name="student-quota",
+    namespace="student-1234",
+    hard_limits={
+        # Compute 리소스
+        "requests.cpu": "4",
+        "requests.memory": "8Gi",
+        "limits.cpu": "8",
+        "limits.memory": "16Gi",
+        
+        # Object Count
+        "pods": "50",
+        "services": "10",
+        "persistentvolumeclaims": "20",
+        "configmaps": "50",
+        "secrets": "50",
+        
+        # Storage
+        "requests.storage": "100Gi",
+    }
+)
+
+# 특정 우선순위 클래스에만 적용
+quota = await resourcequota_manager.create_resource_quota(
+    name="high-priority-quota",
+    namespace="production",
+    hard_limits={
+        "pods": "20",
+        "requests.cpu": "10",
+        "requests.memory": "20Gi"
+    },
+    scopes=["PriorityClass"]
+)
+```
+
+##### 2. get_quota_status()
+```python
+async def get_quota_status(
+    name: str,
+    namespace: str
+) -> Optional[Dict[str, Dict[str, str]]]
+```
+
+**기능**: ResourceQuota 사용량 vs 제한 조회
+
+**반환 예시**:
+```python
+{
+    "hard": {
+        "pods": "50",
+        "requests.cpu": "4",
+        "requests.memory": "8Gi"
+    },
+    "used": {
+        "pods": "12",
+        "requests.cpu": "2.5",
+        "requests.memory": "3Gi"
+    }
+}
+```
+
+##### 3. update_resource_quota()
+```python
+async def update_resource_quota(
+    name: str,
+    namespace: str,
+    hard_limits: Dict[str, str],
+    scope_selector: Optional[Dict] = None,
+    scopes: Optional[List[str]] = None
+) -> V1ResourceQuota
+```
+
+**기능**: ResourceQuota 제한 업데이트
+
+**사용 예시**:
+```python
+# 리소스 증설
+quota = await resourcequota_manager.update_resource_quota(
+    name="student-quota",
+    namespace="student-1234",
+    hard_limits={
+        "requests.cpu": "8",      # 4 → 8
+        "requests.memory": "16Gi", # 8Gi → 16Gi
+        "pods": "100"              # 50 → 100
+    }
+)
+```
+
+#### ResourceQuota 리소스 종류
+
+##### Compute Resources
+| 리소스 | 의미 |
+|--------|------|
+| `requests.cpu` | 전체 CPU 요청 합계 |
+| `requests.memory` | 전체 메모리 요청 합계 |
+| `limits.cpu` | 전체 CPU 제한 합계 |
+| `limits.memory` | 전체 메모리 제한 합계 |
+| `requests.nvidia.com/gpu` | GPU 요청 합계 |
+
+##### Object Count
+| 리소스 | 의미 |
+|--------|------|
+| `pods` | Pod 개수 |
+| `services` | Service 개수 |
+| `services.loadbalancers` | LoadBalancer Service 개수 |
+| `services.nodeports` | NodePort Service 개수 |
+| `persistentvolumeclaims` | PVC 개수 |
+| `configmaps` | ConfigMap 개수 |
+| `secrets` | Secret 개수 |
+| `replicationcontrollers` | ReplicationController 개수 |
+
+##### Storage
+| 리소스 | 의미 |
+|--------|------|
+| `requests.storage` | 전체 PVC 스토리지 요청 합계 |
+| `persistentvolumeclaims` | PVC 개수 |
+| `<storage-class-name>.storageclass.storage.k8s.io/requests.storage` | 특정 StorageClass 스토리지 합계 |
+| `<storage-class-name>.storageclass.storage.k8s.io/persistentvolumeclaims` | 특정 StorageClass PVC 개수 |
+
+#### ResourceQuota Scopes
+
+| Scope | 적용 대상 |
+|-------|----------|
+| `Terminating` | activeDeadlineSeconds 설정된 Pod |
+| `NotTerminating` | activeDeadlineSeconds 없는 Pod |
+| `BestEffort` | requests/limits 없는 Pod |
+| `NotBestEffort` | requests/limits 있는 Pod |
+| `PriorityClass` | 특정 우선순위 클래스 Pod |
+
+#### 특징
+- **총합 제한**: 네임스페이스 내 모든 리소스의 합계 제한
+- **생성 차단**: 할당량 초과 시 새 리소스 생성 거부
+- **실시간 추적**: 리소스 생성/삭제 시 즉시 반영
+- **세분화 제어**: Scope로 특정 조건의 Pod만 제한 가능
+
+#### 사용 시나리오
+- 테넌트별 전체 리소스 할당량 관리
+- 비용 통제 (클라우드 환경)
+- 클러스터 리소스 공정 분배
+- 실수로 인한 과도한 리소스 사용 방지
+
+#### LimitRange + ResourceQuota 조합 예시
+
+```python
+# 1. LimitRange: 개별 Pod/Container 제한
+container_limits = V1LimitRangeItem(
+    type="Container",
+    max={"cpu": "2", "memory": "2Gi"},
+    default={"cpu": "500m", "memory": "512Mi"}
+)
+await limitrange_manager.create_limitrange(
+    name="limits",
+    namespace="student-1234",
+    limits=[container_limits]
+)
+
+# 2. ResourceQuota: 네임스페이스 전체 제한
+await resourcequota_manager.create_resource_quota(
+    name="quota",
+    namespace="student-1234",
+    hard_limits={
+        "requests.cpu": "10",      # 전체 합계
+        "requests.memory": "20Gi",
+        "pods": "20"               # 최대 Pod 수
+    }
+)
+
+# 결과:
+# - 각 컨테이너: 최대 2 CPU, 2Gi 메모리
+# - 네임스페이스: 전체 10 CPU, 20Gi 메모리, 20개 Pod
+# - 예: 컨테이너당 500m CPU 기본값 → 최대 20개 Pod까지만 생성 가능
+```
 
 ---
 
@@ -2475,6 +2956,9 @@ AppException (core/exception.py)
     │   ├── RoleCreationException
     │   ├── RoleBindingCreationException
     │   ├── ConfigMapCreationException
+    │   ├── PersistentVolumeClaimCreationException
+    │   ├── LimitRangeCreationException
+    │   ├── ResourceQuotaCreationException
     │   ├── DeploymentCreationException
     │   ├── StatefulSetCreationException
     │   ├── DaemonSetCreationException
@@ -2488,6 +2972,9 @@ AppException (core/exception.py)
     │   ├── RoleReadException
     │   ├── RoleBindingReadException
     │   ├── ConfigMapReadException
+    │   ├── PersistentVolumeClaimReadException
+    │   ├── LimitRangeReadException
+    │   ├── ResourceQuotaReadException
     │   ├── DeploymentReadException
     │   ├── StatefulSetReadException
     │   ├── DaemonSetReadException
@@ -2502,6 +2989,9 @@ AppException (core/exception.py)
     │   ├── RoleUpdateException
     │   ├── RoleBindingUpdateException
     │   ├── ConfigMapUpdateException
+    │   ├── PersistentVolumeClaimUpdateException
+    │   ├── LimitRangeUpdateException
+    │   ├── ResourceQuotaUpdateException
     │   ├── DeploymentUpdateException
     │   ├── StatefulSetUpdateException
     │   ├── DaemonSetUpdateException
@@ -2515,6 +3005,9 @@ AppException (core/exception.py)
     │   ├── RoleDeletionException
     │   ├── RoleBindingDeletionException
     │   ├── ConfigMapDeletionException
+    │   ├── PersistentVolumeClaimDeletionException
+    │   ├── LimitRangeDeletionException
+    │   ├── ResourceQuotaDeletionException
     │   ├── DeploymentDeletionException
     │   ├── StatefulSetDeletionException
     │   ├── DaemonSetDeletionException
@@ -2528,6 +3021,9 @@ AppException (core/exception.py)
     │   ├── RoleListException
     │   ├── RoleBindingListException
     │   ├── ConfigMapListException
+    │   ├── PersistentVolumeClaimListException
+    │   ├── LimitRangeListException
+    │   ├── ResourceQuotaListException
     │   ├── DeploymentListException
     │   ├── StatefulSetListException
     │   ├── DaemonSetListException
@@ -2614,6 +3110,9 @@ pytest tests/infra/kubernetes/managers/rolebinding/test_manager.py -v
 | RoleBindingManager | test_manager.py | 초기화, CRUD, Subject 관리, 예외 처리 |
 | ConfigMapManager | test_manager.py | 초기화, CRUD, 데이터 업데이트, 예외 처리 |
 | SecretManager | test_manager.py | Vault 바인딩, Injection, 예외 처리 |
+| PersistentVolumeClaimManager | test_manager.py | 초기화, CRUD, 크기 조정, 상태 조회, 예외 처리 |
+| LimitRangeManager | test_manager.py | 초기화, CRUD, 제한 업데이트, 예외 처리 |
+| ResourceQuotaManager | test_manager.py | 초기화, CRUD, 할당량 업데이트, 상태 조회, 예외 처리 |
 | DeploymentManager | test_manager.py | 초기화, CRUD, 스케일링, 상태 조회, 예외 처리 |
 | StatefulSetManager | test_manager.py | 초기화, CRUD, 스케일링, PVC, 예외 처리 |
 | DaemonSetManager | test_manager.py | 초기화, CRUD, 상태 조회, 예외 처리 |
