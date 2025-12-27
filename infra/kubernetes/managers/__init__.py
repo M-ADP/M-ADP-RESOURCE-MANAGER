@@ -9,6 +9,22 @@ from .namespace import (
     NamespaceReadException,
     NamespaceListException,
 )
+from .daemonset import (
+    DaemonSetManager,
+    DaemonSetCreationException,
+    DaemonSetReadException,
+    DaemonSetUpdateException,
+    DaemonSetDeletionException,
+    DaemonSetListException,
+)
+from .replicaset import (
+    ReplicaSetManager,
+    ReplicaSetCreationException,
+    ReplicaSetReadException,
+    ReplicaSetUpdateException,
+    ReplicaSetDeletionException,
+    ReplicaSetListException,
+)
 
 __all__ = [
     "NamespaceManager",
@@ -18,4 +34,16 @@ __all__ = [
     "NamespaceUpdateException",
     "NamespaceReadException",
     "NamespaceListException",
+    "DaemonSetManager",
+    "DaemonSetCreationException",
+    "DaemonSetReadException",
+    "DaemonSetUpdateException",
+    "DaemonSetDeletionException",
+    "DaemonSetListException",
+    "ReplicaSetManager",
+    "ReplicaSetCreationException",
+    "ReplicaSetReadException",
+    "ReplicaSetUpdateException",
+    "ReplicaSetDeletionException",
+    "ReplicaSetListException",
 ]
