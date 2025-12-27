@@ -1,26 +1,21 @@
-"""Pod 리소스 관리 클래스
-
-주의: Pod는 직접 생성/삭제하지 않고, 조회/관찰만 수행합니다.
-Pod 생성은 Deployment, StatefulSet 등의 컨트롤러를 통해 이루어집니다.
-"""
+"""Pod 리소스 관리 클래스"""
 
 from typing import Optional, Dict, List
-from kubernetes_asyncio.client import V1Pod
+from kubernetes_asyncio.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container
 from kubernetes_asyncio.client.exceptions import ApiException
 
 from infra.kubernetes.client import KubernetesClient
 from core.logger import Logger, get_logger
 from .exceptions import (
+    PodCreationException,
     PodReadException,
+    PodDeletionException,
     PodListException,
 )
 
 
 class PodManager:
-    """Pod 리소스를 조회/관찰하는 클래스
-    
-    주의: Pod는 직접 생성/삭제하지 않습니다.
-    """
+    """Pod 리소스를 관리하는 클래스"""
 
     def __init__(
         self,
@@ -29,6 +24,100 @@ class PodManager:
     ):
         self.k8s_client = k8s_client
         self.logger = logger or get_logger()
+
+    async def create_pod(
+        self,
+        name: str,
+        namespace: str,
+        containers: List[V1Container],
+        labels: Optional[Dict[str, str]] = None,
+        annotations: Optional[Dict[str, str]] = None,
+        restart_policy: str = "Always",
+        service_account_name: Optional[str] = None,
+    ) -> V1Pod:
+        """Pod 비동기 생성
+
+        Args:
+            name: Pod 이름
+            namespace: 네임스페이스
+            containers: 컨테이너 리스트
+            labels: Pod 레이블
+            annotations: Pod 어노테이션
+            restart_policy: 재시작 정책 (Always, OnFailure, Never)
+            service_account_name: ServiceAccount 이름 (선택적)
+
+        Returns:
+            생성되거나 기존에 존재하는 V1Pod 객체
+
+        Raises:
+            PodCreationException: Pod 생성 실패 시
+        """
+        self.logger.info(
+            f"Pod 생성 시도: {name} (namespace: {namespace})"
+        )
+
+        # 이미 존재하는지 확인 (멱등성)
+        existing = await self.get_pod(name, namespace)
+        if existing:
+            self.logger.info(
+                f"Pod 이미 존재함: {name} (namespace: {namespace})"
+            )
+            return existing
+
+        pod = V1Pod(
+            api_version="v1",
+            kind="Pod",
+            metadata=V1ObjectMeta(
+                name=name,
+                namespace=namespace,
+                labels=labels or {"app": name},
+                annotations=annotations or {},
+            ),
+            spec=V1PodSpec(
+                containers=containers,
+                restart_policy=restart_policy,
+                service_account_name=service_account_name,
+            ),
+        )
+
+        try:
+            created = await self.k8s_client.core_v1.create_namespaced_pod(
+                namespace=namespace,
+                body=pod,
+            )
+            self.logger.info(
+                f"Pod 생성 완료: {name} (namespace: {namespace})"
+            )
+            return created
+
+        except ApiException as e:
+            if e.status == 409:
+                self.logger.warning(
+                    f"Pod 생성 충돌 (409), 재조회: {name}"
+                )
+                existing = await self.get_pod(name, namespace)
+                if existing:
+                    return existing
+
+            self.logger.logger.error(
+                f"Pod 생성 실패: {name} (namespace: {namespace}) - {e.reason}"
+            )
+            raise PodCreationException(
+                pod_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.logger.error(
+                f"Pod 생성 중 예외 발생: {name} - {str(e)}"
+            )
+            raise PodCreationException(
+                pod_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
 
     async def get_pod(
         self,
@@ -73,6 +162,79 @@ class PodManager:
                 f"Pod 조회 중 예외 발생: {name} - {str(e)}"
             )
             raise PodReadException(
+                pod_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
+
+    async def delete_pod(
+        self,
+        name: str,
+        namespace: str,
+        grace_period_seconds: Optional[int] = None,
+    ) -> bool:
+        """Pod 비동기 삭제
+
+        Args:
+            name: Pod 이름
+            namespace: 네임스페이스
+            grace_period_seconds: 유예 기간 (초)
+
+        Returns:
+            삭제 성공 여부
+
+        Raises:
+            PodDeletionException: 삭제 실패 시
+        """
+        self.logger.info(
+            f"Pod 삭제 시도: {name} (namespace: {namespace})"
+        )
+
+        # 존재 여부 확인
+        existing = await self.get_pod(name, namespace)
+        if not existing:
+            self.logger.warning(
+                f"Pod가 존재하지 않음: {name} (namespace: {namespace})"
+            )
+            raise PodDeletionException(
+                pod_name=name,
+                namespace=namespace,
+                reason="Pod does not exist",
+            )
+
+        try:
+            await self.k8s_client.core_v1.delete_namespaced_pod(
+                name=name,
+                namespace=namespace,
+                grace_period_seconds=grace_period_seconds,
+            )
+            self.logger.info(
+                f"Pod 삭제 완료: {name} (namespace: {namespace})"
+            )
+            return True
+
+        except ApiException as e:
+            if e.status == 404:
+                self.logger.warning(
+                    f"Pod 이미 삭제됨: {name} (namespace: {namespace})"
+                )
+                return True
+
+            self.logger.logger.error(
+                f"Pod 삭제 실패: {name} (namespace: {namespace}) - {e.reason}"
+            )
+            raise PodDeletionException(
+                pod_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.logger.error(
+                f"Pod 삭제 중 예외 발생: {name} - {str(e)}"
+            )
+            raise PodDeletionException(
                 pod_name=name,
                 namespace=namespace,
                 reason=str(e),

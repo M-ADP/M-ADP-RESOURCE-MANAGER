@@ -2,9 +2,30 @@
 
 from typing import Optional
 from infra.kubernetes.exceptions import (
+    ResourceCreationException,
     ResourceReadException,
+    ResourceDeletionException,
     ResourceListException,
 )
+
+
+class PodCreationException(ResourceCreationException):
+    """Pod 생성 실패 시 발생하는 예외"""
+
+    def __init__(
+        self,
+        pod_name: str,
+        namespace: str,
+        reason: str,
+        detail: Optional[dict] = None,
+    ):
+        super().__init__(
+            resource_type="Pod",
+            resource_name=pod_name,
+            reason=reason,
+            namespace=namespace,
+            detail=detail,
+        )
 
 
 class PodReadException(ResourceReadException):
@@ -37,6 +58,25 @@ class PodListException(ResourceListException):
     ):
         super().__init__(
             resource_type="Pod",
+            reason=reason,
+            namespace=namespace,
+            detail=detail,
+        )
+
+
+class PodDeletionException(ResourceDeletionException):
+    """Pod 삭제 실패 시 발생하는 예외"""
+
+    def __init__(
+        self,
+        pod_name: str,
+        namespace: str,
+        reason: str,
+        detail: Optional[dict] = None,
+    ):
+        super().__init__(
+            resource_type="Pod",
+            resource_name=pod_name,
             reason=reason,
             namespace=namespace,
             detail=detail,
