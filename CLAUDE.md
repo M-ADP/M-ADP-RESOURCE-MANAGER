@@ -62,7 +62,17 @@ DaemonSet
 
 ReplicaSet
 
+Job
+
+CronJob
+
+PersistentVolumeClaim
+
 Service
+
+LimitRange
+
+ResourceQuota
 
 Vault 전제하에서의 Secret 처리
 
@@ -72,7 +82,7 @@ Kubernetes Secret 리소스는 생성하지 않는다
 
 ServiceAccount ↔ Vault Role 연결 구조
 
-Workload(Deployment/StatefulSet/DaemonSet)에 Vault 연동 설정 주입
+Workload(Deployment/StatefulSet/DaemonSet/CronJob)에 Vault 연동 설정 주입
 
 즉, Secret 값이 아닌 “Secret 접근 구조”만 관리
 
@@ -134,7 +144,7 @@ Role / RoleBinding 연결
 
 ConfigMap 적용
 
-Deployment/StatefulSet/DaemonSet 생성 또는 갱신
+Deployment/StatefulSet/DaemonSet/CronJob 생성 또는 갱신
 
 Vault 접근 구조 연결
 

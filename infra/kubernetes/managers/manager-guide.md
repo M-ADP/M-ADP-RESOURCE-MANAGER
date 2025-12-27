@@ -2408,23 +2408,48 @@ async def get_cronjob_status(
 **경로**: `infra/kubernetes/managers/pod/manager.py`
 
 #### 역할
-Kubernetes Pod 리소스를 **조회 및 관찰**하는 클래스입니다.
-
-**중요**: Pod는 **직접 생성/삭제하지 않습니다**. Pod는 Deployment, StatefulSet 등의 컨트롤러를 통해 관리되어야 합니다.
+Kubernetes Pod 리소스를 생성/조회/삭제 및 관찰하는 클래스입니다.
 
 #### 설계 의도
 
-Pod를 직접 생성하면:
-- ❌ Pod 장애 시 자동 복구 없음
-- ❌ 롤링 업데이트 불가능
-- ❌ 스케일링 불가능
-- ❌ 선언적 관리 불가능
+Pod를 직접 생성할 수 있으나:
+- ⚠️ Pod 장애 시 자동 복구 없음
+- ⚠️ 롤링 업데이트 불가능
+- ⚠️ 스케일링 불가능
+- ⚠️ 선언적 관리 불가능
 
-따라서 PodManager는 **조회/관찰 전용**입니다.
+운영 환경에서는 Deployment/StatefulSet 등 컨트롤러 기반 사용을 권장합니다.
 
 #### 주요 기능
 
-##### 1. get_pod()
+##### 1. create_pod()
+```python
+async def create_pod(
+    name: str,
+    namespace: str,
+    containers: List[V1Container],
+    labels: Optional[Dict[str, str]] = None,
+    annotations: Optional[Dict[str, str]] = None,
+    restart_policy: str = "Always",
+    service_account_name: Optional[str] = None
+) -> V1Pod
+```
+
+**기능**: Pod 생성 (멱등성 보장)
+
+**사용 예시**:
+```python
+from kubernetes_asyncio.client import V1Container
+
+pod = await pod_manager.create_pod(
+    name="debug-pod",
+    namespace="student-1234",
+    containers=[V1Container(name="debug", image="busybox")],
+    restart_policy="Never"
+)
+```
+
+##### 2. get_pod()
 ```python
 async def get_pod(
     name: str,
@@ -2442,7 +2467,23 @@ if pod:
     print(f"Node: {pod.spec.node_name}")
 ```
 
-##### 2. list_pods()
+##### 3. delete_pod()
+```python
+async def delete_pod(
+    name: str,
+    namespace: str,
+    grace_period_seconds: Optional[int] = None
+) -> bool
+```
+
+**기능**: Pod 삭제
+
+**사용 예시**:
+```python
+await pod_manager.delete_pod("debug-pod", "student-1234")
+```
+
+##### 4. list_pods()
 ```python
 async def list_pods(
     namespace: Optional[str] = None,
@@ -2473,7 +2514,7 @@ pods = await pod_manager.list_pods(
 )
 ```
 
-##### 3. get_pod_status()
+##### 5. get_pod_status()
 ```python
 async def get_pod_status(
     name: str,
@@ -2531,7 +2572,7 @@ async def get_pod_status(
 }
 ```
 
-##### 4. get_pod_logs()
+##### 6. get_pod_logs()
 ```python
 async def get_pod_logs(
     name: str,
@@ -2579,7 +2620,7 @@ logs = await pod_manager.get_pod_logs(
 )
 ```
 
-##### 5. list_pods_by_owner()
+##### 7. list_pods_by_owner()
 ```python
 async def list_pods_by_owner(
     owner_name: str,
@@ -2626,7 +2667,7 @@ pods = await pod_manager.list_pods_by_owner(
 | Terminated | 컨테이너가 종료됨 (정상 또는 오류) |
 
 #### 특징
-- **Read-Only**: 생성/삭제 기능 없음 (조회/관찰만)
+- **생성/삭제 지원**: 단일 Pod 생성/삭제 가능
 - **로그 접근**: 컨테이너 로그 조회 가능
 - **상태 추적**: Phase, Conditions, Container State 확인
 - **Owner 추적**: OwnerReferences로 상위 컨트롤러 확인

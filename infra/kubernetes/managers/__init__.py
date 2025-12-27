@@ -25,6 +25,38 @@ from .replicaset import (
     ReplicaSetDeletionException,
     ReplicaSetListException,
 )
+from .job import (
+    JobManager,
+    JobCreationException,
+    JobReadException,
+    JobUpdateException,
+    JobDeletionException,
+    JobListException,
+)
+from .cronjob import (
+    CronJobManager,
+    CronJobCreationException,
+    CronJobReadException,
+    CronJobUpdateException,
+    CronJobDeletionException,
+    CronJobListException,
+)
+from .persistentvolumeclaim import (
+    PersistentVolumeClaimManager,
+    PersistentVolumeClaimCreationException,
+    PersistentVolumeClaimReadException,
+    PersistentVolumeClaimUpdateException,
+    PersistentVolumeClaimDeletionException,
+    PersistentVolumeClaimListException,
+)
+from .limitrange import (
+    LimitRangeManager,
+    LimitRangeCreationException,
+    LimitRangeReadException,
+    LimitRangeUpdateException,
+    LimitRangeDeletionException,
+    LimitRangeListException,
+)
 
 __all__ = [
     "NamespaceManager",
@@ -46,4 +78,28 @@ __all__ = [
     "ReplicaSetUpdateException",
     "ReplicaSetDeletionException",
     "ReplicaSetListException",
+    "JobManager",
+    "JobCreationException",
+    "JobReadException",
+    "JobUpdateException",
+    "JobDeletionException",
+    "JobListException",
+    "CronJobManager",
+    "CronJobCreationException",
+    "CronJobReadException",
+    "CronJobUpdateException",
+    "CronJobDeletionException",
+    "CronJobListException",
+    "PersistentVolumeClaimManager",
+    "PersistentVolumeClaimCreationException",
+    "PersistentVolumeClaimReadException",
+    "PersistentVolumeClaimUpdateException",
+    "PersistentVolumeClaimDeletionException",
+    "PersistentVolumeClaimListException",
+    "LimitRangeManager",
+    "LimitRangeCreationException",
+    "LimitRangeReadException",
+    "LimitRangeUpdateException",
+    "LimitRangeDeletionException",
+    "LimitRangeListException",
 ]

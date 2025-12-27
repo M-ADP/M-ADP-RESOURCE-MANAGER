@@ -23,7 +23,9 @@ from kubernetes_asyncio.client.exceptions import ApiException
 from infra.kubernetes.client import KubernetesClient
 from infra.kubernetes.managers.pod import (
     PodManager,
+    PodCreationException,
     PodReadException,
+    PodDeletionException,
     PodListException,
 )
 
@@ -187,6 +189,70 @@ class TestGetPod:
         assert "Unexpected error" in str(exc_info.value)
 
 
+class TestCreatePod:
+    """Pod 생성 테스트"""
+
+    @pytest.mark.asyncio
+    async def test_create_pod_success(
+        self, pod_manager, k8s_client, mock_pod
+    ):
+        """Pod 생성 성공"""
+        k8s_client.core_v1.read_namespaced_pod = AsyncMock(
+            side_effect=ApiException(status=404)
+        )
+        k8s_client.core_v1.create_namespaced_pod = AsyncMock(
+            return_value=mock_pod
+        )
+
+        result = await pod_manager.create_pod(
+            name="test-pod",
+            namespace="test-ns",
+            containers=[V1Container(name="test-container", image="nginx:latest")],
+        )
+
+        assert result == mock_pod
+
+    @pytest.mark.asyncio
+    async def test_create_pod_already_exists(
+        self, pod_manager, k8s_client, mock_pod
+    ):
+        """Pod가 이미 존재하는 경우"""
+        k8s_client.core_v1.read_namespaced_pod = AsyncMock(
+            return_value=mock_pod
+        )
+        k8s_client.core_v1.create_namespaced_pod = AsyncMock()
+
+        result = await pod_manager.create_pod(
+            name="test-pod",
+            namespace="test-ns",
+            containers=[V1Container(name="test-container", image="nginx:latest")],
+        )
+
+        assert result == mock_pod
+        k8s_client.core_v1.create_namespaced_pod.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_create_pod_api_exception(
+        self, pod_manager, k8s_client
+    ):
+        """Pod 생성 중 API 예외 발생"""
+        k8s_client.core_v1.read_namespaced_pod = AsyncMock(
+            side_effect=ApiException(status=404)
+        )
+        k8s_client.core_v1.create_namespaced_pod = AsyncMock(
+            side_effect=ApiException(status=500, reason="Internal Server Error")
+        )
+
+        with pytest.raises(PodCreationException) as exc_info:
+            await pod_manager.create_pod(
+                name="test-pod",
+                namespace="test-ns",
+                containers=[V1Container(name="test-container", image="nginx:latest")],
+            )
+
+        assert "Internal Server Error" in str(exc_info.value)
+
+
 class TestListPods:
     """Pod 목록 조회 테스트"""
 
@@ -256,6 +322,42 @@ class TestListPods:
             await pod_manager.list_pods(namespace="test-ns")
 
         assert "Internal Server Error" in str(exc_info.value)
+
+
+class TestDeletePod:
+    """Pod 삭제 테스트"""
+
+    @pytest.mark.asyncio
+    async def test_delete_pod_success(
+        self, pod_manager, k8s_client, mock_pod
+    ):
+        """Pod 삭제 성공"""
+        k8s_client.core_v1.read_namespaced_pod = AsyncMock(
+            return_value=mock_pod
+        )
+        k8s_client.core_v1.delete_namespaced_pod = AsyncMock()
+
+        result = await pod_manager.delete_pod(
+            name="test-pod",
+            namespace="test-ns",
+        )
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_delete_pod_not_found(
+        self, pod_manager, k8s_client
+    ):
+        """Pod가 존재하지 않는 경우"""
+        k8s_client.core_v1.read_namespaced_pod = AsyncMock(
+            side_effect=ApiException(status=404)
+        )
+
+        with pytest.raises(PodDeletionException):
+            await pod_manager.delete_pod(
+                name="test-pod",
+                namespace="test-ns",
+            )
 
 
 class TestExists:
