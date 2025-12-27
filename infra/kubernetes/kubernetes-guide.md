@@ -73,8 +73,10 @@ KubernetesClient는 다음 4가지 API 클라이언트를 제공합니다:
 
 | API 클라이언트 | 관리 리소스 | 사용 Manager                                                                                           |
 |---------------|------------|------------------------------------------------------------------------------------------------------|
-| `core_v1` | Namespace, ServiceAccount, Pod, Service, ConfigMap, Secret | NamespaceManager, ServiceAccountManager, PodManager, ServiceManager, ConfigMapManager, SecretManager |
-| `apps_v1` | Deployment, StatefulSet, DaemonSet, ReplicaSet | DeploymentManager, StatefulSetManager, ReplicaSetManager, DaemonSetManager                           |
+| `core_v1` | Namespace, ServiceAccount, Pod, Service, ConfigMap, Secret, PersistentVolumeClaim, ResourceQuota, LimitRange | NamespaceManager, ServiceAccountManager, PodManager, ServiceManager, ConfigMapManager, SecretManager, PersistentVolumeClaimManager, ResourceQuotaManager, LimitRangeManager |
+| `apps_v1` | Deployment, StatefulSet, DaemonSet, ReplicaSet | DeploymentManager, StatefulSetManager, DaemonSetManager, ReplicaSetManager                           |
+| `rbac_v1` | Role, RoleBinding, ClusterRole, ClusterRoleBinding | RoleManager, RoleBindingManager                                                                      |
+| `batch_v1` | Job, CronJob | JobManager, CronJobManager                                                                           | `apps_v1` | Deployment, StatefulSet, DaemonSet, ReplicaSet | DeploymentManager, StatefulSetManager, ReplicaSetManager, DaemonSetManager                           |
 | `rbac_v1` | Role, RoleBinding, ClusterRole, ClusterRoleBinding | RoleManager, RoleBindingManager                                                                      |
 | `batch_v1` | Job, CronJob | JobManager, CronJobManager                                                                           |
 
