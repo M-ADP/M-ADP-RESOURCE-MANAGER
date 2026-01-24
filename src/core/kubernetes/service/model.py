@@ -75,6 +75,20 @@ class Service:
             external_ips=self.external_ips,
         )
 
+    def with_annotations(self, annotations: Dict[str, str]) -> "Service":
+        """새로운 어노테이션이 추가된 Service 반환"""
+        return Service(
+            name=self.name,
+            namespace=self.namespace,
+            ports=self.ports,
+            selector=self.selector,
+            service_type=self.service_type,
+            labels=self.labels,
+            annotations={**self.annotations, **annotations},
+            cluster_ip=self.cluster_ip,
+            external_ips=self.external_ips,
+        )
+
     def with_selector(self, selector: Dict[str, str]) -> "Service":
         """selector가 변경된 Service 반환"""
         return Service(

@@ -42,6 +42,31 @@ class ProjectDnsCreateRequest(BaseModel):
 
 
 class ProjectDnsUpdateRequest(BaseModel):
+
+
     """Project DNS 수정 요청 모델"""
 
+
+
+
+
     new_subdomain: str = Field(..., min_length=1)
+
+
+
+
+
+
+
+
+class ProjectDnsPortBindRequest(BaseModel):
+
+
+    """Project DNS 포트 바인딩 요청 모델"""
+
+
+
+
+
+    target_service_name: str = Field(..., min_length=1)
+

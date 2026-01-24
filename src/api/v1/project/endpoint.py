@@ -19,6 +19,7 @@ from src.app.project.project_port_update_use_case import ProjectPortUpdateUseCas
 from src.app.project.project_dns_create_use_case import ProjectDnsCreateUseCase
 from src.app.project.project_dns_delete_use_case import ProjectDnsDeleteUseCase
 from src.app.project.project_dns_update_use_case import ProjectDnsUpdateUseCase
+from src.app.project.project_dns_port_bind_use_case import ProjectDnsPortBindUseCase
 from src.core.response import SuccessResponse
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
@@ -212,6 +213,46 @@ async def update_project_dns(
             type=dns_record.type,
             value=dns_record.value
         )
+    )
+
+
+@project_router.patch("/{name}/dns-records/{dns_id}/port", response_model=SuccessResponse[ProjectDnsPortBindResponse])
+async def bind_project_dns_port(
+    name: str,
+    dns_id: str, # dns_id는 subdomain으로 사용
+    payload: ProjectDnsPortBindRequest,
+    user: User = Depends(),
+    project_dns_port_bind_usecase: ProjectDnsPortBindUseCase = Depends(ProjectDnsPortBindUseCase)
+):
+    updated_service = await project_dns_port_bind_usecase(
+        project_name=name,
+        subdomain=dns_id,
+        payload=payload
+    )
+
+    ports_response = [
+        ServicePortResponse(
+            port=p.port,
+            target_port=p.target_port,
+            protocol=p.protocol,
+            name=p.name,
+            node_port=p.node_port
+        ) for p in updated_service.ports
+    ]
+
+    response = ProjectDnsPortBindResponse(
+        name=updated_service.name,
+        namespace=updated_service.namespace,
+        ports=ports_response,
+        selector=updated_service.selector,
+        service_type=updated_service.service_type,
+        cluster_ip=updated_service.cluster_ip,
+        external_ips=updated_service.external_ips
+    )
+    
+    return SuccessResponse(
+        message="DNS record bound to service successfully",
+        data=response
     )
 
 

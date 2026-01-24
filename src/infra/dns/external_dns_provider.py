@@ -1,6 +1,7 @@
 from src.core.dns.provider import DnsProvider, DnsRecord
 from src.core.kubernetes.service import Service, ServiceRepository
 from src.core.dependencies.kubernetes import get_service_repository
+from src.core.exception import CustomException
 from fastapi import Depends
 
 
@@ -75,3 +76,27 @@ class ExternalDnsProvider(DnsProvider):
         new_record = await self.create_subdomain_record(project_name, new_subdomain)
 
         return new_record
+    
+    async def bind_dns_to_service(self, project_name: str, subdomain: str, target_service_name: str) -> Service:
+        """
+        생성된 DNS 레코드를 실제 애플리케이션 서비스에 매핑(연결)합니다.
+        """
+        # 1. 대상 애플리케이션 서비스 조회
+        target_service = await self.service_repo.find_by_name(name=target_service_name, namespace=project_name)
+        if not target_service:
+            raise CustomException(404, f"Target service '{target_service_name}' not found in namespace '{project_name}'")
+
+        # 2. 호스트네임 어노테이션 추가
+        full_domain = f"{subdomain}.mdeveloper.platform"
+        annotated_service = target_service.with_annotations({
+            "external-dns.alpha.kubernetes.io/hostname": full_domain
+        })
+        
+        # 3. 대상 서비스 업데이트
+        updated_service = await self.service_repo.save(annotated_service)
+
+        # 4. 기존의 플레이스홀더 DNS 서비스 삭제
+        placeholder_service_name = f"dns-record-{subdomain}"
+        await self.service_repo.delete(name=placeholder_service_name, namespace=project_name)
+
+        return updated_service

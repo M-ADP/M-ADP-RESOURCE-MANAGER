@@ -77,3 +77,15 @@ class ProjectDnsUpdateResponse(BaseModel):
     name: str
     type: str
     value: str
+
+
+class ProjectDnsPortBindResponse(BaseModel):
+    """Project DNS 포트 바인딩 응답 모델"""
+
+    name: str
+    namespace: str
+    ports: List[ServicePortResponse]
+    selector: Dict[str, str]
+    service_type: str
+    cluster_ip: Optional[str] = None
+    external_ips: List[str] = Field(default_factory=list)
