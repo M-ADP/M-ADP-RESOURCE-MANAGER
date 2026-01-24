@@ -12,7 +12,7 @@ from kubernetes_asyncio.client import (
 )
 from kubernetes_asyncio.client.exceptions import ApiException
 
-from src.core.kubernetes.KubernetesClient import KubernetesClient
+from src.core.kubernetes.kubernetes_client import KubernetesClient
 from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core.logger import Logger, get_logger
 from .exceptions import (

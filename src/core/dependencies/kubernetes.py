@@ -1,8 +1,14 @@
 from typing import Optional
 
 from src.core.config.kubernetes import KubernetesConfig
+from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
+from src.infra.kubernetes.managers.namespace import NamespaceManager
+from src.infra.kubernetes.repository import K8sNamespaceRepository
+
+
+_k8s_client_instance: Optional[KubernetesClientImpl] = None
 
 
 async def get_kubernetes_client(
@@ -31,3 +37,10 @@ async def get_kubernetes_client(
         await _k8s_client_instance.initialize()
 
     return _k8s_client_instance
+
+
+async def get_namespace_repository() -> NamespaceRepository:
+    """NamespaceRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = NamespaceManager(k8s_client)
+    return K8sNamespaceRepository(manager)
