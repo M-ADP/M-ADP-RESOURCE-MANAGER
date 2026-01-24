@@ -3,22 +3,23 @@
 from fastapi import APIRouter, Depends
 
 from src.api.v1.project.schmas.request import (
-    ProjectCreateRequest, ProjectPortOpenRequest, ProjectPortUpdateRequest,
+    ProjectCreateRequest, ProjectPortOpenRequest, ProjectPortUpdateRequest, ProjectDnsCreateRequest,
 )
 from src.api.v1.project.schmas.response import (
-    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse, ProjectPortCloseResponse,
-    ProjectPortUpdateResponse,
+    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse,
+    ProjectPortCloseResponse,
+    ProjectPortUpdateResponse, ProjectDnsCreateResponse,
 )
 from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
 from src.app.project.project_delete_use_case import ProjectDeleteUseCase
+from src.app.project.project_dns_create_use_case import ProjectDnsCreateUseCase
 from src.app.project.project_port_open_use_case import ProjectPortOpenUseCase
 from src.app.project.project_port_close_use_case import ProjectPortCloseUseCase
 from src.app.project.project_port_update_use_case import ProjectPortUpdateUseCase
 from src.core.response import SuccessResponse
 
-project_router = APouter(prefix="/projects", tags=["projects"])
-
+project_router = APIRouter(prefix="/project", tags=["Project"])
 
 @project_router.post("", response_model=SuccessResponse[ProjectCreateResponse])
 async def create_project(
@@ -40,7 +41,7 @@ async def create_project(
 async def delete_project(
     name: str,
     user : User = Depends(),
-    project_delete_usecase : ProjectCreateUseCase = Depends(ProjectCreateUseCase)
+    project_delete_usecase : ProjectDeleteUseCase = Depends(ProjectDeleteUseCase)
 ):
     project_delete_result = await project_delete_usecase(
         name,
@@ -145,3 +146,26 @@ async def close_project_port(
         message="Port closed successfully",
         data=ProjectPortCloseResponse(service_closed=closed)
     )
+
+
+@project_router.post("/{name}/dns", response_model=SuccessResponse[ProjectDnsCreateResponse])
+async def create_project_dns(
+    name: str,
+    payload: ProjectDnsCreateRequest,
+    user: User = Depends(),
+    project_dns_create_usecase: ProjectDnsCreateUseCase = Depends(ProjectDnsCreateUseCase)
+):
+    dns_record = await project_dns_create_usecase(
+        project_name=name,
+        payload=payload
+    )
+
+    return SuccessResponse(
+        message="DNS record created successfully",
+        data=ProjectDnsCreateResponse(
+            name=dns_record.name,
+            type=dns_record.type,
+            value=dns_record.value
+        )
+    )
+

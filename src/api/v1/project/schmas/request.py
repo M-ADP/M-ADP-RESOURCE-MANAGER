@@ -33,3 +33,9 @@ class ProjectPortUpdateRequest(BaseModel):
     target_port: Optional[int] = Field(None, gt=0, le=65535)
     protocol: Optional[str] = "TCP"
     service_type: Optional[str] = "ClusterIP" # ClusterIP, NodePort, LoadBalancer
+
+
+class ProjectDnsCreateRequest(BaseModel):
+    """Project DNS 생성 요청 모델"""
+    
+    subdomain: str = Field(..., min_length=1)

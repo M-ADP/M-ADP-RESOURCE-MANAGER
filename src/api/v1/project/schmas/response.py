@@ -55,3 +55,11 @@ class ProjectPortUpdateResponse(BaseModel):
     service_type: str
     cluster_ip: Optional[str] = None
     external_ips: List[str] = Field(default_factory=list)
+
+
+class ProjectDnsCreateResponse(BaseModel):
+    """Project DNS 생성 응답 모델"""
+
+    name: str
+    type: str
+    value: str
