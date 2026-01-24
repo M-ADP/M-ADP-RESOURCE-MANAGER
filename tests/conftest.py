@@ -23,9 +23,9 @@ def reset_singletons():
     """각 테스트 후 싱글톤 인스턴스 초기화"""
     yield
     
-    # KubernetesClient 싱글톤 초기화
+    # KubernetesClientImpl 싱글톤 초기화
     try:
-        import infra.kubernetes.client as client_module
+        import src.infra.kubernetes.client as client_module
         client_module._k8s_client_instance = None
     except ImportError:
         pass

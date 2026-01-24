@@ -9,12 +9,11 @@ from kubernetes_asyncio.client import (
     V1PersistentVolumeClaimList,
     V1ResourceRequirements,
     V1PersistentVolumeClaimStatus,
-    V1PersistentVolumeClaimCondition,
 )
 from kubernetes_asyncio.client.exceptions import ApiException
 
-from infra.kubernetes.client import KubernetesClient
-from infra.kubernetes.managers.persistentvolumeclaim import (
+from src.infra.kubernetes.client import KubernetesClientImpl
+from src.infra.kubernetes.managers.persistentvolumeclaim import (
     PersistentVolumeClaimManager,
     PersistentVolumeClaimCreationException,
     PersistentVolumeClaimReadException,
@@ -26,8 +25,8 @@ from infra.kubernetes.managers.persistentvolumeclaim import (
 
 @pytest.fixture
 def k8s_client():
-    """KubernetesClient Mock 픽스처"""
-    client = MagicMock(spec=KubernetesClient)
+    """KubernetesClientImpl Mock 픽스처"""
+    client = MagicMock(spec=KubernetesClientImpl)
     client.core_v1 = AsyncMock()
     return client
 

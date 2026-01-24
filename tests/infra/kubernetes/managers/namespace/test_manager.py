@@ -1,13 +1,13 @@
 """NamespaceManager 유닛 테스트"""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from kubernetes_asyncio.client import V1Namespace, V1ObjectMeta, V1NamespaceList, V1NamespaceStatus
 from kubernetes_asyncio.client.rest import ApiException
 
-from infra.kubernetes.client import KubernetesClient
-from infra.kubernetes.managers.namespace import NamespaceManager
-from infra.kubernetes.managers.namespace.exceptions import (
+from src.infra.kubernetes.client import KubernetesClientImpl
+from src.infra.kubernetes.managers.namespace import NamespaceManager
+from src.infra.kubernetes.managers.namespace.exceptions import (
     NamespaceCreationException,
     NamespaceNotFoundException,
     NamespaceDeletionException,
@@ -15,7 +15,7 @@ from infra.kubernetes.managers.namespace.exceptions import (
     NamespaceReadException,
     NamespaceListException,
 )
-from core.logger import Logger
+from src.core import Logger
 
 
 @pytest.fixture
@@ -30,8 +30,8 @@ def mock_logger():
 
 @pytest.fixture
 def mock_k8s_client():
-    """Mock KubernetesClient 픽스처"""
-    client = MagicMock(spec=KubernetesClient)
+    """Mock KubernetesClientImpl 픽스처"""
+    client = MagicMock(spec=KubernetesClientImpl)
     client.core_v1 = AsyncMock()
     return client
 

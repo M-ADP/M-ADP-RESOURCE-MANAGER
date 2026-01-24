@@ -10,8 +10,8 @@ from kubernetes_asyncio.client import (
 )
 from kubernetes_asyncio.client.exceptions import ApiException
 
-from infra.kubernetes.client import KubernetesClient
-from infra.kubernetes.managers.serviceaccount import (
+from src.infra.kubernetes.client import KubernetesClientImpl
+from src.infra import (
     ServiceAccountManager,
     ServiceAccountCreationException,
     ServiceAccountReadException,
@@ -23,8 +23,8 @@ from infra.kubernetes.managers.serviceaccount import (
 
 @pytest.fixture
 def k8s_client():
-    """KubernetesClient Mock 픽스처"""
-    client = MagicMock(spec=KubernetesClient)
+    """KubernetesClientImpl Mock 픽스처"""
+    client = MagicMock(spec=KubernetesClientImpl)
     client.core_v1 = AsyncMock()
     return client
 

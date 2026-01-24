@@ -1,17 +1,15 @@
 """VaultClient 유닛 테스트"""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 import hvac
 from hvac.exceptions import VaultError, InvalidPath
 
-from infra.vault.client import VaultClient
-from infra.vault.exceptions import (
-    VaultRoleException,
-    VaultPolicyException,
+from src.infra import VaultClient
+from src.infra.vault.exceptions import (
     VaultSecretException,
 )
-from core.logger import Logger
+from src.core import Logger
 
 
 @pytest.fixture

@@ -16,8 +16,8 @@ from kubernetes_asyncio.client import (
 )
 from kubernetes_asyncio.client.exceptions import ApiException
 
-from infra.kubernetes.client import KubernetesClient
-from infra.kubernetes.managers.daemonset import (
+from src.infra.kubernetes.client import KubernetesClientImpl
+from src.infra.kubernetes.managers.daemonset import (
     DaemonSetManager,
     DaemonSetCreationException,
     DaemonSetReadException,
@@ -29,8 +29,8 @@ from infra.kubernetes.managers.daemonset import (
 
 @pytest.fixture
 def k8s_client():
-    """KubernetesClient Mock 픽스처"""
-    client = MagicMock(spec=KubernetesClient)
+    """KubernetesClientImpl Mock 픽스처"""
+    client = MagicMock(spec=KubernetesClientImpl)
     client.apps_v1 = AsyncMock()
     return client
 

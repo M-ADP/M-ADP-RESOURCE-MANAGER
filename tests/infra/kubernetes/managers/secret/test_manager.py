@@ -9,20 +9,19 @@ from kubernetes_asyncio.client import (
     V1StatefulSet,
 )
 
-from infra.kubernetes.client import KubernetesClient
-from infra.vault.client import VaultClient
-from infra.kubernetes.managers.secret import (
+from src.infra.kubernetes.client import KubernetesClientImpl
+from src.infra import VaultClient
+from src.infra.kubernetes.managers.secret import (
     SecretManager,
     SecretAccessBindingException,
-    SecretAccessUnbindingException,
     VaultInjectionException,
 )
 
 
 @pytest.fixture
 def k8s_client():
-    """KubernetesClient Mock 픽스처"""
-    client = MagicMock(spec=KubernetesClient)
+    """KubernetesClientImpl Mock 픽스처"""
+    client = MagicMock(spec=KubernetesClientImpl)
     client.core_v1 = AsyncMock()
     client.apps_v1 = AsyncMock()
     return client
