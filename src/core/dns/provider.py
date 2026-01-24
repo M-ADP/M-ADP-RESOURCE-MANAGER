@@ -26,3 +26,17 @@ class DnsProvider(ABC):
             생성된 DnsRecord 객체
         """
         ...
+    
+    @abstractmethod
+    async def delete_subdomain_record(self, project_name: str, subdomain: str) -> bool:
+        """
+        서브도메인에 대한 DNS 레코드를 삭제합니다.
+
+        Args:
+            project_name: 프로젝트 이름 (네임스페이스)
+            subdomain: 삭제할 서브도메인
+
+        Returns:
+            삭제 성공 여부
+        """
+        ...

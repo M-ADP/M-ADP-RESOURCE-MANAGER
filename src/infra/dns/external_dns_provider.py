@@ -56,3 +56,10 @@ class ExternalDnsProvider(DnsProvider):
             type="TXT",
             value=f"madp-dns-placeholder={full_domain}"
         )
+
+    async def delete_subdomain_record(self, project_name: str, subdomain: str) -> bool:
+        """
+        서브도메인에 해당하는 헤드리스 서비스를 삭제하여 DNS 레코드를 제거합니다.
+        """
+        service_name = f"dns-record-{subdomain}"
+        return await self.service_repo.delete(name=service_name, namespace=project_name)

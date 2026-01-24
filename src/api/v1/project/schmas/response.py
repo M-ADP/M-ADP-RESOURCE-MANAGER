@@ -63,3 +63,9 @@ class ProjectDnsCreateResponse(BaseModel):
     name: str
     type: str
     value: str
+
+
+class ProjectDnsDeleteResponse(BaseModel):
+    """Project DNS 삭제 응답 모델"""
+
+    deleted: bool

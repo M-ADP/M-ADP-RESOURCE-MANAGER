@@ -6,20 +6,21 @@ from src.api.v1.project.schmas.request import (
     ProjectCreateRequest, ProjectPortOpenRequest, ProjectPortUpdateRequest, ProjectDnsCreateRequest,
 )
 from src.api.v1.project.schmas.response import (
-    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse,
-    ProjectPortCloseResponse,
-    ProjectPortUpdateResponse, ProjectDnsCreateResponse,
+    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse, ProjectPortCloseResponse,
+    ProjectPortUpdateResponse, ProjectDnsCreateResponse, ProjectDnsDeleteResponse,
 )
 from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
 from src.app.project.project_delete_use_case import ProjectDeleteUseCase
-from src.app.project.project_dns_create_use_case import ProjectDnsCreateUseCase
 from src.app.project.project_port_open_use_case import ProjectPortOpenUseCase
 from src.app.project.project_port_close_use_case import ProjectPortCloseUseCase
 from src.app.project.project_port_update_use_case import ProjectPortUpdateUseCase
+from src.app.project.project_dns_create_use_case import ProjectDnsCreateUseCase
+from src.app.project.project_dns_delete_use_case import ProjectDnsDeleteUseCase
 from src.core.response import SuccessResponse
 
-project_router = APIRouter(prefix="/project", tags=["Project"])
+project_router = APIRouter(prefix="/projects", tags=["projects"])
+
 
 @project_router.post("", response_model=SuccessResponse[ProjectCreateResponse])
 async def create_project(
@@ -41,7 +42,7 @@ async def create_project(
 async def delete_project(
     name: str,
     user : User = Depends(),
-    project_delete_usecase : ProjectDeleteUseCase = Depends(ProjectDeleteUseCase)
+    project_delete_usecase : ProjectCreateUseCase = Depends(ProjectCreateUseCase)
 ):
     project_delete_result = await project_delete_usecase(
         name,
@@ -168,4 +169,24 @@ async def create_project_dns(
             value=dns_record.value
         )
     )
+
+
+@project_router.delete("/{name}/dns-records/{dns_id}", response_model=SuccessResponse[ProjectDnsDeleteResponse])
+async def delete_project_dns(
+    name: str,
+    dns_id: str, # dns_id는 subdomain으로 사용
+    user: User = Depends(),
+    project_dns_delete_usecase: ProjectDnsDeleteUseCase = Depends(ProjectDnsDeleteUseCase)
+):
+    deleted = await project_dns_delete_usecase(
+        project_name=name,
+        subdomain=dns_id
+    )
+
+    return SuccessResponse(
+        message="DNS record deleted successfully",
+        data=ProjectDnsDeleteResponse(deleted=deleted)
+    )
+
+
 
