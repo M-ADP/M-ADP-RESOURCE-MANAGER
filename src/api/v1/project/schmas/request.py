@@ -70,3 +70,30 @@ class ProjectDnsPortBindRequest(BaseModel):
 
     target_service_name: str = Field(..., min_length=1)
 
+
+
+
+
+
+
+
+class ProjectResourceUpdateRequest(BaseModel):
+
+
+    """Project 리소스 할당량 수정 요청 모델"""
+
+
+
+
+
+    cpu: Optional[str] = None
+
+
+    memory: Optional[str] = None
+
+
+    disk: Optional[str] = None
+
+
+
+

@@ -5,15 +5,21 @@ from src.core.kubernetes.gateway import GatewayRepository
 from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
 from src.core.kubernetes.service import ServiceRepository
+from src.core.kubernetes.vpa import VpaRepository
+from src.core.kubernetes.limit_range import LimitRangeRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
 from src.infra.kubernetes.managers.gateway.manager import IstioGatewayManager
 from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.service import ServiceManager
+from src.infra.kubernetes.managers.vpa import VpaManager
+from src.infra.kubernetes.managers.limitrange import LimitRangeManager
 from src.infra.kubernetes.repository.gateway_repository import K8sGatewayRepository
 from src.infra.kubernetes.repository import K8sNamespaceRepository, K8sResourceQuotaRepository
 from src.infra.kubernetes.repository.service_repository import K8sServiceRepository
+from src.infra.kubernetes.repository.vpa_repository import K8sVpaRepository
+from src.infra.kubernetes.repository.limit_range_repository import K8sLimitRangeRepository
 
 
 _k8s_client_instance: Optional[KubernetesClientImpl] = None
@@ -73,3 +79,17 @@ async def get_service_repository() -> ServiceRepository:
     k8s_client = await get_kubernetes_client()
     manager = ServiceManager(k8s_client)
     return K8sServiceRepository(manager)
+
+
+async def get_vpa_repository() -> VpaRepository:
+    """VpaRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = VpaManager(k8s_client)
+    return K8sVpaRepository(manager)
+
+
+async def get_limit_range_repository() -> LimitRangeRepository:
+    """LimitRangeRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = LimitRangeManager(k8s_client)
+    return K8sLimitRangeRepository(manager)

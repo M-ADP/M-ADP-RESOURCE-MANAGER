@@ -89,3 +89,9 @@ class ProjectDnsPortBindResponse(BaseModel):
     service_type: str
     cluster_ip: Optional[str] = None
     external_ips: List[str] = Field(default_factory=list)
+
+
+class ProjectResourceUpdateResponse(BaseModel):
+    """Project 리소스 할당량 수정 응답 모델"""
+
+    resource_quota: Dict[str, str]

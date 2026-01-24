@@ -20,6 +20,7 @@ from src.app.project.project_dns_create_use_case import ProjectDnsCreateUseCase
 from src.app.project.project_dns_delete_use_case import ProjectDnsDeleteUseCase
 from src.app.project.project_dns_update_use_case import ProjectDnsUpdateUseCase
 from src.app.project.project_dns_port_bind_use_case import ProjectDnsPortBindUseCase
+from src.app.project.project_resource_update_use_case import ProjectResourceUpdateUseCase
 from src.core.response import SuccessResponse
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
@@ -253,6 +254,26 @@ async def bind_project_dns_port(
     return SuccessResponse(
         message="DNS record bound to service successfully",
         data=response
+    )
+
+
+@project_router.patch("/{name}/resource", response_model=SuccessResponse[ProjectResourceUpdateResponse])
+async def update_project_resources(
+    name: str,
+    payload: ProjectResourceUpdateRequest,
+    user: User = Depends(),
+    project_resource_update_usecase: ProjectResourceUpdateUseCase = Depends(ProjectResourceUpdateUseCase)
+):
+    updated_quota = await project_resource_update_usecase(
+        project_name=name,
+        payload=payload
+    )
+
+    return SuccessResponse(
+        message="Project resources updated successfully",
+        data=ProjectResourceUpdateResponse(
+            resource_quota=updated_quota.hard_limits
+        )
     )
 
 
