@@ -39,3 +39,9 @@ class ProjectDnsCreateRequest(BaseModel):
     """Project DNS 생성 요청 모델"""
     
     subdomain: str = Field(..., min_length=1)
+
+
+class ProjectDnsUpdateRequest(BaseModel):
+    """Project DNS 수정 요청 모델"""
+
+    new_subdomain: str = Field(..., min_length=1)

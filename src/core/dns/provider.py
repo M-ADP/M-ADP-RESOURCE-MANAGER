@@ -40,3 +40,18 @@ class DnsProvider(ABC):
             삭제 성공 여부
         """
         ...
+
+    @abstractmethod
+    async def update_subdomain_record(self, project_name: str, old_subdomain: str, new_subdomain: str) -> DnsRecord:
+        """
+        서브도메인에 대한 DNS 레코드를 수정합니다.
+
+        Args:
+            project_name: 프로젝트 이름 (네임스페이스)
+            old_subdomain: 변경 전 서브도메인
+            new_subdomain: 변경 후 서브도메인
+
+        Returns:
+            수정된 DnsRecord 객체
+        """
+        ...

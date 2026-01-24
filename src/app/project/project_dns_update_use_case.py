@@ -1,0 +1,31 @@
+from fastapi import Depends
+
+from src.api.v1.project.schmas.request import ProjectDnsUpdateRequest
+from src.app.base_use_case import BaseUseCase
+from src.core.dependencies.dns import get_dns_provider
+from src.core.dns.provider import DnsProvider, DnsRecord
+
+
+class ProjectDnsUpdateUseCase(BaseUseCase):
+
+    def __init__(
+            self,
+            dns_provider: DnsProvider = Depends(get_dns_provider),
+    ):
+        self.dns_provider = dns_provider
+
+    async def __call__(
+            self,
+            project_name: str,
+            old_subdomain: str,
+            payload: ProjectDnsUpdateRequest
+    ) -> DnsRecord:
+        """Project DNS 수정"""
+        
+        dns_record = await self.dns_provider.update_subdomain_record(
+            project_name=project_name,
+            old_subdomain=old_subdomain,
+            new_subdomain=payload.new_subdomain
+        )
+
+        return dns_record

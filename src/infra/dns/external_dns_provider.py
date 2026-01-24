@@ -63,3 +63,15 @@ class ExternalDnsProvider(DnsProvider):
         """
         service_name = f"dns-record-{subdomain}"
         return await self.service_repo.delete(name=service_name, namespace=project_name)
+
+    async def update_subdomain_record(self, project_name: str, old_subdomain: str, new_subdomain: str) -> DnsRecord:
+        """
+        기존 DNS 레코드를 삭제하고 새로운 DNS 레코드를 생성하여 서브도메인을 수정합니다.
+        """
+        # 1. 기존 레코드(서비스) 삭제
+        await self.delete_subdomain_record(project_name, old_subdomain)
+
+        # 2. 새로운 레코드(서비스) 생성
+        new_record = await self.create_subdomain_record(project_name, new_subdomain)
+
+        return new_record

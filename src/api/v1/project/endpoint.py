@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends
 
 from src.api.v1.project.schmas.request import (
     ProjectCreateRequest, ProjectPortOpenRequest, ProjectPortUpdateRequest, ProjectDnsCreateRequest,
+    ProjectDnsUpdateRequest,
 )
 from src.api.v1.project.schmas.response import (
     ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse, ProjectPortCloseResponse,
-    ProjectPortUpdateResponse, ProjectDnsCreateResponse, ProjectDnsDeleteResponse,
+    ProjectPortUpdateResponse, ProjectDnsCreateResponse, ProjectDnsDeleteResponse, ProjectDnsUpdateResponse,
 )
 from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
@@ -17,6 +18,7 @@ from src.app.project.project_port_close_use_case import ProjectPortCloseUseCase
 from src.app.project.project_port_update_use_case import ProjectPortUpdateUseCase
 from src.app.project.project_dns_create_use_case import ProjectDnsCreateUseCase
 from src.app.project.project_dns_delete_use_case import ProjectDnsDeleteUseCase
+from src.app.project.project_dns_update_use_case import ProjectDnsUpdateUseCase
 from src.core.response import SuccessResponse
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
@@ -186,6 +188,30 @@ async def delete_project_dns(
     return SuccessResponse(
         message="DNS record deleted successfully",
         data=ProjectDnsDeleteResponse(deleted=deleted)
+    )
+
+
+@project_router.patch("/{name}/dns-records/{dns_id}", response_model=SuccessResponse[ProjectDnsUpdateResponse])
+async def update_project_dns(
+    name: str,
+    dns_id: str, # dns_id는 old_subdomain으로 사용
+    payload: ProjectDnsUpdateRequest,
+    user: User = Depends(),
+    project_dns_update_usecase: ProjectDnsUpdateUseCase = Depends(ProjectDnsUpdateUseCase)
+):
+    dns_record = await project_dns_update_usecase(
+        project_name=name,
+        old_subdomain=dns_id,
+        payload=payload
+    )
+
+    return SuccessResponse(
+        message="DNS record updated successfully",
+        data=ProjectDnsUpdateResponse(
+            name=dns_record.name,
+            type=dns_record.type,
+            value=dns_record.value
+        )
     )
 
 
