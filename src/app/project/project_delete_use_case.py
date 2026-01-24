@@ -1,0 +1,42 @@
+from fastapi import Depends
+
+from src.api.v1.project.schmas.response import ProjectDeleteResponse
+from src.app.base_use_case import BaseUseCase
+from src.core.dependencies.kubernetes import get_kubernetes_client
+from src.infra.kubernetes import NamespaceManager, KubernetesClientImpl
+from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
+
+
+class ProjectDeleteUseCase(BaseUseCase):
+
+    def __init__(
+            self,
+            k8s_client : KubernetesClientImpl = Depends(get_kubernetes_client),
+    ):
+        self.namespace_manager = NamespaceManager(k8s_client)
+        self.resource_quota_manager = ResourceQuotaManager(k8s_client)
+
+    async def __call__(
+            self,
+            name : str,
+    ) -> ProjectDeleteResponse:
+        """Project 삭제 (ResourceQuota + Namespace)"""
+        quota_name = f"{name}-quota"
+        existing_quota = await self.resource_quota_manager.get_resource_quota(
+            name=quota_name,
+            namespace=name,
+        )
+        resource_quota_deleted = False
+        if existing_quota:
+            await self.resource_quota_manager.delete_resource_quota(
+                name=quota_name,
+                namespace=name,
+            )
+            resource_quota_deleted = True
+
+        await self.namespace_manager.delete_namespace(name=name)
+
+        return ProjectDeleteResponse(
+            namespace=name,
+            resource_quota_deleted=resource_quota_deleted,
+        )
