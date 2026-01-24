@@ -3,11 +3,9 @@ from fastapi import Depends
 from src.api.v1.project.schmas.request import ProjectCreateRequest
 from src.api.v1.project.schmas.response import ProjectCreateResponse
 from src.app.base_use_case import BaseUseCase
-from src.core.dependencies.kubernetes import get_kubernetes_client, get_namespace_repository
+from src.core.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
 from src.core.kubernetes.namespace import Namespace, NamespaceRepository
-from src.infra.kubernetes import KubernetesClientImpl
-from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
-from src.infra.kubernetes.managers.resourcequota.model import ResourceQuotaLimits
+from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits, ResourceQuotaRepository
 
 
 class ProjectCreateUseCase(BaseUseCase):
@@ -15,11 +13,10 @@ class ProjectCreateUseCase(BaseUseCase):
     def __init__(
             self,
             namespace_repo: NamespaceRepository = Depends(get_namespace_repository),
-            k8s_client: KubernetesClientImpl = Depends(get_kubernetes_client),
+            resource_quota_repo: ResourceQuotaRepository = Depends(get_resource_quota_repository),
     ):
         self.namespace_repo = namespace_repo
-        # TODO: ResourceQuotaRepository로 전환 예정
-        self.resource_quota_manager = ResourceQuotaManager(k8s_client)
+        self.resource_quota_repo = resource_quota_repo
 
     async def __call__(
             self,
@@ -27,26 +24,26 @@ class ProjectCreateUseCase(BaseUseCase):
             user_id: str
     ) -> ProjectCreateResponse:
         """Project 생성 (Namespace + ResourceQuota)"""
-        # 도메인 객체 생성
+        # Namespace 도메인 객체 생성 및 저장
         namespace = Namespace(name=payload.name)
-
-        # Repository를 통해 저장
         saved_namespace = await self.namespace_repo.save(namespace)
 
+        # ResourceQuota 도메인 객체 생성 및 저장
         quota_name = f"{user_id}-{saved_namespace.name}-quota"
-        resource_limits = ResourceQuotaLimits(
+        limits = ResourceQuotaLimits(
             cpu=payload.cpu,
             memory=payload.memory,
             disk=payload.disk,
         )
-        await self.resource_quota_manager.create_resource_quota(
+        resource_quota = ResourceQuota.from_limits(
             name=quota_name,
             namespace=saved_namespace.name,
-            hard_limits=resource_limits.to_dict(),
+            limits=limits,
         )
+        saved_quota = await self.resource_quota_repo.save(resource_quota)
 
         return ProjectCreateResponse(
             namespace=saved_namespace.name,
-            resource_quota=quota_name,
-            limits=resource_limits.to_dict(),
+            resource_quota=saved_quota.name,
+            limits=saved_quota.hard_limits,
         )

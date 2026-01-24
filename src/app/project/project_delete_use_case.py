@@ -2,44 +2,38 @@ from fastapi import Depends
 
 from src.api.v1.project.schmas.response import ProjectDeleteResponse
 from src.app.base_use_case import BaseUseCase
-from src.core.dependencies.kubernetes import get_kubernetes_client
-from src.infra.kubernetes import NamespaceManager, KubernetesClientImpl
-from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
+from src.core.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
+from src.core.kubernetes.namespace import NamespaceRepository
+from src.core.kubernetes.resource_quota import ResourceQuotaRepository
 
 
 class ProjectDeleteUseCase(BaseUseCase):
 
     def __init__(
             self,
-            k8s_client : KubernetesClientImpl = Depends(get_kubernetes_client),
+            namespace_repo: NamespaceRepository = Depends(get_namespace_repository),
+            resource_quota_repo: ResourceQuotaRepository = Depends(get_resource_quota_repository),
     ):
-        self.namespace_manager = NamespaceManager(k8s_client)
-        self.resource_quota_manager = ResourceQuotaManager(k8s_client)
+        self.namespace_repo = namespace_repo
+        self.resource_quota_repo = resource_quota_repo
 
     async def __call__(
             self,
-            name : str,
-            user_id : str
+            name: str,
+            user_id: str
     ) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
         project_name = f"{user_id}-{name}"
-
         quota_name = f"{name}-quota"
-        existing_quota = await self.resource_quota_manager.get_resource_quota(
-            name=quota_name,
-            namespace=project_name,
-        )
+
+        # ResourceQuota 삭제 (존재하는 경우)
         resource_quota_deleted = False
-        if existing_quota:
-            await self.resource_quota_manager.delete_resource_quota(
-                name=quota_name,
-                namespace=project_name,
-            )
+        if await self.resource_quota_repo.exists(quota_name, project_name):
+            await self.resource_quota_repo.delete(quota_name, project_name)
             resource_quota_deleted = True
 
-        await self.namespace_manager.delete_namespace(
-            name=project_name
-        )
+        # Namespace 삭제
+        await self.namespace_repo.delete(project_name)
 
         return ProjectDeleteResponse(
             namespace=project_name,
