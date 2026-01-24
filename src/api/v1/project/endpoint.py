@@ -6,13 +6,13 @@ from src.api.v1.project.schmas.request import (
     ProjectCreateRequest, ProjectPortOpenRequest,
 )
 from src.api.v1.project.schmas.response import (
-    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ProjectPortDeleteResponse,
+    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ProjectPortCloseResponse,
 )
 from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
 from src.app.project.project_delete_use_case import ProjectDeleteUseCase
 from src.app.project.project_port_open_use_case import ProjectPortOpenUseCase
-from src.app.project.project_port_delete_use_case import ProjectPortDeleteUseCase
+from src.app.project.project_port_close_use_case import ProjectPortCloseUseCase
 from src.core.response import SuccessResponse
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
@@ -77,18 +77,18 @@ async def open_project_port(
     )
 
 
-@project_router.delete("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortDeleteResponse])
-async def delete_project_port(
+@project_router.delete("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortCloseResponse])
+async def close_project_port(
     name: str,
     port_id: int,
     user: User = Depends(),
-    project_port_delete_usecase: ProjectPortDeleteUseCase = Depends(ProjectPortDeleteUseCase)
+    project_port_close_usecase: ProjectPortCloseUseCase = Depends(ProjectPortCloseUseCase)
 ):
-    deleted = await project_port_delete_usecase(
+    closed = await project_port_close_usecase(
         project_name=name,
         port_id=port_id,
     )
     return SuccessResponse(
-        message="Port deleted successfully",
-        data=ProjectPortDeleteResponse(gateway_deleted=deleted)
+        message="Port closed successfully",
+        data=ProjectPortCloseResponse(gateway_closed=closed)
     )

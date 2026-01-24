@@ -28,7 +28,7 @@ class ProjectPortOpenResponse(BaseModel):
     hosts: List[str]
 
 
-class ProjectPortDeleteResponse(BaseModel):
-    """Project 포트 삭제 응답 모델"""
+class ProjectPortCloseResponse(BaseModel):
+    """Project 포트 정리 응답 모델"""
 
-    gateway_deleted: bool
+    gateway_closed: bool
