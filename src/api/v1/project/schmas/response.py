@@ -1,6 +1,15 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class ServicePortResponse(BaseModel):
+    """Service Port 응답 모델"""
+    port: int
+    target_port: int
+    protocol: str
+    name: Optional[str] = None
+    node_port: Optional[int] = None
 
 
 class ProjectCreateResponse(BaseModel):
@@ -19,16 +28,30 @@ class ProjectDeleteResponse(BaseModel):
 
 
 class ProjectPortOpenResponse(BaseModel):
-    """Project 포트 개방 응답 모델"""
+    """Project 포트 개방 응답 모델 (Service 생성 결과)"""
 
-    gateway_name: str
+    name: str
     namespace: str
-    port: int
-    protocol: str
-    hosts: List[str]
+    ports: List[ServicePortResponse]
+    selector: Dict[str, str]
+    service_type: str
+    cluster_ip: Optional[str] = None
+    external_ips: List[str] = Field(default_factory=list)
 
 
 class ProjectPortCloseResponse(BaseModel):
     """Project 포트 정리 응답 모델"""
 
-    gateway_closed: bool
+    service_closed: bool
+
+
+class ProjectPortUpdateResponse(BaseModel):
+    """Project 포트 수정 응답 모델 (Service 수정 결과)"""
+
+    name: str
+    namespace: str
+    ports: List[ServicePortResponse]
+    selector: Dict[str, str]
+    service_type: str
+    cluster_ip: Optional[str] = None
+    external_ips: List[str] = Field(default_factory=list)

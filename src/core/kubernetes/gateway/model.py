@@ -131,3 +131,26 @@ class Gateway:
             labels={**self.labels, **labels},
             annotations=self.annotations,
         )
+
+    def update_server_hosts_by_port(self, port_number: int, new_hosts: List[str]) -> "Gateway":
+        """포트 번호로 서버를 찾아 호스트를 업데이트하고, 새 Gateway 객체를 반환합니다."""
+        updated_servers = []
+        found = False
+        for server in self.servers:
+            if server.port.number == port_number:
+                updated_servers.append(server.with_hosts(new_hosts))
+                found = True
+            else:
+                updated_servers.append(server)
+        
+        if not found:
+            return self
+
+        return Gateway(
+            name=self.name,
+            namespace=self.namespace,
+            servers=updated_servers,
+            selector=self.selector,
+            labels=self.labels,
+            annotations=self.annotations,
+        )

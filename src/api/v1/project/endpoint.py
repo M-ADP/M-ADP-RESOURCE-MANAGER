@@ -3,19 +3,21 @@
 from fastapi import APIRouter, Depends
 
 from src.api.v1.project.schmas.request import (
-    ProjectCreateRequest, ProjectPortOpenRequest,
+    ProjectCreateRequest, ProjectPortOpenRequest, ProjectPortUpdateRequest,
 )
 from src.api.v1.project.schmas.response import (
-    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ProjectPortCloseResponse,
+    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse, ProjectPortCloseResponse,
+    ProjectPortUpdateResponse,
 )
 from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
 from src.app.project.project_delete_use_case import ProjectDeleteUseCase
 from src.app.project.project_port_open_use_case import ProjectPortOpenUseCase
 from src.app.project.project_port_close_use_case import ProjectPortCloseUseCase
+from src.app.project.project_port_update_use_case import ProjectPortUpdateUseCase
 from src.core.response import SuccessResponse
 
-project_router = APIRouter(prefix="/projects", tags=["projects"])
+project_router = APouter(prefix="/projects", tags=["projects"])
 
 
 @project_router.post("", response_model=SuccessResponse[ProjectCreateResponse])
@@ -38,7 +40,7 @@ async def create_project(
 async def delete_project(
     name: str,
     user : User = Depends(),
-    project_delete_usecase : ProjectDeleteUseCase = Depends(ProjectDeleteUseCase)
+    project_delete_usecase : ProjectCreateUseCase = Depends(ProjectCreateUseCase)
 ):
     project_delete_result = await project_delete_usecase(
         name,
@@ -57,18 +59,29 @@ async def open_project_port(
     user: User = Depends(),
     project_port_open_usecase: ProjectPortOpenUseCase = Depends(ProjectPortOpenUseCase)
 ):
-    gateway = await project_port_open_usecase(
+    service = await project_port_open_usecase(
         project_name=name,
         payload=payload
     )
-    
-    server = gateway.servers[0]
+
+    ports_response = [
+        ServicePortResponse(
+            port=p.port,
+            target_port=p.target_port,
+            protocol=p.protocol,
+            name=p.name,
+            node_port=p.node_port
+        ) for p in service.ports
+    ]
+
     response = ProjectPortOpenResponse(
-        gateway_name=gateway.name,
-        namespace=gateway.namespace,
-        port=server.port.number,
-        protocol=server.port.protocol,
-        hosts=server.hosts
+        name=service.name,
+        namespace=service.namespace,
+        ports=ports_response,
+        selector=service.selector,
+        service_type=service.service_type,
+        cluster_ip=service.cluster_ip,
+        external_ips=service.external_ips
     )
 
     return SuccessResponse(
@@ -77,18 +90,58 @@ async def open_project_port(
     )
 
 
+@project_router.put("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortUpdateResponse])
+async def update_project_port(
+    name: str,
+    port_id: int, # path parameter로 받은 포트 번호
+    payload: ProjectPortUpdateRequest,
+    user: User = Depends(),
+    project_port_update_usecase: ProjectPortUpdateUseCase = Depends(ProjectPortUpdateUseCase)
+):
+    service = await project_port_update_usecase(
+        project_name=name,
+        port_number=port_id, # Path Parameter에서 받은 포트 번호를 전달
+        payload=payload
+    )
+
+    ports_response = [
+        ServicePortResponse(
+            port=p.port,
+            target_port=p.target_port,
+            protocol=p.protocol,
+            name=p.name,
+            node_port=p.node_port
+        ) for p in service.ports
+    ]
+
+    response = ProjectPortUpdateResponse(
+        name=service.name,
+        namespace=service.namespace,
+        ports=ports_response,
+        selector=service.selector,
+        service_type=service.service_type,
+        cluster_ip=service.cluster_ip,
+        external_ips=service.external_ips
+    )
+
+    return SuccessResponse(
+        message="Port updated successfully",
+        data=response
+    )
+
+
 @project_router.delete("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortCloseResponse])
 async def close_project_port(
     name: str,
-    port_id: int,
+    port_id: str, # port_id를 service_name으로 사용
     user: User = Depends(),
     project_port_close_usecase: ProjectPortCloseUseCase = Depends(ProjectPortCloseUseCase)
 ):
     closed = await project_port_close_usecase(
         project_name=name,
-        port_id=port_id,
+        service_name=port_id, # service_name으로 전달
     )
     return SuccessResponse(
         message="Port closed successfully",
-        data=ProjectPortCloseResponse(gateway_closed=closed)
+        data=ProjectPortCloseResponse(service_closed=closed)
     )
