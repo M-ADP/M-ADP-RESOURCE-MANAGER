@@ -1,12 +1,15 @@
 from typing import Optional
 
 from src.core.config.kubernetes import KubernetesConfig
+from src.core.kubernetes.gateway import GatewayRepository
 from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
+from src.infra.kubernetes.managers.gateway.manager import IstioGatewayManager
 from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
+from src.infra.kubernetes.repository.gateway_repository import K8sGatewayRepository
 from src.infra.kubernetes.repository import K8sNamespaceRepository, K8sResourceQuotaRepository
 
 
@@ -53,3 +56,10 @@ async def get_resource_quota_repository() -> ResourceQuotaRepository:
     k8s_client = await get_kubernetes_client()
     manager = ResourceQuotaManager(k8s_client)
     return K8sResourceQuotaRepository(manager)
+
+
+async def get_gateway_repository() -> GatewayRepository:
+    """GatewayRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = IstioGatewayManager(k8s_client)
+    return K8sGatewayRepository(manager)

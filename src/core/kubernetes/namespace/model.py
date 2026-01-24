@@ -11,6 +11,12 @@ class Namespace:
     annotations: Dict[str, str] = field(default_factory=dict)
     status: Optional[str] = None  # Active, Terminating
     
+    @classmethod
+    def for_project(cls, user_id: str, project_name: str) -> "Namespace":
+        """Creates a Namespace for a project with a standardized name."""
+        name = f"{user_id}-{project_name}"
+        return cls(name=name)
+
     def with_label(self, key: str, value: str) -> "Namespace":
         """새로운 레이블이 추가된 Namespace 반환 (불변성 유지)"""
         return Namespace(

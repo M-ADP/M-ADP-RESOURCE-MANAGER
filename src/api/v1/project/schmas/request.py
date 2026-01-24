@@ -12,3 +12,10 @@ class ProjectCreateRequest(BaseModel):
     cpu: str = "100m" # 0.1v
     memory: str = "32Mi" # 32MB
     disk: str = "32Mi" # 32MB
+
+
+class ProjectPortOpenRequest(BaseModel):
+    """Project 포트 개방 요청 모델"""
+
+    port: int = Field(..., gt=0, le=65535)
+    protocol: str = "HTTP"

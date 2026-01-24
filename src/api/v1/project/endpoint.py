@@ -3,12 +3,16 @@
 from fastapi import APIRouter, Depends
 
 from src.api.v1.project.schmas.request import (
-    ProjectCreateRequest,
+    ProjectCreateRequest, ProjectPortOpenRequest,
 )
-from src.api.v1.project.schmas.response import ProjectCreateResponse, ProjectDeleteResponse
+from src.api.v1.project.schmas.response import (
+    ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ProjectPortDeleteResponse,
+)
 from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
 from src.app.project.project_delete_use_case import ProjectDeleteUseCase
+from src.app.project.project_port_open_use_case import ProjectPortOpenUseCase
+from src.app.project.project_port_delete_use_case import ProjectPortDeleteUseCase
 from src.core.response import SuccessResponse
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
@@ -45,7 +49,46 @@ async def delete_project(
         data=project_delete_result,
     )
 
-#
-# @project_router.post("/{name}/ports")
-# async def open_ports
 
+@project_router.post("/{name}/ports", response_model=SuccessResponse[ProjectPortOpenResponse])
+async def open_project_port(
+    name: str,
+    payload: ProjectPortOpenRequest,
+    user: User = Depends(),
+    project_port_open_usecase: ProjectPortOpenUseCase = Depends(ProjectPortOpenUseCase)
+):
+    gateway = await project_port_open_usecase(
+        project_name=name,
+        payload=payload
+    )
+    
+    server = gateway.servers[0]
+    response = ProjectPortOpenResponse(
+        gateway_name=gateway.name,
+        namespace=gateway.namespace,
+        port=server.port.number,
+        protocol=server.port.protocol,
+        hosts=server.hosts
+    )
+
+    return SuccessResponse(
+        message="Port opened successfully",
+        data=response
+    )
+
+
+@project_router.delete("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortDeleteResponse])
+async def delete_project_port(
+    name: str,
+    port_id: int,
+    user: User = Depends(),
+    project_port_delete_usecase: ProjectPortDeleteUseCase = Depends(ProjectPortDeleteUseCase)
+):
+    deleted = await project_port_delete_usecase(
+        project_name=name,
+        port_id=port_id,
+    )
+    return SuccessResponse(
+        message="Port deleted successfully",
+        data=ProjectPortDeleteResponse(gateway_deleted=deleted)
+    )

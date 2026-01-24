@@ -47,6 +47,23 @@ class ResourceQuota:
             labels=labels or {},
         )
 
+    @classmethod
+    def for_project(
+        cls,
+        user_id: str,
+        namespace: str,
+        limits: ResourceQuotaLimits,
+        labels: Optional[Dict[str, str]] = None,
+    ) -> "ResourceQuota":
+        """프로젝트의 ResourceQuota 생성 (이름 규칙 포함)"""
+        quota_name = f"{user_id}-{namespace}-quota"
+        return cls.from_limits(
+            name=quota_name,
+            namespace=namespace,
+            limits=limits,
+            labels=labels,
+        )
+
     def with_labels(self, labels: Dict[str, str]) -> "ResourceQuota":
         """새로운 레이블이 추가된 ResourceQuota 반환 (불변성 유지)"""
         return ResourceQuota(
