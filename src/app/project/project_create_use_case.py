@@ -27,7 +27,7 @@ class ProjectCreateUseCase(BaseUseCase):
     ) -> ProjectCreateResponse:
         """Project 생성 (Namespace + ResourceQuota)"""
         # Namespace 도메인 객체 생성 및 저장
-        namespace = Namespace.for_project(user_id, payload.name).with_labels(MANAGED_BY_LABEL)
+        namespace = Namespace.for_project(user_id, payload.id, payload.name).with_labels(MANAGED_BY_LABEL)
         saved_namespace = await self.namespace_repo.save(namespace)
 
         # ResourceQuota 도메인 객체 생성 및 저장
@@ -38,14 +38,16 @@ class ProjectCreateUseCase(BaseUseCase):
         )
         resource_quota = ResourceQuota.for_project(
             user_id=user_id,
-            namespace=saved_namespace.name,
+            project_name=payload.name,
+            namespace=saved_namespace.id,
             limits=limits,
             # labels=MANAGED_BY_LABEL,
         )
         saved_quota = await self.resource_quota_repo.save(resource_quota)
 
         return ProjectCreateResponse(
-            namespace=saved_namespace.name,
-            resource_quota=saved_quota.name,
+            namespace_id=saved_namespace.id,
+            name=saved_namespace.name,
+            resource_quota_id=saved_quota.id,
             limits=saved_quota.hard_limits,
         )

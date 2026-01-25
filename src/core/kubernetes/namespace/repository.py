@@ -21,12 +21,12 @@ class NamespaceRepository(ABC):
         ...
     
     @abstractmethod
-    async def find_by_name(self, name: str) -> Optional[Namespace]:
+    async def find_by_id(self, id: str) -> Optional[Namespace]:
         """
-        이름으로 Namespace 조회
+        ID로 Namespace 조회
         
         Args:
-            name: Namespace 이름
+            id: Namespace ID
             
         Returns:
             Namespace 도메인 객체, 없으면 None
@@ -50,12 +50,12 @@ class NamespaceRepository(ABC):
         ...
     
     @abstractmethod
-    async def delete(self, name: str) -> bool:
+    async def delete(self, id: str) -> bool:
         """
         Namespace 삭제
         
         Args:
-            name: Namespace 이름
+            id: Namespace ID
             
         Returns:
             삭제 성공 여부
@@ -63,12 +63,12 @@ class NamespaceRepository(ABC):
         ...
     
     @abstractmethod
-    async def exists(self, name: str) -> bool:
+    async def exists(self, id: str) -> bool:
         """
         Namespace 존재 여부 확인
         
         Args:
-            name: Namespace 이름
+            id: Namespace ID
             
         Returns:
             존재 여부

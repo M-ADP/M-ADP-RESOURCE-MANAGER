@@ -15,15 +15,16 @@ class ServicePortResponse(BaseModel):
 class ProjectCreateResponse(BaseModel):
     """Project 생성 응답 모델"""
 
-    namespace: str
-    resource_quota: str
+    namespace_id: str
+    name: str
+    resource_quota_id: str
     limits: Dict[str, str]
 
 
 class ProjectDeleteResponse(BaseModel):
     """Project 삭제 응답 모델"""
 
-    namespace: str
+    namespace_id: str
     resource_quota_deleted: bool
 
 

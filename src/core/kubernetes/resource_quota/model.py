@@ -24,6 +24,7 @@ class ResourceQuotaLimits:
 class ResourceQuota:
     """Kubernetes ResourceQuota 도메인 객체"""
 
+    id: str
     name: str
     namespace: str
     hard_limits: Dict[str, str] = field(default_factory=dict)
@@ -34,6 +35,7 @@ class ResourceQuota:
     @classmethod
     def from_limits(
         cls,
+        id: str,
         name: str,
         namespace: str,
         limits: ResourceQuotaLimits,
@@ -41,6 +43,7 @@ class ResourceQuota:
     ) -> "ResourceQuota":
         """ResourceQuotaLimits로부터 ResourceQuota 생성"""
         return cls(
+            id=id,
             name=name,
             namespace=namespace,
             hard_limits=limits.to_dict(),
@@ -51,22 +54,25 @@ class ResourceQuota:
     def for_project(
         cls,
         user_id: str,
+        project_name: str,
         namespace: str,
         limits: ResourceQuotaLimits,
         labels: Optional[Dict[str, str]] = None,
     ) -> "ResourceQuota":
         """프로젝트의 ResourceQuota 생성 (이름 규칙 포함)"""
-        quota_name = f"{user_id}-{namespace}-quota"
+        quota_id = f"{namespace}-quota"
         return cls.from_limits(
-            name=quota_name,
+            id=quota_id,
+            name=project_name,
             namespace=namespace,
             limits=limits,
-            labels=labels,
+            labels={**(labels or {}), "madp.io/name": project_name},
         )
 
     def with_labels(self, labels: Dict[str, str]) -> "ResourceQuota":
         """새로운 레이블이 추가된 ResourceQuota 반환 (불변성 유지)"""
         return ResourceQuota(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             hard_limits=self.hard_limits,

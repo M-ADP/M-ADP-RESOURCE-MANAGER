@@ -21,12 +21,12 @@ class ResourceQuotaRepository(ABC):
         ...
 
     @abstractmethod
-    async def find_by_name(self, name: str, namespace: str) -> Optional[ResourceQuota]:
+    async def find_by_id(self, id: str, namespace: str) -> Optional[ResourceQuota]:
         """
-        이름과 네임스페이스로 ResourceQuota 조회
+        ID와 네임스페이스로 ResourceQuota 조회
 
         Args:
-            name: ResourceQuota 이름
+            id: ResourceQuota ID
             namespace: 네임스페이스
 
         Returns:
@@ -53,12 +53,12 @@ class ResourceQuotaRepository(ABC):
         ...
 
     @abstractmethod
-    async def delete(self, name: str, namespace: str) -> bool:
+    async def delete(self, id: str, namespace: str) -> bool:
         """
         ResourceQuota 삭제
 
         Args:
-            name: ResourceQuota 이름
+            id: ResourceQuota ID
             namespace: 네임스페이스
 
         Returns:
@@ -67,12 +67,12 @@ class ResourceQuotaRepository(ABC):
         ...
 
     @abstractmethod
-    async def exists(self, name: str, namespace: str) -> bool:
+    async def exists(self, id: str, namespace: str) -> bool:
         """
         ResourceQuota 존재 여부 확인
 
         Args:
-            name: ResourceQuota 이름
+            id: ResourceQuota ID
             namespace: 네임스페이스
 
         Returns:

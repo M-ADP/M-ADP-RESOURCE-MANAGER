@@ -19,23 +19,23 @@ class ProjectDeleteUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            name: str,
+            id: str,
             user_id: str
     ) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
-        project_name = f"{user_id}-{name}"
-        quota_name = f"{name}-quota"
+        project_id = id
+        quota_id = f"{id}-quota"
 
         # ResourceQuota 삭제 (존재하는 경우)
         resource_quota_deleted = False
-        if await self.resource_quota_repo.exists(quota_name, project_name):
-            await self.resource_quota_repo.delete(quota_name, project_name)
+        if await self.resource_quota_repo.exists(quota_id, project_id):
+            await self.resource_quota_repo.delete(quota_id, project_id)
             resource_quota_deleted = True
 
         # Namespace 삭제
-        await self.namespace_repo.delete(project_name)
+        await self.namespace_repo.delete(project_id)
 
         return ProjectDeleteResponse(
-            namespace=project_name,
+            namespace_id=project_id,
             resource_quota_deleted=resource_quota_deleted,
         )

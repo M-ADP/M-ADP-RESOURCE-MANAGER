@@ -13,8 +13,8 @@ class ServiceRepository(ABC):
         ...
 
     @abstractmethod
-    async def find_by_name(self, name: str, namespace: str) -> Optional[Service]:
-        """이름과 네임스페이스로 Service 조회"""
+    async def find_by_id(self, id: str, namespace: str) -> Optional[Service]:
+        """ID와 네임스페이스로 Service 조회"""
         ...
 
     @abstractmethod
@@ -27,11 +27,11 @@ class ServiceRepository(ABC):
         ...
 
     @abstractmethod
-    async def delete(self, name: str, namespace: str) -> bool:
+    async def delete(self, id: str, namespace: str) -> bool:
         """Service 삭제"""
         ...
 
     @abstractmethod
-    async def exists(self, name: str, namespace: str) -> bool:
+    async def exists(self, id: str, namespace: str) -> bool:
         """Service 존재 여부 확인"""
         ...

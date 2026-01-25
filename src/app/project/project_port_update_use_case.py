@@ -22,8 +22,8 @@ class ProjectPortUpdateUseCase(BaseUseCase):
     ) -> Service:
         """Project 포트 수정 (Service 업데이트)"""
         # 1. 기존 Service 조회
-        # payload.service_name을 사용하여 서비스 조회
-        existing_service = await self.service_repo.find_by_name(name=payload.service_name, namespace=project_name)
+        # payload.service_id을 사용하여 서비스 조회
+        existing_service = await self.service_repo.find_by_id(id=payload.service_id, namespace=project_name)
         if not existing_service:
             raise ServiceNotFoundException()
 
@@ -32,6 +32,9 @@ class ProjectPortUpdateUseCase(BaseUseCase):
         # 2. Selector 업데이트
         if payload.target_deployment_name:
             updated_service = updated_service.with_selector({"app": payload.target_deployment_name})
+        
+        if payload.service_name:
+            updated_service = updated_service.with_labels({"madp.io/name": payload.service_name})
 
         # 3. Service Type 업데이트
         if payload.service_type:
@@ -39,7 +42,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
             # Service Type이 LoadBalancer로 변경되면 ExternalDNS 어노테이션 추가
             if payload.service_type == "LoadBalancer":
                  updated_service = updated_service.with_annotations({
-                    "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_name}.{project_name}.example.com"
+                    "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.example.com"
                 })
             else: # 그 외의 타입일 경우 ExternalDNS 어노테이션 제거
                 # TODO: 기존 어노테이션에서 external-dns 어노테이션만 제거하는 로직 필요

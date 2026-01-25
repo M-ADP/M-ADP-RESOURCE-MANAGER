@@ -37,6 +37,7 @@ class ServicePort:
 class Service:
     """Kubernetes Service 도메인 객체"""
 
+    id: str
     name: str
     namespace: str
     ports: List[ServicePort] = field(default_factory=list)
@@ -50,6 +51,7 @@ class Service:
     def with_port(self, port: ServicePort) -> "Service":
         """새로운 포트가 추가된 Service 반환"""
         return Service(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             ports=[*self.ports, port],
@@ -64,6 +66,7 @@ class Service:
     def with_labels(self, labels: Dict[str, str]) -> "Service":
         """새로운 레이블이 추가된 Service 반환"""
         return Service(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             ports=self.ports,
@@ -78,6 +81,7 @@ class Service:
     def with_annotations(self, annotations: Dict[str, str]) -> "Service":
         """새로운 어노테이션이 추가된 Service 반환"""
         return Service(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             ports=self.ports,
@@ -92,6 +96,7 @@ class Service:
     def with_selector(self, selector: Dict[str, str]) -> "Service":
         """selector가 변경된 Service 반환"""
         return Service(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             ports=self.ports,
@@ -106,6 +111,7 @@ class Service:
     def with_service_type(self, service_type: str) -> "Service":
         """service_type이 변경된 Service 반환"""
         return Service(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             ports=self.ports,
@@ -142,6 +148,7 @@ class Service:
             return self # 일치하는 포트가 없으면 원본 Service 반환
 
         return Service(
+            id=self.id,
             name=self.name,
             namespace=self.namespace,
             ports=updated_ports,

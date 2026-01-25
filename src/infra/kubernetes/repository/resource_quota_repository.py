@@ -15,7 +15,7 @@ class K8sResourceQuotaRepository(ResourceQuotaRepository):
     async def save(self, resource_quota: ResourceQuota) -> ResourceQuota:
         """ResourceQuota 저장 (생성 또는 업데이트, 멱등성 보장)"""
         v1_rq = await self._manager.create_resource_quota(
-            name=resource_quota.name,
+            name=resource_quota.id,
             namespace=resource_quota.namespace,
             hard_limits=resource_quota.hard_limits,
             labels=resource_quota.labels if resource_quota.labels else None,
@@ -23,9 +23,9 @@ class K8sResourceQuotaRepository(ResourceQuotaRepository):
         )
         return self._to_domain(v1_rq)
 
-    async def find_by_name(self, name: str, namespace: str) -> Optional[ResourceQuota]:
-        """이름과 네임스페이스로 ResourceQuota 조회"""
-        v1_rq = await self._manager.get_resource_quota(name, namespace)
+    async def find_by_id(self, id: str, namespace: str) -> Optional[ResourceQuota]:
+        """ID와 네임스페이스로 ResourceQuota 조회"""
+        v1_rq = await self._manager.get_resource_quota(id, namespace)
         if v1_rq is None:
             return None
         return self._to_domain(v1_rq)
@@ -42,21 +42,23 @@ class K8sResourceQuotaRepository(ResourceQuotaRepository):
         )
         return [self._to_domain(rq) for rq in v1_rqs]
 
-    async def delete(self, name: str, namespace: str) -> bool:
+    async def delete(self, id: str, namespace: str) -> bool:
         """ResourceQuota 삭제"""
-        return await self._manager.delete_resource_quota(name, namespace)
+        return await self._manager.delete_resource_quota(id, namespace)
 
-    async def exists(self, name: str, namespace: str) -> bool:
+    async def exists(self, id: str, namespace: str) -> bool:
         """ResourceQuota 존재 여부 확인"""
-        return await self._manager.exists(name, namespace)
+        return await self._manager.exists(id, namespace)
 
     def _to_domain(self, v1_rq: V1ResourceQuota) -> ResourceQuota:
         """V1ResourceQuota를 도메인 객체로 변환"""
+        labels = v1_rq.metadata.labels or {}
         return ResourceQuota(
-            name=v1_rq.metadata.name,
+            id=v1_rq.metadata.name,
+            name=labels.get("madp.io/name", ""),
             namespace=v1_rq.metadata.namespace,
             hard_limits=v1_rq.spec.hard if v1_rq.spec and v1_rq.spec.hard else {},
             used=v1_rq.status.used if v1_rq.status and v1_rq.status.used else {},
-            labels=v1_rq.metadata.labels or {},
+            labels=labels,
             annotations=v1_rq.metadata.annotations or {},
         )
