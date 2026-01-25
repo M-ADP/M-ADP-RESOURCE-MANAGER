@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
-from src.app.bootstrap.exception import register_exception_handlers
-from src.app.bootstrap.router import register_routers
+from src.api.exception_handler import register_exception_handlers
+from src.api.routers import register_routers
 
 
 def create_app():

@@ -6,8 +6,8 @@ from src.app.base_use_case import BaseUseCase
 from src.core.dependencies.kubernetes import get_resource_quota_repository, get_limit_range_repository, get_vpa_repository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository, ResourceQuotaLimits, ResourceQuota
 from src.core.kubernetes.limit_range import LimitRangeRepository, LimitRange, LimitRangeItem
+from src.core.exceptions import ResourceQuotaNotFoundException
 from src.core.kubernetes.vpa import VpaRepository, VerticalPodAutoscaler
-from src.core.exception import CustomException
 
 MANAGED_BY_LABEL = {"managed-by": "madp"}
 
@@ -46,7 +46,7 @@ class ProjectResourceUpdateUseCase(BaseUseCase):
         """지정된 프로젝트(네임스페이스)의 ResourceQuota를 찾아 업데이트합니다."""
         quotas = await self.quota_repo.find_all(namespace=project_name, label_selector="managed-by=madp")
         if not quotas:
-            raise CustomException(404, f"Managed ResourceQuota not found in namespace '{project_name}'")
+            raise ResourceQuotaNotFoundException()
         
         existing_quota = quotas[0]
 

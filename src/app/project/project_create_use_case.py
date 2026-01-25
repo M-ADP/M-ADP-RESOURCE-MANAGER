@@ -7,7 +7,7 @@ from src.core.dependencies.kubernetes import get_namespace_repository, get_resou
 from src.core.kubernetes.namespace import Namespace, NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits, ResourceQuotaRepository
 
-MANAGED_BY_LABEL = {"managed-by": "madp"}
+# MANAGED_BY_LABEL = {"managed-by": "madp"}
 
 
 class ProjectCreateUseCase(BaseUseCase):
@@ -40,7 +40,7 @@ class ProjectCreateUseCase(BaseUseCase):
             user_id=user_id,
             namespace=saved_namespace.name,
             limits=limits,
-            labels=MANAGED_BY_LABEL,
+            # labels=MANAGED_BY_LABEL,
         )
         saved_quota = await self.resource_quota_repo.save(resource_quota)
 

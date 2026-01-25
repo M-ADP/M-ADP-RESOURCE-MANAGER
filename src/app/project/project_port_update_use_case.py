@@ -1,11 +1,10 @@
 from fastapi import Depends
 
+from src.core.exceptions import ServiceNotFoundException, PortNotFoundException
 from src.api.v1.project.schmas.request import ProjectPortUpdateRequest
 from src.app.base_use_case import BaseUseCase
 from src.core.dependencies.kubernetes import get_service_repository
 from src.core.kubernetes.service import Service, ServiceRepository
-from src.core.exception import CustomException
-
 
 class ProjectPortUpdateUseCase(BaseUseCase):
 
@@ -26,7 +25,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
         # payload.service_name을 사용하여 서비스 조회
         existing_service = await self.service_repo.find_by_name(name=payload.service_name, namespace=project_name)
         if not existing_service:
-            raise CustomException(404, f"Service '{payload.service_name}' not found in namespace '{project_name}'")
+            raise ServiceNotFoundException()
 
         updated_service = existing_service
 
@@ -56,7 +55,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
             )
             # 포트 번호에 해당하는 포트가 Service에 없는 경우 예외 처리
             if updated_service == existing_service and (payload.target_port or payload.protocol):
-                 raise CustomException(404, f"Port '{port_number}' not found in service '{payload.service_name}'")
+                 raise PortNotFoundException()
 
 
         # 5. Service 저장 (업데이트)

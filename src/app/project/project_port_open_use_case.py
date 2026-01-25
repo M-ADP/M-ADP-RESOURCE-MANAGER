@@ -3,8 +3,8 @@ from fastapi import Depends
 from src.api.v1.project.schmas.request import ProjectPortOpenRequest
 from src.app.base_use_case import BaseUseCase
 from src.core.dependencies.kubernetes import get_service_repository
+from src.core.exceptions import ServiceAlreadyExistsException
 from src.core.kubernetes.service import Service, ServicePort, ServiceRepository
-from src.core.exception import CustomException
 
 
 class ProjectPortOpenUseCase(BaseUseCase):
@@ -24,7 +24,7 @@ class ProjectPortOpenUseCase(BaseUseCase):
         # 1. 서비스 이름 중복 확인
         existing_service = await self.service_repo.find_by_name(name=payload.service_name, namespace=project_name)
         if existing_service:
-            raise CustomException(409, f"Service '{payload.service_name}' already exists in namespace '{project_name}'")
+            raise ServiceAlreadyExistsException()
 
         # 2. ServicePort 객체 생성
         service_port = ServicePort(

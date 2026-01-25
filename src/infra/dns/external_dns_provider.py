@@ -1,7 +1,7 @@
 from src.core.dns.provider import DnsProvider, DnsRecord
 from src.core.kubernetes.service import Service, ServiceRepository
 from src.core.dependencies.kubernetes import get_service_repository
-from src.core.exception import CustomException
+from src.core.exceptions import ServiceNotFoundException
 from fastapi import Depends
 
 
@@ -84,7 +84,7 @@ class ExternalDnsProvider(DnsProvider):
         # 1. 대상 애플리케이션 서비스 조회
         target_service = await self.service_repo.find_by_name(name=target_service_name, namespace=project_name)
         if not target_service:
-            raise CustomException(404, f"Target service '{target_service_name}' not found in namespace '{project_name}'")
+            raise ServiceNotFoundException()
 
         # 2. 호스트네임 어노테이션 추가
         full_domain = f"{subdomain}.mdeveloper.platform"
