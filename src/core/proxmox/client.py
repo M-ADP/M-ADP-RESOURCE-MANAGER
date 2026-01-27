@@ -11,10 +11,10 @@ class ProxmoxClient(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def node(self) -> ProxmoxNodeChecker:
+    def node(self) -> ProxmoxNodeChecker:
         raise NotImplementedError
 
 
     @abstractmethod
-    async def vm(self) -> ProxmoxVMChecker:
+    def vm(self) -> ProxmoxVMChecker:
         raise NotImplementedError
