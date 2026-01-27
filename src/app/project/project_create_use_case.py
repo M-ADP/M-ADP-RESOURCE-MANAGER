@@ -7,7 +7,7 @@ from src.core.dependencies.kubernetes import get_namespace_repository, get_resou
 from src.core.kubernetes.namespace import Namespace, NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits, ResourceQuotaRepository
 
-# MANAGED_BY_LABEL = {"managed-by": "madp"}
+MANAGED_BY_LABEL = {"managed-by": "madp"}
 
 
 class ProjectCreateUseCase(BaseUseCase):
