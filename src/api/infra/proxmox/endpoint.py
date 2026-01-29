@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Query
 
-from src.api.infra.monitoring.schema import (
+from src.api.infra.proxmox.schema import (
     # Cluster Resources (권장)
     ClusterNodeResource,
     ClusterNodesResponse,
@@ -26,15 +26,15 @@ from src.dependencies.proxmox import get_proxmox_client
 from src.core.proxmox.client import ProxmoxClient
 from src.core.response import SuccessResponse
 
-monitoring_router = APIRouter(
-    prefix="/monitoring",
-    tags=["monitoring"],
+proxmox_router = APIRouter(
+    prefix="/proxmox",
+    tags=["proxmox"],
 )
 
 
 # ==================== Cluster Resources API (권장) ====================
 
-@monitoring_router.get("/cluster/resources/raw")
+@proxmox_router.get("/cluster/resources/raw")
 async def get_cluster_resources_raw(
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
 ):
@@ -44,7 +44,7 @@ async def get_cluster_resources_raw(
     return {"resources": resources}
 
 
-@monitoring_router.get("/cluster/nodes", response_model=SuccessResponse[ClusterNodesResponse])
+@proxmox_router.get("/cluster/nodes", response_model=SuccessResponse[ClusterNodesResponse])
 async def get_cluster_nodes(
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
 ):
@@ -75,7 +75,7 @@ async def get_cluster_nodes(
     )
 
 
-@monitoring_router.get("/cluster/vms", response_model=SuccessResponse[ClusterVMsResponse])
+@proxmox_router.get("/cluster/vms", response_model=SuccessResponse[ClusterVMsResponse])
 async def get_cluster_vms(
     node: Optional[str] = Query(default=None, description="특정 노드의 VM만 조회"),
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
@@ -113,7 +113,7 @@ async def get_cluster_vms(
     )
 
 
-@monitoring_router.get("/cluster/nodes/{node_name}/storages", response_model=SuccessResponse[NodeStoragesResponse])
+@proxmox_router.get("/cluster/nodes/{node_name}/storages", response_model=SuccessResponse[NodeStoragesResponse])
 async def get_node_storages(
     node_name: str,
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
@@ -146,7 +146,7 @@ async def get_node_storages(
 
 # ==================== Legacy Node APIs ====================
 
-@monitoring_router.get("/nodes", response_model=SuccessResponse[NodeListResponse])
+@proxmox_router.get("/nodes", response_model=SuccessResponse[NodeListResponse])
 async def list_nodes(
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
 ):
@@ -160,7 +160,7 @@ async def list_nodes(
     )
 
 
-@monitoring_router.get("/nodes/{node_name}", response_model=SuccessResponse[NodeStatusResponse])
+@proxmox_router.get("/nodes/{node_name}", response_model=SuccessResponse[NodeStatusResponse])
 async def get_node_status(
     node_name: str,
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
@@ -227,7 +227,7 @@ async def get_node_status(
 
 # ==================== Legacy VM APIs ====================
 
-@monitoring_router.get("/nodes/{node_name}/vms", response_model=SuccessResponse[VMListResponse])
+@proxmox_router.get("/nodes/{node_name}/vms", response_model=SuccessResponse[VMListResponse])
 async def list_vms(
     node_name: str,
     proxmox: ProxmoxClient = Depends(get_proxmox_client),
@@ -244,7 +244,7 @@ async def list_vms(
     )
 
 
-@monitoring_router.get(
+@proxmox_router.get(
     "/nodes/{node_name}/vms/{vmid}",
     response_model=SuccessResponse[VMStatusResponse],
 )
@@ -282,7 +282,7 @@ async def get_vm_status(
     )
 
 
-@monitoring_router.get(
+@proxmox_router.get(
     "/nodes/{node_name}/vms/{vmid}/metrics",
     response_model=SuccessResponse[VMMetricsResponse],
 )
