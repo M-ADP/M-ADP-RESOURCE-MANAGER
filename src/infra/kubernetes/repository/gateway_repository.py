@@ -2,7 +2,7 @@ from typing import List, Optional, Any, Dict
 import dataclasses
 
 from src.core.kubernetes.gateway import Gateway, GatewayRepository, GatewayServer, GatewayPort, TlsConfig
-from src.infra.kubernetes.managers.gateway.manager import IstioGatewayManager
+from src.infra.kubernetes.managers.gateway import IstioGatewayManager
 
 
 class K8sGatewayRepository(GatewayRepository):

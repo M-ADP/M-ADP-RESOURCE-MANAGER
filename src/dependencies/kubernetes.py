@@ -10,7 +10,7 @@ from src.core.kubernetes.limit_range import LimitRangeRepository
 from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
-from src.infra.kubernetes.managers.gateway.manager import IstioGatewayManager
+from src.infra.kubernetes.managers.gateway import IstioGatewayManager
 from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.service import ServiceManager
@@ -23,12 +23,15 @@ from src.infra.kubernetes.managers.statefulset import StatefulSetManager
 from src.infra.kubernetes.managers.job import JobManager
 from src.infra.kubernetes.managers.cronjob import CronJobManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
-from src.infra.kubernetes.repository.gateway_repository import K8sGatewayRepository
-from src.infra.kubernetes.repository import K8sNamespaceRepository, K8sResourceQuotaRepository
-from src.infra.kubernetes.repository.service_repository import K8sServiceRepository
-from src.infra.kubernetes.repository.vpa_repository import K8sVpaRepository
-from src.infra.kubernetes.repository.limit_range_repository import K8sLimitRangeRepository
-from src.infra.kubernetes.repository.deployment_repository import K8sDeploymentRepository
+from src.infra.kubernetes.repository import (
+    K8sNamespaceRepository,
+    K8sResourceQuotaRepository,
+    K8sServiceRepository,
+    K8sLimitRangeRepository,
+    K8sDeploymentRepository,
+    K8sGatewayRepository,
+    K8sVpaRepository,
+)
 
 
 _k8s_client_instance: Optional[KubernetesClientImpl] = None

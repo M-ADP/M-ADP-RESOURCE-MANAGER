@@ -3,7 +3,7 @@ from typing import List, Optional
 from kubernetes_asyncio.client import V1DaemonSet
 
 from src.core.kubernetes.daemonset import DaemonSet, DaemonSetStatus, DaemonSetRepository
-from src.core.kubernetes.deployment.model import Container
+from src.core.kubernetes.deployment import Container
 from src.infra.kubernetes.managers.daemonset import DaemonSetManager
 
 

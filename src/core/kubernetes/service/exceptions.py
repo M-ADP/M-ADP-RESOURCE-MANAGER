@@ -1,6 +1,6 @@
 """Service 관련 예외"""
 
-from src.core.exceptions import NotFoundException, ConflictException
+from src.core import NotFoundException, ConflictException
 
 
 class ServiceNotFoundException(NotFoundException):

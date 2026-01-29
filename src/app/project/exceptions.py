@@ -1,6 +1,6 @@
 """Project 관련 예외"""
 
-from src.core.exceptions import BadRequestException, NotFoundException, ConflictException
+from src.core import BadRequestException, NotFoundException, ConflictException
 
 
 class DiskReductionNotAllowedException(BadRequestException):

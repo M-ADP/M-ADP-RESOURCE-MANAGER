@@ -3,7 +3,7 @@ from typing import List, Optional
 from kubernetes_asyncio.client import V1CronJob
 
 from src.core.kubernetes.cronjob import CronJob, CronJobStatus, CronJobRepository
-from src.core.kubernetes.deployment.model import Container
+from src.core.kubernetes.deployment import Container
 from src.infra.kubernetes.managers.cronjob import CronJobManager
 
 

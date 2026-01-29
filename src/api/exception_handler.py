@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
-from src.core.exceptions import (
+from src.core import (
     BadRequestException,
     NotFoundException,
     ForbiddenException,

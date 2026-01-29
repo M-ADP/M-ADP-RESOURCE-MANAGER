@@ -14,6 +14,8 @@ from .pvc_repository import K8sPersistentVolumeClaimRepository
 from .limit_range_repository import K8sLimitRangeRepository
 from .replica_set_repository import K8sReplicaSetRepository
 from .secret_repository import K8sSecretRepository
+from .gateway_repository import K8sGatewayRepository
+from .vpa_repository import K8sVpaRepository
 
 __all__ = [
     "K8sNamespaceRepository",
@@ -32,4 +34,6 @@ __all__ = [
     "K8sLimitRangeRepository",
     "K8sReplicaSetRepository",
     "K8sSecretRepository",
+    "K8sGatewayRepository",
+    "K8sVpaRepository",
 ]

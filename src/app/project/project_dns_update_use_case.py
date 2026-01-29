@@ -3,7 +3,7 @@ from fastapi import Depends
 from src.api.v1.project.schmas.request import ProjectDnsUpdateRequest
 from src.app.base_use_case import BaseUseCase
 from src.dependencies.dns import get_dns_provider
-from src.core.dns.provider import DnsProvider, DnsRecord
+from src.core.dns import DnsProvider, DnsRecord
 
 
 class ProjectDnsUpdateUseCase(BaseUseCase):

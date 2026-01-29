@@ -1,6 +1,6 @@
 from fastapi import Depends
 
-from src.core.kubernetes.service.exceptions import ServiceNotFoundException, PortNotFoundException
+from src.core.kubernetes.service import ServiceNotFoundException, PortNotFoundException
 from src.api.v1.project.schmas.request import ProjectPortUpdateRequest
 from src.app.base_use_case import BaseUseCase
 from src.dependencies.kubernetes import get_service_repository

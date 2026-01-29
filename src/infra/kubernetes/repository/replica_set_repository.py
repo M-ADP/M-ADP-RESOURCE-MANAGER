@@ -3,7 +3,7 @@ from typing import List, Optional
 from kubernetes_asyncio.client import V1ReplicaSet
 
 from src.core.kubernetes.replica_set import ReplicaSet, ReplicaSetStatus, ReplicaSetRepository
-from src.core.kubernetes.deployment.model import Container
+from src.core.kubernetes.deployment import Container
 from src.infra.kubernetes.managers.replicaset import ReplicaSetManager
 
 

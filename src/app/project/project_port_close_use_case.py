@@ -19,5 +19,5 @@ class ProjectPortCloseUseCase(BaseUseCase):
             service_name: str
     ) -> bool:
         """Project 포트 정리 (Service 삭제)"""
-        closed = await self.service_repo.delete(name=service_name, namespace=project_name)
+        closed = await self.service_repo.delete(id=service_name, namespace=project_name)
         return closed

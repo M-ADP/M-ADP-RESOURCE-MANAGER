@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 
 from src.core.kubernetes.vpa import VerticalPodAutoscaler, VpaRepository, VpaTargetRef, VpaUpdatePolicy
-from src.infra.kubernetes.managers.vpa.manager import VpaManager
+from src.infra.kubernetes.managers.vpa import VpaManager
 
 
 class K8sVpaRepository(VpaRepository):

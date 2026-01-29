@@ -3,7 +3,7 @@ from typing import List, Optional
 from kubernetes_asyncio.client import V1Job
 
 from src.core.kubernetes.job import Job, JobStatus, JobRepository
-from src.core.kubernetes.deployment.model import Container
+from src.core.kubernetes.deployment import Container
 from src.infra.kubernetes.managers.job import JobManager
 
 

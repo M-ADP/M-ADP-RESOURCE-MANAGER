@@ -3,7 +3,7 @@ from typing import List, Optional
 from kubernetes_asyncio.client import V1StatefulSet
 
 from src.core.kubernetes.statefulset import StatefulSet, StatefulSetStatus, StatefulSetRepository
-from src.core.kubernetes.deployment.model import Container
+from src.core.kubernetes.deployment import Container
 from src.infra.kubernetes.managers.statefulset import StatefulSetManager
 
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from src.core.kubernetes.deployment.model import Container
+from src.core.kubernetes.deployment import Container
 
 
 @dataclass(frozen=True)

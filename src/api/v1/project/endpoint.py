@@ -258,7 +258,6 @@ async def bind_project_dns_port(
         data=response
     )
 
-
 @project_router.patch("/{name}/resource", response_model=SuccessResponse[ProjectResourceUpdateResponse])
 async def update_project_resources(
     name: str,

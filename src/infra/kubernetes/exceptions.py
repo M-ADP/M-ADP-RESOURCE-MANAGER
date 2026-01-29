@@ -1,7 +1,7 @@
 """Kubernetes 리소스 관리 관련 예외 클래스"""
 
 from typing import Optional
-from src.core.exceptions import MadpException
+from src.core import MadpException
 
 
 class KubernetesResourceException(MadpException):

@@ -1,4 +1,4 @@
-from src.core.dns.provider import DnsProvider
+from src.core.dns import DnsProvider
 from src.infra.dns.external_dns_provider import ExternalDnsProvider
 
 
