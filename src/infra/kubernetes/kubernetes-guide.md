@@ -121,7 +121,7 @@ export K8S_MAX_RETRIES=3
 ### 2. 설정 객체를 통한 직접 설정
 
 ```python
-from src.core.config.kubernetes import KubernetesConfig
+from src.common.config.kubernetes import KubernetesConfig
 from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core import get_logger
 
@@ -433,7 +433,7 @@ async def check_kubernetes_health(
 
 ```python
 from src.infra.kubernetes.client import KubernetesClientImpl
-from src.core.config.kubernetes import KubernetesConfig
+from src.common.config.kubernetes import KubernetesConfig
 from src.core import get_logger
 
 
@@ -455,7 +455,7 @@ async def example_with_context_manager():
 ```python
 from fastapi import FastAPI
 from src.infra.kubernetes.client import KubernetesClientImpl, get_kubernetes_client
-from src.core.config.kubernetes import KubernetesConfig
+from src.common.config.kubernetes import KubernetesConfig
 from src.core import get_logger
 
 app = FastAPI()
@@ -521,7 +521,7 @@ async def create_namespace(
 
 ```python
 from src.infra.kubernetes.client import KubernetesClientImpl
-from src.core.config.kubernetes import KubernetesConfig
+from src.common.config.kubernetes import KubernetesConfig
 from src.core import get_logger
 
 

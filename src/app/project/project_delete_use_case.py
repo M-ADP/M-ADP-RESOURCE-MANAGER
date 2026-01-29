@@ -2,7 +2,7 @@ from fastapi import Depends
 
 from src.api.v1.project.schmas.response import ProjectDeleteResponse
 from src.app.base_use_case import BaseUseCase
-from src.core.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
+from src.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
 from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
 

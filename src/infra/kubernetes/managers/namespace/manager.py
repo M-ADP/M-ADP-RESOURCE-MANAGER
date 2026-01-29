@@ -4,7 +4,7 @@ from typing import Optional, Dict, List
 from kubernetes_asyncio.client import V1Namespace, V1ObjectMeta, V1NamespaceList
 from kubernetes_asyncio.client.rest import ApiException
 
-from src.core.config.logger import LoggerConfig
+from src.common.config.logger import LoggerConfig
 from src.infra.kubernetes.client import KubernetesClientImpl
 from .exceptions import (
     NamespaceCreationException,

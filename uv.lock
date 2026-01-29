@@ -412,27 +412,6 @@ wheels = [
 ]
 
 [[package]]
-name = "kubernetes"
-version = "34.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "durationpy" },
-    { name = "google-auth" },
-    { name = "python-dateutil" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "requests-oauthlib" },
-    { name = "six" },
-    { name = "urllib3" },
-    { name = "websocket-client" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/55/3f880ef65f559cbed44a9aa20d3bdbc219a2c3a3bac4a30a513029b03ee9/kubernetes-34.1.0.tar.gz", hash = "sha256:8fe8edb0b5d290a2f3ac06596b23f87c658977d46b5f8df9d0f4ea83d0003912", size = 1083771, upload-time = "2025-09-29T20:23:49.283Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/ec/65f7d563aa4a62dd58777e8f6aa882f15db53b14eb29aba0c28a20f7eb26/kubernetes-34.1.0-py2.py3-none-any.whl", hash = "sha256:bffba2272534e224e6a7a74d582deb0b545b7c9879d2cd9e4aae9481d1f2cc2a", size = 2008380, upload-time = "2025-09-29T20:23:47.684Z" },
-]
-
-[[package]]
 name = "kubernetes-asyncio"
 version = "33.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -946,7 +925,6 @@ dependencies = [
     { name = "hvac" },
     { name = "idna" },
     { name = "iniconfig" },
-    { name = "kubernetes" },
     { name = "kubernetes-asyncio" },
     { name = "multidict" },
     { name = "oauthlib" },
@@ -999,7 +977,6 @@ requires-dist = [
     { name = "hvac", specifier = "==2.4.0" },
     { name = "idna", specifier = "==3.11" },
     { name = "iniconfig", specifier = "==2.3.0" },
-    { name = "kubernetes", specifier = "==34.1.0" },
     { name = "kubernetes-asyncio", specifier = "==33.3.0" },
     { name = "multidict", specifier = "==6.7.0" },
     { name = "oauthlib", specifier = "==3.3.1" },

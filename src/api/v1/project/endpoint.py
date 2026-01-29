@@ -2,15 +2,16 @@
 
 from fastapi import APIRouter, Depends
 
+from src.api.v1.deps.user import get_user
 from src.api.v1.project.schmas.request import (
     ProjectCreateRequest, ProjectPortOpenRequest, ProjectPortUpdateRequest, ProjectDnsCreateRequest,
-    ProjectDnsUpdateRequest,
+    ProjectDnsUpdateRequest, ProjectDnsPortBindRequest, ProjectResourceUpdateRequest,
 )
 from src.api.v1.project.schmas.response import (
     ProjectCreateResponse, ProjectDeleteResponse, ProjectPortOpenResponse, ServicePortResponse, ProjectPortCloseResponse,
     ProjectPortUpdateResponse, ProjectDnsCreateResponse, ProjectDnsDeleteResponse, ProjectDnsUpdateResponse,
+    ProjectDnsPortBindResponse, ProjectResourceUpdateResponse,
 )
-from src.api.v1.schema.request.user import User
 from src.app.project.project_create_use_case import ProjectCreateUseCase
 from src.app.project.project_delete_use_case import ProjectDeleteUseCase
 from src.app.project.project_port_open_use_case import ProjectPortOpenUseCase
@@ -22,6 +23,7 @@ from src.app.project.project_dns_update_use_case import ProjectDnsUpdateUseCase
 from src.app.project.project_dns_port_bind_use_case import ProjectDnsPortBindUseCase
 from src.app.project.project_resource_update_use_case import ProjectResourceUpdateUseCase
 from src.core.response import SuccessResponse
+from src.core.user.model import User
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -29,7 +31,7 @@ project_router = APIRouter(prefix="/projects", tags=["projects"])
 @project_router.post("", response_model=SuccessResponse[ProjectCreateResponse])
 async def create_project(
     payload: ProjectCreateRequest,
-    user : User = Depends(),
+    user: User = Depends(get_user),
     project_create_usecase : ProjectCreateUseCase = Depends(ProjectCreateUseCase)
 ):
     project_create_result = await project_create_usecase(
@@ -45,8 +47,8 @@ async def create_project(
 @project_router.delete("/{name}", response_model=SuccessResponse[ProjectDeleteResponse])
 async def delete_project(
     name: str,
-    user : User = Depends(),
-    project_delete_usecase : ProjectCreateUseCase = Depends(ProjectCreateUseCase)
+    user: User = Depends(get_user),
+    project_delete_usecase : ProjectDeleteUseCase = Depends(ProjectDeleteUseCase)
 ):
     project_delete_result = await project_delete_usecase(
         name,
@@ -62,7 +64,7 @@ async def delete_project(
 async def open_project_port(
     name: str,
     payload: ProjectPortOpenRequest,
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_port_open_usecase: ProjectPortOpenUseCase = Depends(ProjectPortOpenUseCase)
 ):
     service = await project_port_open_usecase(
@@ -101,7 +103,7 @@ async def update_project_port(
     name: str,
     port_id: int, # path parameter로 받은 포트 번호
     payload: ProjectPortUpdateRequest,
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_port_update_usecase: ProjectPortUpdateUseCase = Depends(ProjectPortUpdateUseCase)
 ):
     service = await project_port_update_usecase(
@@ -140,7 +142,7 @@ async def update_project_port(
 async def close_project_port(
     name: str,
     port_id: str, # port_id를 service_name으로 사용
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_port_close_usecase: ProjectPortCloseUseCase = Depends(ProjectPortCloseUseCase)
 ):
     closed = await project_port_close_usecase(
@@ -157,7 +159,7 @@ async def close_project_port(
 async def create_project_dns(
     name: str,
     payload: ProjectDnsCreateRequest,
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_dns_create_usecase: ProjectDnsCreateUseCase = Depends(ProjectDnsCreateUseCase)
 ):
     dns_record = await project_dns_create_usecase(
@@ -179,7 +181,7 @@ async def create_project_dns(
 async def delete_project_dns(
     name: str,
     dns_id: str, # dns_id는 subdomain으로 사용
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_dns_delete_usecase: ProjectDnsDeleteUseCase = Depends(ProjectDnsDeleteUseCase)
 ):
     deleted = await project_dns_delete_usecase(
@@ -198,7 +200,7 @@ async def update_project_dns(
     name: str,
     dns_id: str, # dns_id는 old_subdomain으로 사용
     payload: ProjectDnsUpdateRequest,
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_dns_update_usecase: ProjectDnsUpdateUseCase = Depends(ProjectDnsUpdateUseCase)
 ):
     dns_record = await project_dns_update_usecase(
@@ -222,7 +224,7 @@ async def bind_project_dns_port(
     name: str,
     dns_id: str, # dns_id는 subdomain으로 사용
     payload: ProjectDnsPortBindRequest,
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_dns_port_bind_usecase: ProjectDnsPortBindUseCase = Depends(ProjectDnsPortBindUseCase)
 ):
     updated_service = await project_dns_port_bind_usecase(
@@ -261,7 +263,7 @@ async def bind_project_dns_port(
 async def update_project_resources(
     name: str,
     payload: ProjectResourceUpdateRequest,
-    user: User = Depends(),
+    user: User = Depends(get_user),
     project_resource_update_usecase: ProjectResourceUpdateUseCase = Depends(ProjectResourceUpdateUseCase)
 ):
     updated_quota = await project_resource_update_usecase(

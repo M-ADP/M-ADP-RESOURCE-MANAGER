@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.core.dependencies.kubernetes import get_kubernetes_client
+from src.dependencies.kubernetes import get_kubernetes_client
 from src.core.logger import Logger
 from src.infra.kubernetes.client import KubernetesClientImpl
-from src.core.config.kubernetes import KubernetesConfig
+from src.common.config.kubernetes import KubernetesConfig
 
 
 @pytest.fixture

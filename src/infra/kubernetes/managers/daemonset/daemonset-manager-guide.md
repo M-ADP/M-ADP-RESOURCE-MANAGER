@@ -29,7 +29,7 @@ from kubernetes_asyncio.client import V1Container
 # 기본 DaemonSet 생성
 daemonset = await manager.create_daemonset(
     name="node-exporter",
-    namespace="monitoring",
+    namespace="proxmox",
     containers=[
         V1Container(
             name="node-exporter",
@@ -42,7 +42,7 @@ daemonset = await manager.create_daemonset(
             ]
         )
     ],
-    labels={"app": "node-exporter", "tier": "monitoring"},
+    labels={"app": "node-exporter", "tier": "proxmox"},
     annotations={"prometheus.io/scrape": "true"}
 )
 
@@ -68,7 +68,7 @@ daemonset = await manager.create_daemonset(
 
 ```python
 # 단일 DaemonSet 조회
-ds = await manager.get_daemonset("node-exporter", "monitoring")
+ds = await manager.get_daemonset("node-exporter", "proxmox")
 if ds:
     print(f"DaemonSet 발견: {ds.metadata.name}")
     print(f"Desired: {ds.status.desired_number_scheduled}")
@@ -77,7 +77,7 @@ else:
     print("DaemonSet이 존재하지 않음")
 
 # 존재 여부 확인
-exists = await manager.exists("node-exporter", "monitoring")
+exists = await manager.exists("node-exporter", "proxmox")
 ```
 
 ### 4. DaemonSet 목록 조회
@@ -88,8 +88,8 @@ daemonsets = await manager.list_daemonsets(namespace="kube-system")
 
 # 레이블 셀렉터로 필터링
 monitoring_ds = await manager.list_daemonsets(
-    namespace="monitoring",
-    label_selector="tier=monitoring"
+    namespace="proxmox",
+    label_selector="tier=proxmox"
 )
 
 # 전체 클러스터의 DaemonSet
@@ -99,7 +99,7 @@ all_daemonsets = await manager.list_daemonsets()
 ### 5. DaemonSet 상태 조회
 
 ```python
-status = await manager.get_daemonset_status("node-exporter", "monitoring")
+status = await manager.get_daemonset_status("node-exporter", "proxmox")
 if status:
     print(f"Desired Nodes: {status['desired_number_scheduled']}")
     print(f"Current Scheduled: {status['current_number_scheduled']}")
@@ -119,7 +119,7 @@ if status:
 # 레이블 추가/병합
 updated = await manager.update_labels(
     name="node-exporter",
-    namespace="monitoring",
+    namespace="proxmox",
     labels={"version": "v1.5", "environment": "production"},
     merge=True  # 기존 레이블과 병합
 )
@@ -133,7 +133,7 @@ print(f"업데이트된 레이블: {updated.metadata.labels}")
 # DaemonSet 삭제 (모든 노드의 Pod도 함께 삭제됨)
 success = await manager.delete_daemonset(
     name="node-exporter",
-    namespace="monitoring",
+    namespace="proxmox",
     grace_period_seconds=30
 )
 
@@ -151,7 +151,7 @@ if success:
 # 모든 노드에서 시스템 메트릭 수집
 node_exporter = await manager.create_daemonset(
     name="node-exporter",
-    namespace="monitoring",
+    namespace="proxmox",
     containers=[
         V1Container(
             name="node-exporter",
@@ -178,7 +178,7 @@ node_exporter = await manager.create_daemonset(
 
 # 모든 노드에 배포될 때까지 대기
 while True:
-    status = await manager.get_daemonset_status("node-exporter", "monitoring")
+    status = await manager.get_daemonset_status("node-exporter", "proxmox")
     if (status['number_ready'] == status['desired_number_scheduled']):
         print(f"Node Exporter가 {status['number_ready']}개 노드에 배포 완료")
         break
@@ -224,7 +224,7 @@ from kubernetes_asyncio.client import V1PodSpec, V1PodTemplateSpec
 
 gpu_monitor = await manager.create_daemonset(
     name="gpu-monitor",
-    namespace="monitoring",
+    namespace="proxmox",
     containers=[
         V1Container(
             name="nvidia-gpu-exporter",
@@ -362,7 +362,7 @@ from src.infra.kubernetes.managers.daemonset.exceptions import (
 try:
     ds = await manager.create_daemonset(
         name="node-exporter",
-        namespace="monitoring",
+        namespace="proxmox",
         containers=[...]
     )
 except DaemonSetCreationException as e:
@@ -398,8 +398,8 @@ except DaemonSetDeletionException:
     print("DaemonSet이 존재하지 않아 삭제 실패")
 
 # ✅ 존재 여부 먼저 확인
-if await manager.exists("node-exporter", "monitoring"):
-    await manager.delete_daemonset("node-exporter", "monitoring")
+if await manager.exists("node-exporter", "proxmox"):
+    await manager.delete_daemonset("node-exporter", "proxmox")
 ```
 
 ### 3. 레이블 셀렉터는 불변

@@ -80,5 +80,5 @@ class K8sServiceRepository(ServiceRepository):
             labels=labels,
             annotations=v1_svc.metadata.annotations or {},
             cluster_ip=v1_svc.spec.cluster_ip if v1_svc.spec else None,
-            external_ips=v1_svc.spec.external_i_ps if v1_svc.spec and v1_svc.spec.external_i_ps else [],
+            external_ips=v1_svc.spec.external_ips if v1_svc.spec and v1_svc.spec.external_ips else [],
         )

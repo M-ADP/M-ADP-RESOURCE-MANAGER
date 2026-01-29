@@ -1,12 +1,13 @@
 from typing import Optional
 
-from src.core.config.kubernetes import KubernetesConfig
+from src.common.config.kubernetes import KubernetesConfig
 from src.core.kubernetes.gateway import GatewayRepository
 from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
 from src.core.kubernetes.service import ServiceRepository
 from src.core.kubernetes.vpa import VpaRepository
 from src.core.kubernetes.limit_range import LimitRangeRepository
+from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
 from src.infra.kubernetes.managers.gateway.manager import IstioGatewayManager
@@ -15,11 +16,19 @@ from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.service import ServiceManager
 from src.infra.kubernetes.managers.vpa import VpaManager
 from src.infra.kubernetes.managers.limitrange import LimitRangeManager
+from src.infra.kubernetes.managers.deployment import DeploymentManager
+from src.infra.kubernetes.managers.pod import PodManager
+from src.infra.kubernetes.managers.configmap import ConfigMapManager
+from src.infra.kubernetes.managers.statefulset import StatefulSetManager
+from src.infra.kubernetes.managers.job import JobManager
+from src.infra.kubernetes.managers.cronjob import CronJobManager
+from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
 from src.infra.kubernetes.repository.gateway_repository import K8sGatewayRepository
 from src.infra.kubernetes.repository import K8sNamespaceRepository, K8sResourceQuotaRepository
 from src.infra.kubernetes.repository.service_repository import K8sServiceRepository
 from src.infra.kubernetes.repository.vpa_repository import K8sVpaRepository
 from src.infra.kubernetes.repository.limit_range_repository import K8sLimitRangeRepository
+from src.infra.kubernetes.repository.deployment_repository import K8sDeploymentRepository
 
 
 _k8s_client_instance: Optional[KubernetesClientImpl] = None
@@ -42,7 +51,7 @@ async def get_kubernetes_client(
     global _k8s_client_instance
 
     if _k8s_client_instance is None:
-        from src.core.config.kubernetes import KubernetesConfig
+        from src.common.config.kubernetes import KubernetesConfig
         from src.core.logger import get_logger
 
         config = k8s_config or KubernetesConfig()
@@ -93,3 +102,46 @@ async def get_limit_range_repository() -> LimitRangeRepository:
     k8s_client = await get_kubernetes_client()
     manager = LimitRangeManager(k8s_client)
     return K8sLimitRangeRepository(manager)
+
+
+async def get_deployment_repository() -> DeploymentRepository:
+    """DeploymentRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = DeploymentManager(k8s_client)
+    return K8sDeploymentRepository(manager)
+
+
+async def get_pod_manager() -> PodManager:
+    """PodManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return PodManager(k8s_client)
+
+
+async def get_configmap_manager() -> ConfigMapManager:
+    """ConfigMapManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return ConfigMapManager(k8s_client)
+
+
+async def get_statefulset_manager() -> StatefulSetManager:
+    """StatefulSetManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return StatefulSetManager(k8s_client)
+
+
+async def get_job_manager() -> JobManager:
+    """JobManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return JobManager(k8s_client)
+
+
+async def get_cronjob_manager() -> CronJobManager:
+    """CronJobManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return CronJobManager(k8s_client)
+
+
+async def get_pvc_manager() -> PersistentVolumeClaimManager:
+    """PersistentVolumeClaimManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return PersistentVolumeClaimManager(k8s_client)

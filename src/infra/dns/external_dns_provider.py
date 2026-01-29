@@ -1,6 +1,6 @@
 from src.core.dns.provider import DnsProvider, DnsRecord
 from src.core.kubernetes.service import Service, ServiceRepository
-from src.core.dependencies.kubernetes import get_service_repository
+from src.dependencies.kubernetes import get_service_repository
 from src.core.exceptions import ServiceNotFoundException
 from fastapi import Depends
 

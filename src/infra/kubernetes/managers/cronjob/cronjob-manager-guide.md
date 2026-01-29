@@ -302,7 +302,7 @@ cleanup_job = await manager.create_cronjob(
 # 외부 API 상태 확인 (10분마다)
 health_check = await manager.create_cronjob(
     name="api-health-check",
-    namespace="monitoring",
+    namespace="proxmox",
     schedule="*/10 * * * *",  # 10분마다
     containers=[
         V1Container(

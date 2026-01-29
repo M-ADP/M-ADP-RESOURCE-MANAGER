@@ -1,6 +1,6 @@
 from proxmoxer import ProxmoxAPI
 
-from src.core.config.proxmox import PROXMOX_CONFIG
+from src.common.config.proxmox import PROXMOX_CONFIG
 from src.core.proxmox.client import ProxmoxClient
 from src.infra.proxmox.client import ProxmoxClientImpl
 

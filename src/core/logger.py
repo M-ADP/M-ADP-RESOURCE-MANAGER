@@ -3,7 +3,7 @@ import sys
 from typing import Optional
 from fastapi import Request
 
-from src.core.config.logger import LoggerConfig
+from src.common.config.logger import LoggerConfig
 
 
 class Logger:

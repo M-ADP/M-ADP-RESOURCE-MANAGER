@@ -152,7 +152,7 @@ updated = await manager.update_labels(
 updated = await manager.update_annotations(
     name="mysql-cluster",
     namespace="production",
-    annotations={"monitoring": "enabled"},
+    annotations={"proxmox": "enabled"},
     merge=True
 )
 ```

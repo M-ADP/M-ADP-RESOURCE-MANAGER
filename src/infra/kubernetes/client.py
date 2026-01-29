@@ -1,12 +1,7 @@
-from typing import Optional
-
-from kubernetes.client import CoreV1Api
 from kubernetes_asyncio import client, config
-from kubernetes_asyncio.client import AppsV1Api, RbacAuthorizationV1Api, BatchV1Api
+from kubernetes_asyncio.client import CoreV1Api, AppsV1Api, RbacAuthorizationV1Api, BatchV1Api
 
-from src.core.config.kubernetes import KubernetesConfig
 from src.core.kubernetes.kubernetes_client import KubernetesClient
-from src.core.logger import Logger
 
 
 class KubernetesClientImpl(KubernetesClient):

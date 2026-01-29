@@ -3,8 +3,8 @@ from fastapi import Depends
 
 from src.api.v1.project.schmas.request import ProjectResourceUpdateRequest
 from src.app.base_use_case import BaseUseCase
-from src.core.dependencies.kubernetes import get_resource_quota_repository, get_limit_range_repository, get_vpa_repository
-from src.core.kubernetes.resource_quota import ResourceQuotaRepository, ResourceQuotaLimits, ResourceQuota
+from src.dependencies.kubernetes import get_resource_quota_repository, get_limit_range_repository, get_vpa_repository
+from src.core.kubernetes.resource_quota import ResourceQuotaRepository, ResourceQuota
 from src.core.kubernetes.limit_range import LimitRangeRepository, LimitRange, LimitRangeItem
 from src.core.exceptions import ResourceQuotaNotFoundException
 from src.core.kubernetes.vpa import VpaRepository, VerticalPodAutoscaler
