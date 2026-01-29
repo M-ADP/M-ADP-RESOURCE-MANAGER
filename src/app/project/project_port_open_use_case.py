@@ -3,7 +3,7 @@ from fastapi import Depends
 from src.api.v1.project.schmas.request import ProjectPortOpenRequest
 from src.app.base_use_case import BaseUseCase
 from src.dependencies.kubernetes import get_service_repository
-from src.core.exceptions import ServiceAlreadyExistsException
+from src.core.kubernetes.service.exceptions import ServiceAlreadyExistsException
 from src.core.kubernetes.service import Service, ServicePort, ServiceRepository
 
 

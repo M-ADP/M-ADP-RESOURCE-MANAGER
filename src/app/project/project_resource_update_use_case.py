@@ -1,16 +1,16 @@
 import dataclasses
+import re
 from fastapi import Depends
 
 from src.api.v1.project.schmas.request import ProjectResourceUpdateRequest
 from src.app.base_use_case import BaseUseCase
+from src.common.const.project_default_label import ProjectDefaultLabel
+from src.common.util.unit_converter import UnitConverter
 from src.dependencies.kubernetes import get_resource_quota_repository, get_limit_range_repository, get_vpa_repository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository, ResourceQuota
 from src.core.kubernetes.limit_range import LimitRangeRepository, LimitRange, LimitRangeItem
-from src.core.exceptions import ResourceQuotaNotFoundException
+from src.app.project.exceptions import ResourceQuotaNotFoundException, DiskReductionNotAllowedException
 from src.core.kubernetes.vpa import VpaRepository, VerticalPodAutoscaler
-
-MANAGED_BY_LABEL = {"managed-by": "madp"}
-
 
 class ProjectResourceUpdateUseCase(BaseUseCase):
 
@@ -47,25 +47,37 @@ class ProjectResourceUpdateUseCase(BaseUseCase):
         quotas = await self.quota_repo.find_all(namespace=project_name, label_selector="managed-by=madp")
         if not quotas:
             raise ResourceQuotaNotFoundException()
-        
+
         existing_quota = quotas[0]
 
         # 요청에 명시된 값만 업데이트하고, 나머지는 기존 값 유지
-        # ResourceQuotaLimits는 to_dict가 있고, ResourceQuota는 hard_limits가 dict. 역변환이 필요.
-        # 간단하게 가기 위해, 기존 값에서 새로운 값으로 덮어쓰는 방식을 사용.
         new_limits_dict = existing_quota.hard_limits.copy()
+
         if payload.cpu:
             new_limits_dict["requests.cpu"] = payload.cpu
             new_limits_dict["limits.cpu"] = payload.cpu
+
         if payload.memory:
             new_limits_dict["requests.memory"] = payload.memory
             new_limits_dict["limits.memory"] = payload.memory
+
         if payload.disk:
+            # DISK는 줄어들지 않는 보수적 정책 적용
+            current_disk = existing_quota.hard_limits.get("requests.storage", "0")
+            current_bytes = UnitConverter.parse_storage_to_bytes(current_disk)
+            requested_bytes = UnitConverter.parse_storage_to_bytes(payload.disk)
+
+            if requested_bytes < current_bytes:
+                raise DiskReductionNotAllowedException(
+                    current=current_disk,
+                    requested=payload.disk,
+                )
+
             new_limits_dict["requests.storage"] = payload.disk
 
         # dataclasses.replace를 사용하여 불변 객체의 복사본을 만듭니다.
         updated_quota_obj = dataclasses.replace(existing_quota, hard_limits=new_limits_dict)
-        
+
         saved_quota = await self.quota_repo.save(updated_quota_obj)
         return saved_quota
 
@@ -95,7 +107,7 @@ class ProjectResourceUpdateUseCase(BaseUseCase):
                 name=limit_range_name,
                 namespace=project_name,
                 limits=[limit_item],
-                labels=MANAGED_BY_LABEL
+                labels=ProjectDefaultLabel.MANAGED_BY_LABEL
             )
         
         await self.limit_repo.save(updated_limit_range)

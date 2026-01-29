@@ -1,67 +1,44 @@
-from enum import Enum
+"""MADP 예외 정의 - 도메인 규약
 
-
-class ExceptionDetail(str, Enum):
-    # Not Found
-    NAMESPACE_NOT_FOUND = "Namespace not found"
-    SERVICE_NOT_FOUND = "Service not found"
-    PORT_NOT_FOUND = "Port not found"
-    RESOURCE_QUOTA_NOT_FOUND = "Resource quota not found"
-
-    # Forbidden
-    FORBIDDEN = "Forbidden"
-
-    # Conflict
-    SERVICE_ALREADY_EXISTS = "Service already exists"
+HTTP 상태코드 기반 상위 예외만 정의합니다.
+구체적인 예외는 각 모듈에서 이 클래스들을 상속하여 정의합니다.
+"""
 
 
 class MadpException(Exception):
-    def __init__(self, detail: ExceptionDetail):
-        self.detail = detail
-        super().__init__(self.detail.value)
+    """MADP 기본 예외"""
+    detail: str = "Internal server error"
+
+    def __init__(self, detail: str = None):
+        self.detail = detail or self.__class__.detail
+        super().__init__(self.detail)
+
+
+class BadRequestException(MadpException):
+    """400 Bad Request"""
+    detail = "Bad request"
 
 
 class NotFoundException(MadpException):
-    def __init__(self, detail: ExceptionDetail):
-        if self.__class__ is NotFoundException:
-            raise NotImplementedError("This is an abstract exception. You should inherit it.")
-        super().__init__(detail)
+    """404 Not Found"""
+    detail = "Not found"
 
 
 class ForbiddenException(MadpException):
-    def __init__(self, detail: ExceptionDetail):
-        if self.__class__ is ForbiddenException:
-            raise NotImplementedError("This is an abstract exception. You should inherit it.")
-        super().__init__(detail)
+    """403 Forbidden"""
+    detail = "Forbidden"
 
 
 class ConflictException(MadpException):
-    def __init__(self, detail: ExceptionDetail):
-        if self.__class__ is ConflictException:
-            raise NotImplementedError("This is an abstract exception. You should inherit it.")
-        super().__init__(detail)
+    """409 Conflict"""
+    detail = "Conflict"
 
 
-class NamespaceNotFoundException(NotFoundException):
-    def __init__(self):
-        super().__init__(detail=ExceptionDetail.NAMESPACE_NOT_FOUND)
+class TooManyRequestsException(MadpException):
+    """429 Too Many Requests"""
+    detail = "Too many requests"
 
 
-class ServiceNotFoundException(NotFoundException):
-    def __init__(self):
-        super().__init__(detail=ExceptionDetail.SERVICE_NOT_FOUND)
-
-
-class PortNotFoundException(NotFoundException):
-    def __init__(self):
-        super().__init__(detail=ExceptionDetail.PORT_NOT_FOUND)
-
-
-class ResourceQuotaNotFoundException(NotFoundException):
-    def __init__(self):
-        super().__init__(detail=ExceptionDetail.RESOURCE_QUOTA_NOT_FOUND)
-
-
-class ServiceAlreadyExistsException(ConflictException):
-    def __init__(self):
-        super().__init__(detail=ExceptionDetail.SERVICE_ALREADY_EXISTS)
+class InternalServerException(MadpException):
+    """500 Internal Server Error"""
+    detail = "Internal server error"
