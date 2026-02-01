@@ -13,19 +13,19 @@ class K8sPersistentVolumeClaimRepository(PersistentVolumeClaimRepository):
         self._manager = manager
 
     async def save(self, pvc: PersistentVolumeClaim) -> PersistentVolumeClaim:
-        v1_pvc = await self._manager.create_persistent_volume_claim(
+        v1_pvc = await self._manager.create_pvc(
             name=pvc.name,
             namespace=pvc.namespace,
+            storage_size=pvc.storage,
             storage_class_name=pvc.storage_class_name,
             access_modes=pvc.access_modes,
-            storage=pvc.storage,
             labels=pvc.labels if pvc.labels else None,
             annotations=pvc.annotations if pvc.annotations else None,
         )
         return self._to_domain(v1_pvc)
 
     async def find_by_name(self, name: str, namespace: str) -> Optional[PersistentVolumeClaim]:
-        v1_pvc = await self._manager.get_persistent_volume_claim(name, namespace)
+        v1_pvc = await self._manager.get_pvc(name, namespace)
         if v1_pvc is None:
             return None
         return self._to_domain(v1_pvc)
@@ -35,17 +35,21 @@ class K8sPersistentVolumeClaimRepository(PersistentVolumeClaimRepository):
         namespace: Optional[str] = None,
         label_selector: Optional[str] = None,
     ) -> List[PersistentVolumeClaim]:
-        v1_pvcs = await self._manager.list_persistent_volume_claims(
+        v1_pvcs = await self._manager.list_pvcs(
             namespace=namespace,
             label_selector=label_selector,
         )
         return [self._to_domain(pvc) for pvc in v1_pvcs]
 
     async def delete(self, name: str, namespace: str) -> bool:
-        return await self._manager.delete_persistent_volume_claim(name, namespace)
+        return await self._manager.delete_pvc(name, namespace)
 
     async def exists(self, name: str, namespace: str) -> bool:
         return await self._manager.exists(name, namespace)
+
+    async def resize(self, name: str, namespace: str, new_storage: str) -> PersistentVolumeClaim:
+        v1_pvc = await self._manager.resize_pvc(name, namespace, new_storage)
+        return self._to_domain(v1_pvc)
 
     def _to_domain(self, v1_pvc: V1PersistentVolumeClaim) -> PersistentVolumeClaim:
         storage = "1Gi"

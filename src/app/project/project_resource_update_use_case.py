@@ -3,7 +3,7 @@ from fastapi import Depends
 
 from src.api.v1.project.schmas.request import ProjectResourceUpdateRequest
 from src.app.base_use_case import BaseUseCase
-from src.common.const import ProjectDefaultLabel
+from src.common.const import DefaultLabel
 from src.common.util import UnitConverter
 from src.dependencies.kubernetes import get_resource_quota_repository, get_limit_range_repository, get_vpa_repository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository, ResourceQuota

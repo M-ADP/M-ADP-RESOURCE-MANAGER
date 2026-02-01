@@ -3,6 +3,14 @@ from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
+class Volume:
+    """Kubernetes Volume 정의"""
+
+    name: str
+    pvc_name: Optional[str] = None  # PVC 볼륨인 경우
+
+
+@dataclass(frozen=True)
 class Container:
     """Kubernetes Container 정의"""
 
@@ -34,6 +42,7 @@ class Deployment:
     namespace: str
     replicas: int = 1
     containers: List[Container] = field(default_factory=list)
+    volumes: List[Volume] = field(default_factory=list)
     labels: Dict[str, str] = field(default_factory=dict)
     annotations: Dict[str, str] = field(default_factory=dict)
     selector_labels: Dict[str, str] = field(default_factory=dict)

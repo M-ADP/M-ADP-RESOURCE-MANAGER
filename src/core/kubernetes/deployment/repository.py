@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .model import Deployment
 
@@ -34,4 +34,21 @@ class DeploymentRepository(ABC):
     @abstractmethod
     async def exists(self, name: str, namespace: str) -> bool:
         """Deployment 존재 여부 확인"""
+        ...
+
+    @abstractmethod
+    async def update_replicas(self, name: str, namespace: str, replicas: int) -> Deployment:
+        """Deployment 레플리카 수 업데이트"""
+        ...
+
+    @abstractmethod
+    async def update_container_resources(
+        self,
+        name: str,
+        namespace: str,
+        container_name: Optional[str] = None,
+        requests: Optional[Dict[str, str]] = None,
+        limits: Optional[Dict[str, str]] = None,
+    ) -> Deployment:
+        """Deployment 컨테이너 리소스 업데이트"""
         ...

@@ -4,7 +4,7 @@ from fastapi import Depends
 
 from src.api.v1.app.schemas.response import AppDeleteResponse
 from src.app.base_use_case import BaseUseCase
-from src.dependencies.kubernetes import get_deployment_manager, get_pvc_manager
+from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository
 
 
 class AppDeleteUseCase(BaseUseCase):
@@ -12,11 +12,11 @@ class AppDeleteUseCase(BaseUseCase):
 
     def __init__(
             self,
-            deployment_manager=Depends(get_deployment_manager),
-            pvc_manager=Depends(get_pvc_manager),
+            deployment_repository=Depends(get_deployment_repository),
+            pvc_repository=Depends(get_pvc_repository),
     ):
-        self.deployment_manager = deployment_manager
-        self.pvc_manager = pvc_manager
+        self.deployment_repository = deployment_repository
+        self.pvc_repository = pvc_repository
 
     async def __call__(
             self,
@@ -27,16 +27,16 @@ class AppDeleteUseCase(BaseUseCase):
         """App(Deployment) 삭제 및 연관 PVC 삭제"""
 
         # 1. Deployment 조회하여 연관 PVC 확인
-        deployment = await self.deployment_manager.get_deployment(name, namespace)
+        deployment = await self.deployment_repository.find_by_name(name, namespace)
         pvc_names = []
 
-        if deployment and deployment.spec.template.spec.volumes:
-            for volume in deployment.spec.template.spec.volumes:
-                if volume.persistent_volume_claim:
-                    pvc_names.append(volume.persistent_volume_claim.claim_name)
+        if deployment and deployment.volumes:
+            for volume in deployment.volumes:
+                if volume.pvc_name:
+                    pvc_names.append(volume.pvc_name)
 
         # 2. Deployment 삭제
-        deleted = await self.deployment_manager.delete_deployment(
+        deleted = await self.deployment_repository.delete(
             name=name,
             namespace=namespace,
         )
@@ -44,7 +44,7 @@ class AppDeleteUseCase(BaseUseCase):
         # 3. 연관 PVC 삭제
         for pvc_name in pvc_names:
             try:
-                await self.pvc_manager.delete_pvc(
+                await self.pvc_repository.delete(
                     name=pvc_name,
                     namespace=namespace,
                 )

@@ -35,3 +35,8 @@ class PersistentVolumeClaimRepository(ABC):
     async def exists(self, name: str, namespace: str) -> bool:
         """PVC 존재 여부 확인"""
         ...
+
+    @abstractmethod
+    async def resize(self, name: str, namespace: str, new_storage: str) -> PersistentVolumeClaim:
+        """PVC 스토리지 크기 변경 (증가만 가능)"""
+        ...

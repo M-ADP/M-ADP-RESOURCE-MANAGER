@@ -1,3 +1,3 @@
-from .project_default_label import ProjectDefaultLabel
+from .project_default_label import DefaultLabel
 
-__all__ = ["ProjectDefaultLabel"]
+__all__ = ["DefaultLabel"]

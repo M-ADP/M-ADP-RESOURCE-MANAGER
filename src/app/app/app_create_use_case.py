@@ -1,17 +1,8 @@
 """App 생성 Use Case"""
 
-from typing import List, Tuple
+from typing import List
 
 from fastapi import Depends
-from kubernetes_asyncio.client import (
-    V1Container,
-    V1ContainerPort,
-    V1ResourceRequirements,
-    V1EnvVar,
-    V1VolumeMount,
-    V1Volume,
-    V1PersistentVolumeClaimVolumeSource,
-)
 
 from src.api.v1.app.schemas.request import AppCreateRequest, ContainerSpec
 from src.api.v1.app.schemas.response import (
@@ -21,7 +12,10 @@ from src.api.v1.app.schemas.response import (
     PvcInfo,
 )
 from src.app.base_use_case import BaseUseCase
-from src.dependencies.kubernetes import get_deployment_manager, get_pvc_manager
+from src.common.const import DefaultLabel
+from src.core.kubernetes.deployment import Deployment, Container, Volume
+from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
+from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository
 
 
 class AppCreateUseCase(BaseUseCase):
@@ -29,11 +23,11 @@ class AppCreateUseCase(BaseUseCase):
 
     def __init__(
             self,
-            deployment_manager=Depends(get_deployment_manager),
-            pvc_manager=Depends(get_pvc_manager),
+            deployment_repository=Depends(get_deployment_repository),
+            pvc_repository=Depends(get_pvc_repository),
     ):
-        self.deployment_manager = deployment_manager
-        self.pvc_manager = pvc_manager
+        self.deployment_repository = deployment_repository
+        self.pvc_repository = pvc_repository
 
     async def __call__(
             self,
@@ -44,34 +38,35 @@ class AppCreateUseCase(BaseUseCase):
 
         # PVC 생성 및 정보 수집
         pvc_infos: List[PvcInfo] = []
-        volumes: List[V1Volume] = []
+        volumes: List[Volume] = []
 
         for spec in payload.containers:
             if spec.disk:
                 pvc_name = f"{payload.name}-{spec.name}-pvc"
 
-                # PVC 생성
-                pvc = await self.pvc_manager.create_pvc(
+                # PVC 도메인 객체 생성
+                pvc_domain = PersistentVolumeClaim(
                     name=pvc_name,
                     namespace=payload.namespace,
-                    storage_size=spec.disk.size,
+                    storage=spec.disk.size,
                     storage_class_name=spec.disk.storage_class,
                     access_modes=["ReadWriteOnce"],
                     labels={
                         "app": payload.name,
                         "container": spec.name,
-                        "managed-by": "madp-rms",
                         "owner": user_id,
+                        **DefaultLabel.MANAGED_BY_LABEL,
                     },
                 )
 
+                # Repository를 통해 PVC 저장
+                saved_pvc = await self.pvc_repository.save(pvc_domain)
+
                 # Volume 정의 추가
                 volumes.append(
-                    V1Volume(
+                    Volume(
                         name=f"{spec.name}-volume",
-                        persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
-                            claim_name=pvc_name
-                        )
+                        pvc_name=pvc_name
                     )
                 )
 
@@ -81,31 +76,34 @@ class AppCreateUseCase(BaseUseCase):
                     size=spec.disk.size,
                     mount_path=spec.disk.mount_path,
                     storage_class=spec.disk.storage_class,
-                    phase=pvc.status.phase if pvc.status else None,
+                    phase=saved_pvc.phase,
                 ))
 
-        # ContainerSpec -> V1Container 변환 (volumeMounts 포함)
+        # ContainerSpec -> Container 도메인 객체 변환
         containers = self._build_containers(payload.containers)
 
         # 레이블 설정 (기본 레이블 + 사용자 레이블)
         labels = {
             "app": payload.name,
-            "managed-by": "madp-rms",
             "owner": user_id,
+            **DefaultLabel.MANAGED_BY_LABEL,
         }
         if payload.labels:
             labels.update(payload.labels)
 
-        # Deployment 생성
-        deployment = await self.deployment_manager.create_deployment(
+        # Deployment 도메인 객체 생성
+        deployment_domain = Deployment(
             name=payload.name,
             namespace=payload.namespace,
-            containers=containers,
             replicas=payload.replicas,
+            containers=containers,
+            volumes=volumes,
             labels=labels,
-            annotations=payload.annotations,
-            volumes=volumes if volumes else None,
+            annotations=payload.annotations or {},
         )
+
+        # Repository를 통해 Deployment 저장
+        saved_deployment = await self.deployment_repository.save(deployment_domain)
 
         # 응답 생성
         container_infos = [
@@ -113,72 +111,66 @@ class AppCreateUseCase(BaseUseCase):
                 name=c.name,
                 image=c.image
             )
-            for c in deployment.spec.template.spec.containers
+            for c in saved_deployment.containers
         ]
 
         status_info = None
-        if deployment.status:
+        if saved_deployment.status:
             status_info = DeploymentStatusInfo(
-                replicas=deployment.status.replicas,
-                ready_replicas=deployment.status.ready_replicas,
-                available_replicas=deployment.status.available_replicas,
-                updated_replicas=deployment.status.updated_replicas,
+                replicas=saved_deployment.status.replicas,
+                ready_replicas=saved_deployment.status.ready_replicas,
+                available_replicas=saved_deployment.status.available_replicas,
+                updated_replicas=saved_deployment.status.updated_replicas,
             )
 
         return AppCreateResponse(
-            name=deployment.metadata.name,
-            namespace=deployment.metadata.namespace,
-            replicas=deployment.spec.replicas,
+            name=saved_deployment.name,
+            namespace=saved_deployment.namespace,
+            replicas=saved_deployment.replicas,
             containers=container_infos,
             pvcs=pvc_infos,
-            labels=deployment.metadata.labels,
+            labels=saved_deployment.labels,
             status=status_info,
         )
 
-    def _build_containers(self, container_specs: List[ContainerSpec]) -> List[V1Container]:
-        """ContainerSpec 리스트를 V1Container 리스트로 변환"""
+    def _build_containers(self, container_specs: List[ContainerSpec]) -> List[Container]:
+        """ContainerSpec 리스트를 Container 도메인 객체 리스트로 변환"""
         containers = []
 
         for spec in container_specs:
-            # 포트 설정 (빈 리스트나 None이면 ports를 None으로 설정)
-            ports = None
+            # 포트 설정
+            ports = []
             if spec.ports and len(spec.ports) > 0:
-                ports = [
-                    V1ContainerPort(container_port=port)
-                    for port in spec.ports
-                ]
+                ports = [{"container_port": port} for port in spec.ports]
 
             # 리소스 설정
-            resources = V1ResourceRequirements(
-                requests={
+            resources = {
+                "requests": {
                     "cpu": spec.resources.requests.cpu,
                     "memory": spec.resources.requests.memory,
                 },
-                limits={
+                "limits": {
                     "cpu": spec.resources.limits.cpu,
                     "memory": spec.resources.limits.memory,
                 },
-            )
+            }
 
             # 환경 변수 설정
-            env = None
+            env = []
             if spec.env:
-                env = [
-                    V1EnvVar(name=key, value=value)
-                    for key, value in spec.env.items()
-                ]
+                env = [{"name": key, "value": value} for key, value in spec.env.items()]
 
             # 볼륨 마운트 설정
-            volume_mounts = None
+            volume_mounts = []
             if spec.disk:
                 volume_mounts = [
-                    V1VolumeMount(
-                        name=f"{spec.name}-volume",
-                        mount_path=spec.disk.mount_path,
-                    )
+                    {
+                        "name": f"{spec.name}-volume",
+                        "mount_path": spec.disk.mount_path,
+                    }
                 ]
 
-            container = V1Container(
+            container = Container(
                 name=spec.name,
                 image=spec.image,
                 ports=ports,

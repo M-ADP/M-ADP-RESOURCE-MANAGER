@@ -3,7 +3,7 @@ from fastapi import Depends
 from src.api.v1.project.schmas.request import ProjectCreateRequest
 from src.api.v1.project.schmas.response import ProjectCreateResponse
 from src.app.base_use_case import BaseUseCase
-from src.common.const import ProjectDefaultLabel
+from src.common.const import DefaultLabel
 from src.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
 from src.core.kubernetes.namespace import Namespace, NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits, ResourceQuotaRepository
@@ -26,7 +26,7 @@ class ProjectCreateUseCase(BaseUseCase):
     ) -> ProjectCreateResponse:
         """Project 생성 (Namespace + ResourceQuota)"""
         # Namespace 도메인 객체 생성 및 저장
-        namespace = Namespace.for_project(user_id, payload.id, payload.name).with_labels(ProjectDefaultLabel.MANAGED_BY_LABEL)
+        namespace = Namespace.for_project(user_id, payload.id, payload.name).with_labels(DefaultLabel.MANAGED_BY_LABEL)
         saved_namespace = await self.namespace_repo.save(namespace)
 
         # ResourceQuota 도메인 객체 생성 및 저장
