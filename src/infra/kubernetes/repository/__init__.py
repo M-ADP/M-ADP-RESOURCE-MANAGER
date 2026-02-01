@@ -16,6 +16,7 @@ from .replica_set_repository import K8sReplicaSetRepository
 from .secret_repository import K8sSecretRepository
 from .gateway_repository import K8sGatewayRepository
 from .vpa_repository import K8sVpaRepository
+from .pod_repository import K8sPodRepository
 
 __all__ = [
     "K8sNamespaceRepository",
@@ -36,4 +37,5 @@ __all__ = [
     "K8sSecretRepository",
     "K8sGatewayRepository",
     "K8sVpaRepository",
+    "K8sPodRepository",
 ]

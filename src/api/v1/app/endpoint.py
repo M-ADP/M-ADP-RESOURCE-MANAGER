@@ -1,13 +1,19 @@
 """App API 라우터"""
 
-from fastapi import APIRouter, Depends, Path
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Path, Query
 
 from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest
 from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse
+from src.api.v1.app.schemas.log_response import AppLogsResponse
+from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
 from src.app.app.app_create_use_case import AppCreateUseCase
 from src.app.app.app_delete_use_case import AppDeleteUseCase
 from src.app.app.app_revision_use_case import AppRevisionUseCase
+from src.app.app.app_logs_use_case import AppLogsUseCase
+from src.app.app.app_events_use_case import AppEventsUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -81,4 +87,52 @@ async def revise_app(
     return SuccessResponse(
         message="App revised successfully",
         data=app_revision_result
+    )
+
+
+@app_router.get("/{namespace}/{name}/logs", response_model=SuccessResponse[AppLogsResponse])
+async def get_app_logs(
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    tail_lines: Optional[int] = Query(default=100, description="마지막 N줄만 조회"),
+    since_seconds: Optional[int] = Query(default=None, description="최근 N초 동안의 로그만 조회"),
+    timestamps: bool = Query(default=False, description="타임스탬프 포함 여부"),
+    user: User = Depends(get_user),
+    app_logs_usecase: AppLogsUseCase = Depends(AppLogsUseCase),
+):
+    """App(Deployment) 로그 조회
+
+    Deployment에 속한 모든 Pod의 로그를 조회합니다.
+    """
+    result = await app_logs_usecase(
+        name=name,
+        namespace=namespace,
+        tail_lines=tail_lines,
+        since_seconds=since_seconds,
+        timestamps=timestamps,
+    )
+    return SuccessResponse(
+        message="App logs retrieved successfully",
+        data=result,
+    )
+
+
+@app_router.get("/{namespace}/{name}/events", response_model=SuccessResponse[AppEventsResponse])
+async def get_app_events(
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_events_usecase: AppEventsUseCase = Depends(AppEventsUseCase),
+):
+    """App(Deployment) 이벤트 조회
+
+    Deployment, ReplicaSet, Pod 관련 Kubernetes 이벤트를 조회합니다.
+    """
+    result = await app_events_usecase(
+        name=name,
+        namespace=namespace,
+    )
+    return SuccessResponse(
+        message="App events retrieved successfully",
+        data=result,
     )

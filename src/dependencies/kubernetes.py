@@ -9,6 +9,7 @@ from src.core.kubernetes.vpa import VpaRepository
 from src.core.kubernetes.limit_range import LimitRangeRepository
 from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaimRepository
+from src.core.kubernetes.pod import PodRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
 from src.infra.kubernetes.managers.gateway import IstioGatewayManager
@@ -33,6 +34,7 @@ from src.infra.kubernetes.repository import (
     K8sGatewayRepository,
     K8sVpaRepository,
     K8sPersistentVolumeClaimRepository,
+    K8sPodRepository,
 )
 
 
@@ -163,3 +165,10 @@ async def get_pvc_repository() -> PersistentVolumeClaimRepository:
     k8s_client = await get_kubernetes_client()
     manager = PersistentVolumeClaimManager(k8s_client)
     return K8sPersistentVolumeClaimRepository(manager)
+
+
+async def get_pod_repository() -> PodRepository:
+    """PodRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = PodManager(k8s_client)
+    return K8sPodRepository(manager)
