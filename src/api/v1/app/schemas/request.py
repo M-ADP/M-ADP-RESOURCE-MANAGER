@@ -48,6 +48,36 @@ class ContainerSpec(BaseModel):
         return v
 
 
+class AppRevisionResourceRequest(BaseModel):
+    """App 리소스 수정 요청 모델"""
+
+    cpu: Optional[str] = Field(default=None, description="CPU 리소스 (예: 100m, 500m, 1)")
+    memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1Gi)")
+
+
+class AppRevisionRequest(BaseModel):
+    """App 수정 요청 모델 (Deployment 리소스량 수정)"""
+
+    container_name: Optional[str] = Field(
+        default=None,
+        description="수정할 컨테이너 이름 (미지정시 첫 번째 컨테이너)"
+    )
+    requests: Optional[AppRevisionResourceRequest] = Field(
+        default=None,
+        description="리소스 요청량"
+    )
+    limits: Optional[AppRevisionResourceRequest] = Field(
+        default=None,
+        description="리소스 제한량"
+    )
+    replicas: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=10,
+        description="레플리카 수"
+    )
+
+
 class AppCreateRequest(BaseModel):
     """App 생성 요청 모델 (Deployment 자원 생성)"""
 

@@ -38,3 +38,27 @@ class AppDeleteResponse(BaseModel):
     name: str = Field(..., description="삭제된 App 이름")
     namespace: str = Field(..., description="네임스페이스")
     deleted: bool = Field(..., description="삭제 성공 여부")
+
+
+class ContainerResourceInfo(BaseModel):
+    """컨테이너 리소스 정보 응답 모델"""
+
+    cpu: Optional[str] = None
+    memory: Optional[str] = None
+
+
+class ContainerResourcesInfo(BaseModel):
+    """컨테이너 리소스 정보 응답 모델"""
+
+    requests: Optional[ContainerResourceInfo] = None
+    limits: Optional[ContainerResourceInfo] = None
+
+
+class AppRevisionResponse(BaseModel):
+    """App 수정 응답 모델"""
+
+    name: str = Field(..., description="수정된 App 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    replicas: int = Field(..., description="레플리카 수")
+    container_name: str = Field(..., description="수정된 컨테이너 이름")
+    resources: ContainerResourcesInfo = Field(..., description="수정된 리소스 정보")

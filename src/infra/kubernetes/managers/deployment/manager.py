@@ -480,6 +480,119 @@ class DeploymentManager:
                 reason=str(e),
             )
 
+    async def update_container_resources(
+        self,
+        name: str,
+        namespace: str,
+        container_name: Optional[str] = None,
+        requests: Optional[Dict[str, str]] = None,
+        limits: Optional[Dict[str, str]] = None,
+    ) -> V1Deployment:
+        """Deployment 컨테이너 리소스 업데이트
+
+        Args:
+            name: Deployment 이름
+            namespace: 네임스페이스
+            container_name: 컨테이너 이름 (None이면 첫 번째 컨테이너)
+            requests: 리소스 요청량 (예: {"cpu": "100m", "memory": "128Mi"})
+            limits: 리소스 제한량 (예: {"cpu": "500m", "memory": "512Mi"})
+
+        Returns:
+            업데이트된 V1Deployment 객체
+
+        Raises:
+            DeploymentUpdateException: 업데이트 실패 시
+        """
+        self.logger.info(
+            f"Deployment 컨테이너 리소스 업데이트: {name} (namespace: {namespace})"
+        )
+
+        # 존재 여부 확인
+        existing = await self.get_deployment(name, namespace)
+        if not existing:
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason="Deployment does not exist",
+            )
+
+        # 컨테이너 찾기
+        containers = existing.spec.template.spec.containers
+        if not containers:
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason="No containers found in deployment",
+            )
+
+        target_container_idx = 0
+        if container_name:
+            for idx, container in enumerate(containers):
+                if container.name == container_name:
+                    target_container_idx = idx
+                    break
+            else:
+                raise DeploymentUpdateException(
+                    deployment_name=name,
+                    namespace=namespace,
+                    reason=f"Container '{container_name}' not found",
+                )
+
+        # 리소스 패치 구성
+        resources_patch = {}
+        if requests:
+            resources_patch["requests"] = requests
+        if limits:
+            resources_patch["limits"] = limits
+
+        if not resources_patch:
+            return existing
+
+        # Patch 요청
+        body = {
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {"name": containers[target_container_idx].name, "resources": resources_patch}
+                        ]
+                    }
+                }
+            }
+        }
+
+        try:
+            dep = await self.k8s_client.apps_v1.patch_namespaced_deployment(
+                name=name,
+                namespace=namespace,
+                body=body,
+            )
+            self.logger.info(
+                f"Deployment 컨테이너 리소스 업데이트 완료: {name} (namespace: {namespace})"
+            )
+            return dep
+
+        except ApiException as e:
+            self.logger.error(
+                f"Deployment 컨테이너 리소스 업데이트 실패: {name} - {e.reason}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"Deployment 컨테이너 리소스 업데이트 중 예외 발생: {name} - {str(e)}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
+
     async def get_deployment_status(
         self,
         name: str,
