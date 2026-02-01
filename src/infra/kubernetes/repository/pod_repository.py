@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from kubernetes_asyncio.client import V1Pod, V1Event
+from kubernetes_asyncio.client import V1Pod
 
 from src.core.kubernetes.pod import Pod, PodLogs, Event, PodRepository
 from src.infra.kubernetes.managers.pod import PodManager
@@ -93,7 +93,7 @@ class K8sPodRepository(PodRepository):
             phase=v1_pod.status.phase if v1_pod.status else None,
         )
 
-    def _event_to_domain(self, v1_event: V1Event) -> Event:
+    def _event_to_domain(self, v1_event) -> Event:
         """V1Event -> Event 도메인 변환"""
         return Event(
             type=v1_event.type or "Normal",
