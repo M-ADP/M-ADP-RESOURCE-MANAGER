@@ -61,3 +61,33 @@ class ProxmoxVMMetricsException(ProxmoxException):
         enhanced_detail = detail or {}
         enhanced_detail.update({"node": node, "vmid": vmid, "timeframe": timeframe, "reason": reason})
         super().__init__(message, enhanced_detail)
+
+
+class ProxmoxNodeNotFoundException(ProxmoxException):
+    """노드를 찾을 수 없을 때 발생하는 예외"""
+
+    def __init__(self, node: str, detail: Optional[dict] = None):
+        message = f"노드를 찾을 수 없습니다: node={node}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"node": node})
+        super().__init__(message, enhanced_detail)
+
+
+class ProxmoxNodeListException(ProxmoxException):
+    """노드 목록 조회 실패 시 발생하는 예외"""
+
+    def __init__(self, reason: str, detail: Optional[dict] = None):
+        message = f"노드 목록 조회 실패: {reason}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"reason": reason})
+        super().__init__(message, enhanced_detail)
+
+
+class ProxmoxNodeStatusException(ProxmoxException):
+    """노드 상태 조회 실패 시 발생하는 예외"""
+
+    def __init__(self, node: str, reason: str, detail: Optional[dict] = None):
+        message = f"노드 상태 조회 실패 [node={node}]: {reason}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"node": node, "reason": reason})
+        super().__init__(message, enhanced_detail)

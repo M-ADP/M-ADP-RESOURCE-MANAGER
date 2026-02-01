@@ -11,6 +11,9 @@ from .exceptions import (
     ProxmoxVMListException,
     ProxmoxVMStatusException,
     ProxmoxVMMetricsException,
+    ProxmoxNodeNotFoundException,
+    ProxmoxNodeListException,
+    ProxmoxNodeStatusException,
 )
 
 __all__ = [
@@ -24,4 +27,7 @@ __all__ = [
     "ProxmoxVMListException",
     "ProxmoxVMStatusException",
     "ProxmoxVMMetricsException",
+    "ProxmoxNodeNotFoundException",
+    "ProxmoxNodeListException",
+    "ProxmoxNodeStatusException",
 ]
