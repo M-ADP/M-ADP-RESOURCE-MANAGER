@@ -91,3 +91,48 @@ class ProxmoxNodeStatusException(ProxmoxException):
         enhanced_detail = detail or {}
         enhanced_detail.update({"node": node, "reason": reason})
         super().__init__(message, enhanced_detail)
+
+
+class ProxmoxClusterNodesException(ProxmoxException):
+    """클러스터 노드 조회 실패 시 발생하는 예외"""
+
+    def __init__(self, reason: str, detail: Optional[dict] = None):
+        message = f"클러스터 노드 조회 실패: {reason}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"reason": reason})
+        super().__init__(message, enhanced_detail)
+
+
+class ProxmoxClusterVMsException(ProxmoxException):
+    """클러스터 VM 조회 실패 시 발생하는 예외"""
+
+    def __init__(self, reason: str, node: Optional[str] = None, detail: Optional[dict] = None):
+        if node:
+            message = f"클러스터 VM 조회 실패 [node={node}]: {reason}"
+        else:
+            message = f"클러스터 VM 조회 실패: {reason}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"reason": reason})
+        if node:
+            enhanced_detail["node"] = node
+        super().__init__(message, enhanced_detail)
+
+
+class ProxmoxClusterStorageException(ProxmoxException):
+    """클러스터 스토리지 조회 실패 시 발생하는 예외"""
+
+    def __init__(self, node: str, reason: str, detail: Optional[dict] = None):
+        message = f"클러스터 스토리지 조회 실패 [node={node}]: {reason}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"node": node, "reason": reason})
+        super().__init__(message, enhanced_detail)
+
+
+class ProxmoxClusterResourcesException(ProxmoxException):
+    """클러스터 리소스 조회 실패 시 발생하는 예외"""
+
+    def __init__(self, reason: str, detail: Optional[dict] = None):
+        message = f"클러스터 리소스 조회 실패: {reason}"
+        enhanced_detail = detail or {}
+        enhanced_detail.update({"reason": reason})
+        super().__init__(message, enhanced_detail)

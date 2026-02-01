@@ -14,6 +14,10 @@ from .exceptions import (
     ProxmoxNodeNotFoundException,
     ProxmoxNodeListException,
     ProxmoxNodeStatusException,
+    ProxmoxClusterNodesException,
+    ProxmoxClusterVMsException,
+    ProxmoxClusterStorageException,
+    ProxmoxClusterResourcesException,
 )
 
 __all__ = [
@@ -30,4 +34,8 @@ __all__ = [
     "ProxmoxNodeNotFoundException",
     "ProxmoxNodeListException",
     "ProxmoxNodeStatusException",
+    "ProxmoxClusterNodesException",
+    "ProxmoxClusterVMsException",
+    "ProxmoxClusterStorageException",
+    "ProxmoxClusterResourcesException",
 ]
