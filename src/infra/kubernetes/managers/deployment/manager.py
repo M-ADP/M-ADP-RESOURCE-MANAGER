@@ -9,6 +9,7 @@ from kubernetes_asyncio.client import (
     V1PodTemplateSpec,
     V1PodSpec,
     V1Container,
+    V1Volume,
 )
 from kubernetes_asyncio.client.exceptions import ApiException
 
@@ -46,6 +47,7 @@ class DeploymentManager:
         selector_labels: Optional[Dict[str, str]] = None,
         pod_labels: Optional[Dict[str, str]] = None,
         pod_annotations: Optional[Dict[str, str]] = None,
+        volumes: Optional[List[V1Volume]] = None,
     ) -> V1Deployment:
         """Deployment 비동기 생성
 
@@ -59,6 +61,7 @@ class DeploymentManager:
             selector_labels: Pod 셀렉터 레이블 (None이면 labels 사용)
             pod_labels: Pod 레이블 (None이면 labels 사용)
             pod_annotations: Pod 어노테이션
+            volumes: 볼륨 리스트 (PVC 마운트용)
 
         Returns:
             생성되거나 기존에 존재하는 V1Deployment 객체
@@ -105,6 +108,7 @@ class DeploymentManager:
                     ),
                     spec=V1PodSpec(
                         containers=containers,
+                        volumes=volumes,
                     ),
                 ),
             ),

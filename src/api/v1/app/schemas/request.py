@@ -19,6 +19,14 @@ class ContainerResources(BaseModel):
     limits: ContainerResourceRequest = Field(default_factory=ContainerResourceRequest)
 
 
+class DiskSpec(BaseModel):
+    """디스크(PVC) 스펙 모델"""
+
+    size: str = Field(..., description="디스크 크기 (예: 1Gi, 500Mi)", examples=["1Gi"])
+    mount_path: str = Field(default="/data", description="마운트 경로", examples=["/data"])
+    storage_class: str = Field(default="local-path", description="StorageClass 이름")
+
+
 class ContainerSpec(BaseModel):
     """컨테이너 스펙 모델"""
 
@@ -30,6 +38,7 @@ class ContainerSpec(BaseModel):
         examples=[[8080]]
     )
     resources: ContainerResources = Field(default_factory=ContainerResources)
+    disk: Optional[DiskSpec] = Field(default=None, description="디스크(PVC) 설정")
     env: Optional[Dict[str, str]] = Field(default=None, description="환경 변수", examples=[{"ENV": "production"}])
     command: Optional[List[str]] = Field(default=None, description="컨테이너 실행 명령어")
     args: Optional[List[str]] = Field(default=None, description="컨테이너 실행 인자")
@@ -55,6 +64,12 @@ class AppRevisionResourceRequest(BaseModel):
     memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1Gi)")
 
 
+class AppRevisionDiskRequest(BaseModel):
+    """App 디스크 수정 요청 모델 (증가만 가능)"""
+
+    size: str = Field(..., description="새로운 디스크 크기 (증가만 가능, 예: 2Gi)")
+
+
 class AppRevisionRequest(BaseModel):
     """App 수정 요청 모델 (Deployment 리소스량 수정)"""
 
@@ -69,6 +84,10 @@ class AppRevisionRequest(BaseModel):
     limits: Optional[AppRevisionResourceRequest] = Field(
         default=None,
         description="리소스 제한량"
+    )
+    disk: Optional[AppRevisionDiskRequest] = Field(
+        default=None,
+        description="디스크 크기 수정 (증가만 가능)"
     )
     replicas: Optional[int] = Field(
         default=None,

@@ -1,5 +1,6 @@
 """App 수정 Use Case"""
 
+import re
 from typing import Optional, Dict
 
 from fastapi import Depends
@@ -9,10 +10,40 @@ from src.api.v1.app.schemas.response import (
     AppRevisionResponse,
     ContainerResourceInfo,
     ContainerResourcesInfo,
+    PvcInfo,
 )
 from src.app.base_use_case import BaseUseCase
 from src.core.exceptions import BadRequestException
-from src.dependencies.kubernetes import get_deployment_manager
+from src.dependencies.kubernetes import get_deployment_manager, get_pvc_manager
+
+
+def parse_size_to_bytes(size_str: str) -> int:
+    """크기 문자열을 바이트로 변환 (예: 1Gi -> 1073741824)"""
+    units = {
+        'Ki': 1024,
+        'Mi': 1024 ** 2,
+        'Gi': 1024 ** 3,
+        'Ti': 1024 ** 4,
+        'K': 1000,
+        'M': 1000 ** 2,
+        'G': 1000 ** 3,
+        'T': 1000 ** 4,
+    }
+
+    match = re.match(r'^(\d+(?:\.\d+)?)\s*([A-Za-z]*)$', size_str.strip())
+    if not match:
+        raise ValueError(f"Invalid size format: {size_str}")
+
+    value = float(match.group(1))
+    unit = match.group(2)
+
+    if unit == '':
+        return int(value)
+
+    if unit not in units:
+        raise ValueError(f"Unknown unit: {unit}")
+
+    return int(value * units[unit])
 
 
 class AppRevisionUseCase(BaseUseCase):
@@ -21,8 +52,10 @@ class AppRevisionUseCase(BaseUseCase):
     def __init__(
             self,
             deployment_manager=Depends(get_deployment_manager),
+            pvc_manager=Depends(get_pvc_manager),
     ):
         self.deployment_manager = deployment_manager
+        self.pvc_manager = pvc_manager
 
     async def __call__(
             self,
@@ -73,6 +106,53 @@ class AppRevisionUseCase(BaseUseCase):
                 limits=limits_dict,
             )
 
+        # PVC 크기 수정 (증가만 가능)
+        pvc_info: Optional[PvcInfo] = None
+        if payload.disk:
+            # 컨테이너에 연결된 PVC 찾기
+            pvc_name = f"{name}-{container_name}-pvc"
+            existing_pvc = await self.pvc_manager.get_pvc(pvc_name, namespace)
+
+            if not existing_pvc:
+                raise BadRequestException(
+                    detail=f"PVC '{pvc_name}' not found. Disk was not configured for this container."
+                )
+
+            # 현재 크기 확인
+            current_size = existing_pvc.spec.resources.requests.get("storage", "0")
+            current_bytes = parse_size_to_bytes(current_size)
+            new_bytes = parse_size_to_bytes(payload.disk.size)
+
+            if new_bytes < current_bytes:
+                raise BadRequestException(
+                    detail=f"Disk size can only be increased. Current: {current_size}, Requested: {payload.disk.size}"
+                )
+
+            if new_bytes > current_bytes:
+                # PVC 크기 증가
+                updated_pvc = await self.pvc_manager.resize_pvc(
+                    name=pvc_name,
+                    namespace=namespace,
+                    new_storage_size=payload.disk.size,
+                )
+
+                # 마운트 경로 찾기
+                mount_path = "/data"
+                for c in containers:
+                    if c.name == container_name and c.volume_mounts:
+                        for vm in c.volume_mounts:
+                            if vm.name == f"{container_name}-volume":
+                                mount_path = vm.mount_path
+                                break
+
+                pvc_info = PvcInfo(
+                    name=pvc_name,
+                    size=payload.disk.size,
+                    mount_path=mount_path,
+                    storage_class=updated_pvc.spec.storage_class_name,
+                    phase=updated_pvc.status.phase if updated_pvc.status else None,
+                )
+
         # 레플리카 업데이트
         if payload.replicas is not None:
             await self.deployment_manager.update_replicas(
@@ -111,4 +191,5 @@ class AppRevisionUseCase(BaseUseCase):
             replicas=updated.spec.replicas,
             container_name=container_name,
             resources=resources_info,
+            pvc=pvc_info,
         )
