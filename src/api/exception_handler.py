@@ -10,6 +10,8 @@ from src.core import (
     TooManyRequestsException,
     InternalServerException,
 )
+from src.infra.kubernetes import KubernetesResourceException
+from src.infra.proxmox import ProxmoxException
 
 
 def register_exception_handlers(app: FastAPI):
@@ -37,3 +39,12 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(InternalServerException)
     async def internal_server_handler(request: Request, exc: InternalServerException):
         return JSONResponse(status_code=500, content={"detail": exc.detail})
+
+    @app.exception_handler(KubernetesResourceException)
+    async def k8s_resource_handler(request: Request, exc: KubernetesResourceException):
+        return JSONResponse(status_code=500, content={"detail": exc.detail})
+
+    @app.exception_handler(ProxmoxException)
+    async def proxmox_resource_handler(request: Request, exc: ProxmoxException):
+        return JSONResponse(status_code=500, content={"detail": exc.detail})
+
