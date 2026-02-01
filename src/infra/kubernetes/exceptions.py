@@ -25,17 +25,17 @@ class KubernetesResourceException(MadpException):
         """
         self.resource_type = resource_type
         self.resource_name = resource_name
+        self.status_code = status_code
 
         enhanced_detail = detail or {}
         enhanced_detail.update({
             "resource_type": resource_type,
             "resource_name": resource_name
         })
+        self.extra_detail = enhanced_detail
 
         super().__init__(
-            message=f"[{resource_type}/{resource_name}] {message}",
-            status_code=status_code,
-            detail=enhanced_detail
+            detail=f"[{resource_type}/{resource_name}] {message}"
         )
 
 

@@ -114,6 +114,12 @@ async def get_deployment_repository() -> DeploymentRepository:
     return K8sDeploymentRepository(manager)
 
 
+async def get_deployment_manager() -> DeploymentManager:
+    """DeploymentManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return DeploymentManager(k8s_client)
+
+
 async def get_pod_manager() -> PodManager:
     """PodManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
