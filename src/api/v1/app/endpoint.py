@@ -1,11 +1,12 @@
 """App API 라우터"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 
 from src.api.v1.app.schemas.request import AppCreateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse
 from src.api.v1.deps.user import get_user
 from src.app.app.app_create_use_case import AppCreateUseCase
+from src.app.app.app_delete_use_case import AppDeleteUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -31,4 +32,26 @@ async def create_app(
     return SuccessResponse(
         message="App created successfully",
         data=app_create_result
+    )
+
+
+@app_router.delete("/{namespace}/{name}", response_model=SuccessResponse[AppDeleteResponse])
+async def delete_app(
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_delete_usecase: AppDeleteUseCase = Depends(AppDeleteUseCase)
+):
+    """App(Deployment) 삭제
+
+    Deployment 자원을 삭제합니다.
+    """
+    app_delete_result = await app_delete_usecase(
+        name=name,
+        namespace=namespace,
+        user_id=user.id
+    )
+    return SuccessResponse(
+        message="App deleted successfully",
+        data=app_delete_result
     )

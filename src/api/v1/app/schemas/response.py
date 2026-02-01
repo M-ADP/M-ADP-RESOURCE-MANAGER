@@ -30,3 +30,11 @@ class AppCreateResponse(BaseModel):
     containers: List[ContainerInfo] = Field(..., description="컨테이너 목록")
     labels: Optional[Dict[str, str]] = Field(default=None, description="레이블")
     status: Optional[DeploymentStatusInfo] = Field(default=None, description="Deployment 상태")
+
+
+class AppDeleteResponse(BaseModel):
+    """App 삭제 응답 모델"""
+
+    name: str = Field(..., description="삭제된 App 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    deleted: bool = Field(..., description="삭제 성공 여부")
