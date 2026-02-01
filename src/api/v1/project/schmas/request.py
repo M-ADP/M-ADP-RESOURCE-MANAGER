@@ -1,8 +1,23 @@
 """Project 스키마"""
 
-from typing import Dict, Optional
+from enum import Enum
+from typing import Dict, Optional, Literal
 
 from pydantic import BaseModel, Field
+
+
+class ProtocolType(str, Enum):
+    """Kubernetes Service 프로토콜 타입"""
+    TCP = "TCP"
+    UDP = "UDP"
+    SCTP = "SCTP"
+
+
+class ServiceType(str, Enum):
+    """Kubernetes Service 타입"""
+    CLUSTER_IP = "ClusterIP"
+    NODE_PORT = "NodePort"
+    LOAD_BALANCER = "LoadBalancer"
 
 
 class ProjectCreateRequest(BaseModel):
@@ -18,13 +33,25 @@ class ProjectCreateRequest(BaseModel):
 class ProjectPortOpenRequest(BaseModel):
     """Project 포트 개방 요청 모델"""
 
-    service_id: str = Field(..., min_length=1)
-    service_name: str = Field(..., min_length=1)
+    service_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=63,
+        pattern=r'^[a-z][a-z0-9-]*$',
+        description="서비스 ID (소문자로 시작, 소문자/숫자/하이픈만 허용)"
+    )
+    service_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=63,
+        pattern=r'^[a-z][a-z0-9-]*$',
+        description="서비스 이름 (소문자로 시작, 소문자/숫자/하이픈만 허용)"
+    )
     target_deployment_name: str = Field(..., min_length=1)
     port: int = Field(..., gt=0, le=65535)
     target_port: int = Field(..., gt=0, le=65535)
-    protocol: str = "TCP"
-    service_type: str = "ClusterIP" # ClusterIP, NodePort, LoadBalancer
+    protocol: ProtocolType = Field(default=ProtocolType.TCP, description="프로토콜 (TCP, UDP, SCTP)")
+    service_type: ServiceType = Field(default=ServiceType.CLUSTER_IP, description="서비스 타입 (ClusterIP, NodePort, LoadBalancer)")
 
 
 class ProjectPortUpdateRequest(BaseModel):
@@ -34,8 +61,8 @@ class ProjectPortUpdateRequest(BaseModel):
     service_name: Optional[str] = Field(None, min_length=1)
     target_deployment_name: Optional[str] = Field(None, min_length=1)
     target_port: Optional[int] = Field(None, gt=0, le=65535)
-    protocol: Optional[str] = "TCP"
-    service_type: Optional[str] = "ClusterIP" # ClusterIP, NodePort, LoadBalancer
+    protocol: Optional[ProtocolType] = Field(default=ProtocolType.TCP, description="프로토콜 (TCP, UDP, SCTP)")
+    service_type: Optional[ServiceType] = Field(default=ServiceType.CLUSTER_IP, description="서비스 타입 (ClusterIP, NodePort, LoadBalancer)")
 
 
 class ProjectDnsCreateRequest(BaseModel):

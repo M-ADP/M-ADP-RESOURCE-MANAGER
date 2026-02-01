@@ -126,7 +126,7 @@ class ServiceManager:
                     return existing
 
             self.logger.error(
-                f"Service 생성 실패: {name} - {e.reason}"
+                f"Service 생성 실패: {name} - {e.reason}, body: {e.body}"
             )
             raise ServiceCreationException(
                 service_name=name,
