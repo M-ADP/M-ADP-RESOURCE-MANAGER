@@ -48,6 +48,7 @@ class DeploymentManager:
         pod_labels: Optional[Dict[str, str]] = None,
         pod_annotations: Optional[Dict[str, str]] = None,
         volumes: Optional[List[V1Volume]] = None,
+        service_account_name: Optional[str] = None,
     ) -> V1Deployment:
         """Deployment 비동기 생성
 
@@ -62,6 +63,7 @@ class DeploymentManager:
             pod_labels: Pod 레이블 (None이면 labels 사용)
             pod_annotations: Pod 어노테이션
             volumes: 볼륨 리스트 (PVC 마운트용)
+            service_account_name: ServiceAccount 이름
 
         Returns:
             생성되거나 기존에 존재하는 V1Deployment 객체
@@ -109,6 +111,7 @@ class DeploymentManager:
                     spec=V1PodSpec(
                         containers=containers,
                         volumes=volumes,
+                        service_account_name=service_account_name,
                     ),
                 ),
             ),

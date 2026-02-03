@@ -15,7 +15,8 @@ from src.app.base_use_case import BaseUseCase
 from src.common.const import DefaultLabel
 from src.core.kubernetes.deployment import Deployment, Container, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
-from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository
+from src.core.kubernetes.service_account import ServiceAccount
+from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
 
 
 class AppCreateUseCase(BaseUseCase):
@@ -25,9 +26,11 @@ class AppCreateUseCase(BaseUseCase):
             self,
             deployment_repository=Depends(get_deployment_repository),
             pvc_repository=Depends(get_pvc_repository),
+            service_account_repository=Depends(get_service_account_repository),
     ):
         self.deployment_repository = deployment_repository
         self.pvc_repository = pvc_repository
+        self.service_account_repository = service_account_repository
 
     async def __call__(
             self,
@@ -36,7 +39,20 @@ class AppCreateUseCase(BaseUseCase):
     ) -> AppCreateResponse:
         """App(Deployment) 생성"""
 
-        # PVC 생성 및 정보 수집
+        # 1. ServiceAccount 생성
+        sa_name = f"{payload.name}-sa"
+        sa_domain = ServiceAccount(
+            name=sa_name,
+            namespace=payload.namespace,
+            labels={
+                "app": payload.name,
+                "owner": user_id,
+                **DefaultLabel.MANAGED_BY_LABEL,
+            }
+        )
+        await self.service_account_repository.save(sa_domain)
+
+        # 2. PVC 생성 및 정보 수집
         pvc_infos: List[PvcInfo] = []
         volumes: List[Volume] = []
 
@@ -100,6 +116,7 @@ class AppCreateUseCase(BaseUseCase):
             volumes=volumes,
             labels=labels,
             annotations=payload.annotations or {},
+            service_account_name=sa_name,
         )
 
         # Repository를 통해 Deployment 저장

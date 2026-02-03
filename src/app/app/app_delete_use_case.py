@@ -4,7 +4,7 @@ from fastapi import Depends
 
 from src.api.v1.app.schemas.response import AppDeleteResponse
 from src.app.base_use_case import BaseUseCase
-from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository
+from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
 
 
 class AppDeleteUseCase(BaseUseCase):
@@ -14,9 +14,11 @@ class AppDeleteUseCase(BaseUseCase):
             self,
             deployment_repository=Depends(get_deployment_repository),
             pvc_repository=Depends(get_pvc_repository),
+            service_account_repository=Depends(get_service_account_repository),
     ):
         self.deployment_repository = deployment_repository
         self.pvc_repository = pvc_repository
+        self.service_account_repository = service_account_repository
 
     async def __call__(
             self,
@@ -24,7 +26,7 @@ class AppDeleteUseCase(BaseUseCase):
             namespace: str,
             user_id: str
     ) -> AppDeleteResponse:
-        """App(Deployment) 삭제 및 연관 PVC 삭제"""
+        """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 삭제"""
 
         # 1. Deployment 조회하여 연관 PVC 확인
         deployment = await self.deployment_repository.find_by_name(name, namespace)
@@ -41,7 +43,16 @@ class AppDeleteUseCase(BaseUseCase):
             namespace=namespace,
         )
 
-        # 3. 연관 PVC 삭제
+        # 3. ServiceAccount 삭제
+        try:
+            await self.service_account_repository.delete(
+                name=f"{name}-sa",
+                namespace=namespace,
+            )
+        except Exception:
+            pass
+
+        # 4. 연관 PVC 삭제
         for pvc_name in pvc_names:
             try:
                 await self.pvc_repository.delete(

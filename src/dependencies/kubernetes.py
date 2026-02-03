@@ -9,6 +9,7 @@ from src.core.kubernetes.vpa import VpaRepository
 from src.core.kubernetes.hpa import HpaRepository
 from src.core.kubernetes.limit_range import LimitRangeRepository
 from src.core.kubernetes.deployment import DeploymentRepository
+from src.core.kubernetes.service_account import ServiceAccountRepository
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaimRepository
 from src.core.kubernetes.pod import PodRepository
 from src.core.logger import Logger
@@ -21,6 +22,7 @@ from src.infra.kubernetes.managers.vpa import VpaManager
 from src.infra.kubernetes.managers.hpa import HpaManager
 from src.infra.kubernetes.managers.limitrange import LimitRangeManager
 from src.infra.kubernetes.managers.deployment import DeploymentManager
+from src.infra.kubernetes.managers.service_account import ServiceAccountManager
 from src.infra.kubernetes.managers.pod import PodManager
 from src.infra.kubernetes.managers.configmap import ConfigMapManager
 from src.infra.kubernetes.managers.statefulset import StatefulSetManager
@@ -33,6 +35,7 @@ from src.infra.kubernetes.repository import (
     K8sServiceRepository,
     K8sLimitRangeRepository,
     K8sDeploymentRepository,
+    K8sServiceAccountRepository,
     K8sGatewayRepository,
     K8sVpaRepository,
     K8sHpaRepository,
@@ -119,6 +122,13 @@ async def get_deployment_repository() -> DeploymentRepository:
     k8s_client = await get_kubernetes_client()
     manager = DeploymentManager(k8s_client)
     return K8sDeploymentRepository(manager)
+
+
+async def get_service_account_repository() -> ServiceAccountRepository:
+    """ServiceAccountRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = ServiceAccountManager(k8s_client)
+    return K8sServiceAccountRepository(manager)
 
 
 async def get_deployment_manager() -> DeploymentManager:

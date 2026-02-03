@@ -62,9 +62,9 @@ path "{policy_path}" {{
 
         # 4. Kubernetes Auth Role 생성/업데이트
         # Role 이름: {namespace}-{app_name}-role
-        # ServiceAccount: App 이름과 동일
+        # ServiceAccount: {app_name}-sa
         role_name = f"{namespace}-{app_name}-role"
-        service_account_name = app_name
+        service_account_name = f"{app_name}-sa"
 
         await self.vault_client.create_kubernetes_role(
             role_name=role_name,

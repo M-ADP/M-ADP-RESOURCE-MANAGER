@@ -86,6 +86,7 @@ class K8sDeploymentRepository(DeploymentRepository):
             annotations=deployment.annotations if deployment.annotations else None,
             selector_labels=deployment.selector_labels if deployment.selector_labels else None,
             volumes=volumes,
+            service_account_name=deployment.service_account_name,
         )
         return self._to_domain(v1_dep)
 
@@ -180,6 +181,10 @@ class K8sDeploymentRepository(DeploymentRepository):
                 updated_replicas=v1_dep.status.updated_replicas,
             )
 
+        service_account_name = None
+        if v1_dep.spec and v1_dep.spec.template and v1_dep.spec.template.spec:
+            service_account_name = v1_dep.spec.template.spec.service_account_name
+
         return Deployment(
             name=v1_dep.metadata.name,
             namespace=v1_dep.metadata.namespace,
@@ -189,5 +194,6 @@ class K8sDeploymentRepository(DeploymentRepository):
             labels=v1_dep.metadata.labels or {},
             annotations=v1_dep.metadata.annotations or {},
             selector_labels=v1_dep.spec.selector.match_labels if v1_dep.spec and v1_dep.spec.selector else {},
+            service_account_name=service_account_name,
             status=status,
         )

@@ -46,6 +46,7 @@ class Deployment:
     labels: Dict[str, str] = field(default_factory=dict)
     annotations: Dict[str, str] = field(default_factory=dict)
     selector_labels: Dict[str, str] = field(default_factory=dict)
+    service_account_name: Optional[str] = None
     status: Optional[DeploymentStatus] = None
 
     def with_replicas(self, replicas: int) -> "Deployment":
@@ -58,6 +59,7 @@ class Deployment:
             labels=self.labels,
             annotations=self.annotations,
             selector_labels=self.selector_labels,
+            service_account_name=self.service_account_name,
             status=self.status,
         )
 
@@ -71,5 +73,6 @@ class Deployment:
             labels={**self.labels, **labels},
             annotations=self.annotations,
             selector_labels=self.selector_labels,
+            service_account_name=self.service_account_name,
             status=self.status,
         )
