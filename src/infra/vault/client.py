@@ -6,13 +6,13 @@ from functools import partial
 import hvac
 from hvac.exceptions import VaultError, InvalidPath
 
+from src.common.config.vault import VAULT_CONFIG
 from src.core.logger import Logger, get_logger
 from .exceptions import (
     VaultRoleException,
     VaultPolicyException,
     VaultSecretException,
 )
-
 
 class VaultClient:
     """
@@ -24,10 +24,11 @@ class VaultClient:
 
     def __init__(
         self,
-        vault_addr: str,
-        vault_token: Optional[str] = None,
-        vault_namespace: Optional[str] = None,
-        kubernetes_auth_path: str = "kubernetes",
+        vault_addr: str = VAULT_CONFIG.addr,
+        vault_token: Optional[str] = VAULT_CONFIG.token,
+        vault_namespace: Optional[str] = VAULT_CONFIG.namespace,
+        kubernetes_auth_path: str = VAULT_CONFIG.kubernetes_auth_path,
+        secret_mount_point: str = VAULT_CONFIG.secret_mount_point,
         logger: Optional[Logger] = None,
     ):
         """
@@ -38,12 +39,14 @@ class VaultClient:
             vault_token: Vault 토큰 (옵션)
             vault_namespace: Vault Namespace (Enterprise 기능, 옵션)
             kubernetes_auth_path: Kubernetes Auth Mount Path
+            secret_mount_point: KV Secret Engine Mount Point
             logger: 로거 인스턴스
         """
         self.vault_addr = vault_addr.rstrip("/")
         self.vault_token = vault_token
         self.vault_namespace = vault_namespace
         self.kubernetes_auth_path = kubernetes_auth_path
+        self.secret_mount_point = secret_mount_point
         self.logger = logger or get_logger()
 
         # hvac 클라이언트 초기화
@@ -356,7 +359,7 @@ class VaultClient:
         self,
         path: str,
         secret: Dict[str, Any],
-        mount_point: str = "secret",
+        mount_point: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Vault에 Secret 생성 또는 업데이트
@@ -364,7 +367,7 @@ class VaultClient:
         Args:
             path: Secret 경로 (예: "myapp/db")
             secret: Secret 데이터 (예: {"username": "admin", "password": "secret"})
-            mount_point: KV 마운트 포인트 (기본: "secret")
+            mount_point: KV 마운트 포인트 (None이면 config 값 사용)
 
         Returns:
             생성 결과
@@ -378,6 +381,7 @@ class VaultClient:
             ...     secret={"username": "admin", "password": "Hashi123"}
             ... )
         """
+        mount_point = mount_point or self.secret_mount_point
         self.logger.info(f"Vault Secret 생성: {mount_point}/data/{path}")
 
         try:
@@ -401,7 +405,7 @@ class VaultClient:
     async def get_secret(
         self,
         path: str,
-        mount_point: str = "secret",
+        mount_point: Optional[str] = None,
         version: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """
@@ -409,7 +413,7 @@ class VaultClient:
 
         Args:
             path: Secret 경로 (예: "myapp/db")
-            mount_point: KV 마운트 포인트 (기본: "secret")
+            mount_point: KV 마운트 포인트 (None이면 config 값 사용)
             version: Secret 버전 (None이면 최신 버전)
 
         Returns:
@@ -420,6 +424,7 @@ class VaultClient:
             >>> print(secret)
             {'username': 'admin', 'password': 'Hashi123'}
         """
+        mount_point = mount_point or self.secret_mount_point
         try:
             result = await self._run_in_executor(
                 self.client.secrets.kv.v2.read_secret_version,
@@ -443,18 +448,19 @@ class VaultClient:
     async def delete_secret(
         self,
         path: str,
-        mount_point: str = "secret",
+        mount_point: Optional[str] = None,
     ) -> bool:
         """
         Vault에서 Secret 삭제 (모든 버전 삭제)
 
         Args:
             path: Secret 경로 (예: "myapp/db")
-            mount_point: KV 마운트 포인트 (기본: "secret")
+            mount_point: KV 마운트 포인트 (None이면 config 값 사용)
 
         Returns:
             삭제 성공 여부
         """
+        mount_point = mount_point or self.secret_mount_point
         self.logger.info(f"Vault Secret 삭제: {mount_point}/data/{path}")
 
         try:
@@ -479,14 +485,14 @@ class VaultClient:
     async def list_secrets(
         self,
         path: str = "",
-        mount_point: str = "secret",
+        mount_point: Optional[str] = None,
     ) -> List[str]:
         """
         Vault에서 Secret 목록 조회
 
         Args:
             path: 디렉토리 경로 (예: "myapp/")
-            mount_point: KV 마운트 포인트 (기본: "secret")
+            mount_point: KV 마운트 포인트 (None이면 config 값 사용)
 
         Returns:
             Secret 이름 리스트
@@ -496,6 +502,7 @@ class VaultClient:
             >>> print(secrets)
             ['db', 'api-key', 'jwt-secret']
         """
+        mount_point = mount_point or self.secret_mount_point
         try:
             result = await self._run_in_executor(
                 self.client.secrets.kv.v2.list_secrets,
