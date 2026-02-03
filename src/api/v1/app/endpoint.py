@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse
+from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -15,6 +15,7 @@ from src.app.app.app_revision_use_case import AppRevisionUseCase
 from src.app.app.app_logs_use_case import AppLogsUseCase
 from src.app.app.app_events_use_case import AppEventsUseCase
 from src.app.app.app_autoscale_use_case import AppAutoScaleUseCase
+from src.app.app.app_fixed_scale_use_case import AppFixedScaleUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -161,5 +162,31 @@ async def set_auto_scale(
     )
     return SuccessResponse(
         message="Auto scale configured successfully",
+        data=result,
+    )
+
+
+@app_router.patch("/{namespace}/{name}/fixed-scale", response_model=SuccessResponse[FixedScaleResponse])
+async def set_fixed_scale(
+    payload: FixedScaleRequest,
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    fixed_scale_usecase: AppFixedScaleUseCase = Depends(AppFixedScaleUseCase),
+):
+    """App Fixed Scale 설정 (고정 레플리카)
+
+    Deployment의 레플리카 수를 고정값으로 설정합니다.
+    - HPA가 존재하면 삭제
+    - 고정 레플리카 수 지정
+    """
+    result = await fixed_scale_usecase(
+        name=name,
+        namespace=namespace,
+        payload=payload,
+        user_id=user.id,
+    )
+    return SuccessResponse(
+        message="Fixed scale configured successfully",
         data=result,
     )

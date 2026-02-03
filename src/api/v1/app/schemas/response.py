@@ -76,6 +76,15 @@ class AppRevisionResponse(BaseModel):
     pvc: Optional[PvcInfo] = Field(default=None, description="PVC 정보")
 
 
+class FixedScaleResponse(BaseModel):
+    """Fixed Scale 설정 응답 모델"""
+
+    name: str = Field(..., description="Deployment 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    replicas: int = Field(..., description="고정 레플리카 수")
+    hpa_deleted: bool = Field(..., description="HPA 삭제 여부")
+
+
 class AutoScaleResponse(BaseModel):
     """Auto Scale 설정 응답 모델 (HPA)"""
 

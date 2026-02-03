@@ -97,6 +97,27 @@ class AppRevisionRequest(BaseModel):
     )
 
 
+class FixedScaleRequest(BaseModel):
+    """Fixed Scale 설정 요청 (고정 레플리카)"""
+
+    replicas: int = Field(
+        ...,
+        ge=1,
+        le=10,
+        description="고정 레플리카 수"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "replicas": 3
+                }
+            ]
+        }
+    }
+
+
 class AutoScaleRequest(BaseModel):
     """Auto Scale 설정 요청 (HPA 생성)"""
 
