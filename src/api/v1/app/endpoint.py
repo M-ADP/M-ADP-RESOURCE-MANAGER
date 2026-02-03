@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse
+from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -16,6 +16,7 @@ from src.app.app.app_logs_use_case import AppLogsUseCase
 from src.app.app.app_events_use_case import AppEventsUseCase
 from src.app.app.app_autoscale_use_case import AppAutoScaleUseCase
 from src.app.app.app_fixed_scale_use_case import AppFixedScaleUseCase
+from src.app.app.app_secret_create_use_case import AppSecretCreateUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -189,4 +190,28 @@ async def set_fixed_scale(
     return SuccessResponse(
         message="Fixed scale configured successfully",
         data=result,
+    )
+
+
+@app_router.post("/{namespace}/{name}/secrets", response_model=SuccessResponse[SecretCreateResponse])
+async def create_app_secret(
+    payload: SecretCreateRequest,
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_secret_create_usecase: AppSecretCreateUseCase = Depends(AppSecretCreateUseCase)
+):
+    """App Secret 생성 및 Vault 설정
+
+    Vault에 Secret을 저장하고, Pod가 접근할 수 있도록 Policy와 Role을 자동 설정합니다.
+    """
+    result = await app_secret_create_usecase(
+        namespace=namespace,
+        app_name=name,
+        payload=payload,
+        user_id=user.id
+    )
+    return SuccessResponse(
+        message="Secret created and configured successfully",
+        data=result
     )

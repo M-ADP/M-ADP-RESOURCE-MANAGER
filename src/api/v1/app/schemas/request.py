@@ -207,3 +207,10 @@ class AppCreateRequest(BaseModel):
             ]
         }
     }
+
+
+class SecretCreateRequest(BaseModel):
+    """Secret 생성 요청 모델"""
+
+    name: str = Field(..., description="Secret 이름", examples=["db-credentials"])
+    data: Dict[str, str] = Field(..., description="Secret 데이터")

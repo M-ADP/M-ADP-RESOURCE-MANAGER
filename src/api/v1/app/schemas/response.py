@@ -97,3 +97,14 @@ class AutoScaleResponse(BaseModel):
     target_memory_utilization: Optional[int] = Field(default=None, description="메모리 사용률 기준 (%)")
     current_replicas: Optional[int] = Field(default=None, description="현재 레플리카 수")
     desired_replicas: Optional[int] = Field(default=None, description="목표 레플리카 수")
+
+
+class SecretCreateResponse(BaseModel):
+    """Secret 생성 응답 모델"""
+
+    name: str = Field(..., description="Secret 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    app_name: str = Field(..., description="App 이름")
+    path: str = Field(..., description="Vault 경로")
+    policy_name: str = Field(..., description="생성된 Policy 이름")
+    role_name: str = Field(..., description="생성된 Role 이름")
