@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Path, Query
 
 from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -17,6 +17,7 @@ from src.app.app.app_events_use_case import AppEventsUseCase
 from src.app.app.app_autoscale_use_case import AppAutoScaleUseCase
 from src.app.app.app_fixed_scale_use_case import AppFixedScaleUseCase
 from src.app.app.app_secret_create_use_case import AppSecretCreateUseCase
+from src.app.app.app_secret_delete_use_case import AppSecretDeleteUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -213,5 +214,30 @@ async def create_app_secret(
     )
     return SuccessResponse(
         message="Secret created and configured successfully",
+        data=result
+    )
+
+
+@app_router.delete("/{namespace}/{name}/secrets/{secret_name}", response_model=SuccessResponse[SecretDeleteResponse])
+async def delete_app_secret(
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    secret_name: str = Path(..., description="삭제할 Secret 이름"),
+    user: User = Depends(get_user),
+    app_secret_delete_usecase: AppSecretDeleteUseCase = Depends(AppSecretDeleteUseCase)
+):
+    """App Secret 삭제
+
+    Vault에서 Secret을 삭제합니다.
+    만약 해당 App의 모든 Secret이 삭제되면, 관련된 Policy와 Role도 자동으로 정리됩니다.
+    """
+    result = await app_secret_delete_usecase(
+        namespace=namespace,
+        app_name=name,
+        secret_name=secret_name,
+        user_id=user.id
+    )
+    return SuccessResponse(
+        message="Secret deleted successfully",
         data=result
     )

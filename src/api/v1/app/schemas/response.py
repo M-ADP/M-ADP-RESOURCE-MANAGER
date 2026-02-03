@@ -108,3 +108,11 @@ class SecretCreateResponse(BaseModel):
     path: str = Field(..., description="Vault 경로")
     policy_name: str = Field(..., description="생성된 Policy 이름")
     role_name: str = Field(..., description="생성된 Role 이름")
+
+
+class SecretDeleteResponse(BaseModel):
+    """Secret 삭제 응답 모델"""
+
+    name: str = Field(..., description="삭제된 Secret 이름")
+    path: str = Field(..., description="삭제된 Vault 경로")
+    all_secrets_deleted: bool = Field(..., description="해당 앱의 모든 Secret 삭제 및 권한 정리 여부")
