@@ -6,6 +6,7 @@ from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
 from src.core.kubernetes.service import ServiceRepository
 from src.core.kubernetes.vpa import VpaRepository
+from src.core.kubernetes.hpa import HpaRepository
 from src.core.kubernetes.limit_range import LimitRangeRepository
 from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaimRepository
@@ -17,6 +18,7 @@ from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.service import ServiceManager
 from src.infra.kubernetes.managers.vpa import VpaManager
+from src.infra.kubernetes.managers.hpa import HpaManager
 from src.infra.kubernetes.managers.limitrange import LimitRangeManager
 from src.infra.kubernetes.managers.deployment import DeploymentManager
 from src.infra.kubernetes.managers.pod import PodManager
@@ -33,6 +35,7 @@ from src.infra.kubernetes.repository import (
     K8sDeploymentRepository,
     K8sGatewayRepository,
     K8sVpaRepository,
+    K8sHpaRepository,
     K8sPersistentVolumeClaimRepository,
     K8sPodRepository,
 )
@@ -172,3 +175,10 @@ async def get_pod_repository() -> PodRepository:
     k8s_client = await get_kubernetes_client()
     manager = PodManager(k8s_client)
     return K8sPodRepository(manager)
+
+
+async def get_hpa_repository() -> HpaRepository:
+    """HpaRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    manager = HpaManager(k8s_client)
+    return K8sHpaRepository(manager)
