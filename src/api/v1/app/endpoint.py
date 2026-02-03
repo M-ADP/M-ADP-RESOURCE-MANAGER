@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse
+from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -14,6 +14,7 @@ from src.app.app.app_delete_use_case import AppDeleteUseCase
 from src.app.app.app_revision_use_case import AppRevisionUseCase
 from src.app.app.app_logs_use_case import AppLogsUseCase
 from src.app.app.app_events_use_case import AppEventsUseCase
+from src.app.app.app_autoscale_use_case import AppAutoScaleUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -134,5 +135,31 @@ async def get_app_events(
     )
     return SuccessResponse(
         message="App events retrieved successfully",
+        data=result,
+    )
+
+
+@app_router.patch("/{namespace}/{name}/auto-scale", response_model=SuccessResponse[AutoScaleResponse])
+async def set_auto_scale(
+    payload: AutoScaleRequest,
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    autoscale_usecase: AppAutoScaleUseCase = Depends(AppAutoScaleUseCase),
+):
+    """App Auto Scale 설정 (HPA 생성/수정)
+
+    Deployment에 HPA(Horizontal Pod Autoscaler)를 설정합니다.
+    - CPU/Memory 사용률 기반 자동 스케일링
+    - 최소/최대 레플리카 수 지정
+    """
+    result = await autoscale_usecase(
+        name=name,
+        namespace=namespace,
+        payload=payload,
+        user_id=user.id,
+    )
+    return SuccessResponse(
+        message="Auto scale configured successfully",
         data=result,
     )

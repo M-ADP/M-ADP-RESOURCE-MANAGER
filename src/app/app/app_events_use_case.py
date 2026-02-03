@@ -3,7 +3,7 @@
 from fastapi import Depends
 
 from src.api.v1.app.schemas.event_response import AppEventsResponse, EventInfo
-from src.core.exceptions import NotFoundException
+from src.app.app.exceptions import DeploymentNotFoundException
 from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.kubernetes.pod import PodRepository
 from src.dependencies.kubernetes import get_deployment_repository, get_pod_repository
@@ -40,9 +40,7 @@ class AppEventsUseCase:
         # 1. Deployment 존재 확인
         deployment = await self.deployment_repository.find_by_name(name, namespace)
         if not deployment:
-            raise NotFoundException(
-                f"Deployment '{name}' not found in namespace '{namespace}'"
-            )
+            raise DeploymentNotFoundException(name=name, namespace=namespace)
 
         # 2. 이벤트 조회
         events = await self.pod_repository.get_events_by_deployment(name, namespace)

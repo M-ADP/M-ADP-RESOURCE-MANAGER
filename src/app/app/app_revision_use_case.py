@@ -13,7 +13,12 @@ from src.api.v1.app.schemas.response import (
     PvcInfo,
 )
 from src.app.base_use_case import BaseUseCase
-from src.core.exceptions import BadRequestException
+from src.app.app.exceptions import (
+    DeploymentNotFoundException,
+    ContainerNotFoundException,
+    PvcNotFoundException,
+    DiskReductionNotAllowedException,
+)
 from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository
 
 
@@ -69,12 +74,12 @@ class AppRevisionUseCase(BaseUseCase):
         # 기존 Deployment 조회
         existing = await self.deployment_repository.find_by_name(name, namespace)
         if not existing:
-            raise BadRequestException(detail=f"Deployment '{name}' not found in namespace '{namespace}'")
+            raise DeploymentNotFoundException(name=name, namespace=namespace)
 
         # 컨테이너 이름 결정
         containers = existing.containers
         if not containers:
-            raise BadRequestException(detail="No containers found in deployment")
+            raise ContainerNotFoundException(deployment_name=name)
 
         container_name = payload.container_name or containers[0].name
 
@@ -114,9 +119,7 @@ class AppRevisionUseCase(BaseUseCase):
             existing_pvc = await self.pvc_repository.find_by_name(pvc_name, namespace)
 
             if not existing_pvc:
-                raise BadRequestException(
-                    detail=f"PVC '{pvc_name}' not found. Disk was not configured for this container."
-                )
+                raise PvcNotFoundException(name=pvc_name, namespace=namespace)
 
             # 현재 크기 확인
             current_size = existing_pvc.storage
@@ -124,9 +127,7 @@ class AppRevisionUseCase(BaseUseCase):
             new_bytes = parse_size_to_bytes(payload.disk.size)
 
             if new_bytes < current_bytes:
-                raise BadRequestException(
-                    detail=f"Disk size can only be increased. Current: {current_size}, Requested: {payload.disk.size}"
-                )
+                raise DiskReductionNotAllowedException(current=current_size, requested=payload.disk.size)
 
             if new_bytes > current_bytes:
                 # PVC 크기 증가

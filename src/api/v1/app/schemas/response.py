@@ -74,3 +74,17 @@ class AppRevisionResponse(BaseModel):
     container_name: str = Field(..., description="수정된 컨테이너 이름")
     resources: ContainerResourcesInfo = Field(..., description="수정된 리소스 정보")
     pvc: Optional[PvcInfo] = Field(default=None, description="PVC 정보")
+
+
+class AutoScaleResponse(BaseModel):
+    """Auto Scale 설정 응답 모델 (HPA)"""
+
+    name: str = Field(..., description="HPA 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    deployment_name: str = Field(..., description="대상 Deployment 이름")
+    min_replicas: int = Field(..., description="최소 레플리카 수")
+    max_replicas: int = Field(..., description="최대 레플리카 수")
+    target_cpu_utilization: Optional[int] = Field(default=None, description="CPU 사용률 기준 (%)")
+    target_memory_utilization: Optional[int] = Field(default=None, description="메모리 사용률 기준 (%)")
+    current_replicas: Optional[int] = Field(default=None, description="현재 레플리카 수")
+    desired_replicas: Optional[int] = Field(default=None, description="목표 레플리카 수")

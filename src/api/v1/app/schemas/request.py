@@ -97,6 +97,48 @@ class AppRevisionRequest(BaseModel):
     )
 
 
+class AutoScaleRequest(BaseModel):
+    """Auto Scale 설정 요청 (HPA 생성)"""
+
+    min_replicas: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description="최소 레플리카 수"
+    )
+    max_replicas: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="최대 레플리카 수"
+    )
+    target_cpu_utilization: int = Field(
+        default=80,
+        ge=1,
+        le=100,
+        description="CPU 사용률 기준 (%)"
+    )
+    target_memory_utilization: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=100,
+        description="메모리 사용률 기준 (%) - 선택사항"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "min_replicas": 1,
+                    "max_replicas": 5,
+                    "target_cpu_utilization": 80,
+                    "target_memory_utilization": None
+                }
+            ]
+        }
+    }
+
+
 class AppCreateRequest(BaseModel):
     """App 생성 요청 모델 (Deployment 자원 생성)"""
 
