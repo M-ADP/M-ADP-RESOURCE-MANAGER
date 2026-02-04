@@ -2,6 +2,7 @@ from fastapi import Depends
 
 from src.api.v1.project.schmas.response import ProjectDeleteResponse
 from src.app.base_use_case import BaseUseCase
+from src.app.project.exceptions import ProjectNotFoundException
 from src.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
 from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
@@ -24,6 +25,11 @@ class ProjectDeleteUseCase(BaseUseCase):
     ) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
         project_id = id
+        
+        # 1. Project 존재 여부 확인
+        if not await self.namespace_repo.exists(project_id):
+            raise ProjectNotFoundException()
+
         quota_id = f"{id}-quota"
 
         # ResourceQuota 삭제 (존재하는 경우)

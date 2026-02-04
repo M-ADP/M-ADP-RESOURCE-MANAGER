@@ -3,6 +3,7 @@
 from fastapi import Depends
 
 from src.api.v1.app.schemas.response import AppDeleteResponse
+from src.app.app.exceptions import DeploymentNotFoundException
 from src.app.base_use_case import BaseUseCase
 from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
 
@@ -30,6 +31,9 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
 
         # 1. Deployment 조회하여 연관 PVC 확인
         deployment = await self.deployment_repository.find_by_name(app_name, namespace)
+        if not deployment:
+            raise DeploymentNotFoundException(name=app_name, namespace=namespace)
+
         pvc_names = []
 
         if deployment and deployment.volumes:

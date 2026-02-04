@@ -10,6 +10,7 @@ from kubernetes_asyncio.client.exceptions import ApiException
 
 from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core.logger import Logger, get_logger
+from src.infra.kubernetes.managers.namespace import NamespaceNotFoundException
 
 
 class ServiceAccountManager:
@@ -63,6 +64,11 @@ class ServiceAccountManager:
         except ApiException as e:
             if e.status == 409:
                 return await self.get_service_account(name, namespace)
+            
+            if e.status == 404:
+                self.logger.error(f"Namespace 미발견: {namespace}")
+                raise NamespaceNotFoundException(namespace_name=namespace)
+
             self.logger.error(f"ServiceAccount 생성 실패: {name} - {e.reason}")
             raise e
 

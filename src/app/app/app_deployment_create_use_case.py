@@ -12,11 +12,13 @@ from src.api.v1.app.schemas.response import (
     PvcInfo,
 )
 from src.app.base_use_case import BaseUseCase
+from src.app.project.exceptions import ProjectNotFoundException
 from src.common.const import DefaultLabel
 from src.core.kubernetes.deployment import Deployment, Container, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
 from src.core.kubernetes.service_account import ServiceAccount
 from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
+from src.infra.kubernetes.managers.namespace.exceptions import NamespaceNotFoundException
 
 
 class AppDeploymentCreateUseCase(BaseUseCase):
@@ -50,7 +52,10 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 **DefaultLabel.MANAGED_BY_LABEL,
             }
         )
-        await self.service_account_repository.save(sa_domain)
+        try:
+            await self.service_account_repository.save(sa_domain)
+        except NamespaceNotFoundException as exc:
+            raise ProjectNotFoundException() from exc
 
         # 2. PVC 생성 및 정보 수집
         pvc_infos: List[PvcInfo] = []
