@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Path, Query
 
 from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentCreateRequest, EnvironmentUpdateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse, EnvironmentUpdateResponse
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse, EnvironmentUpdateResponse, EnvironmentDeleteResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -20,6 +20,7 @@ from src.app.app.app_secret_create_use_case import AppSecretCreateUseCase
 from src.app.app.app_secret_delete_use_case import AppSecretDeleteUseCase
 from src.app.app.app_environment_create_use_case import AppEnvironmentCreateUseCase
 from src.app.app.app_environment_update_use_case import AppEnvironmentUpdateUseCase
+from src.app.app.app_environment_delete_use_case import AppEnvironmentDeleteUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -293,5 +294,28 @@ async def update_app_environment(
     )
     return SuccessResponse(
         message="Environment variables updated successfully",
+        data=result
+    )
+
+
+@app_router.delete("/{namespace}/{name}/environment", response_model=SuccessResponse[EnvironmentDeleteResponse])
+async def delete_app_environment(
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_environment_delete_usecase: AppEnvironmentDeleteUseCase = Depends(AppEnvironmentDeleteUseCase)
+):
+    """App 환경 변수 삭제 (ConfigMap 삭제)
+
+    App의 환경 변수 ConfigMap을 삭제합니다.
+    - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
+    """
+    result = await app_environment_delete_usecase(
+        namespace=namespace,
+        app_name=name,
+        user_id=user.id
+    )
+    return SuccessResponse(
+        message="Environment variables deleted successfully",
         data=result
     )

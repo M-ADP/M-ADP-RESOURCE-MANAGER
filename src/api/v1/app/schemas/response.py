@@ -134,3 +134,12 @@ class EnvironmentUpdateResponse(BaseModel):
     namespace: str = Field(..., description="네임스페이스")
     app_name: str = Field(..., description="App 이름")
     data_keys: List[str] = Field(..., description="수정된 환경 변수 키 목록")
+
+
+class EnvironmentDeleteResponse(BaseModel):
+    """환경 변수 삭제 응답 모델"""
+
+    name: str = Field(..., description="삭제된 ConfigMap 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    app_name: str = Field(..., description="App 이름")
+    deleted: bool = Field(..., description="삭제 성공 여부")
