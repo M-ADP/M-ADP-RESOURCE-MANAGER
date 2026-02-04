@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse
+from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentCreateRequest
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -18,6 +18,7 @@ from src.app.app.app_autoscale_use_case import AppAutoScaleUseCase
 from src.app.app.app_fixed_scale_use_case import AppFixedScaleUseCase
 from src.app.app.app_secret_create_use_case import AppSecretCreateUseCase
 from src.app.app.app_secret_delete_use_case import AppSecretDeleteUseCase
+from src.app.app.app_environment_create_use_case import AppEnvironmentCreateUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -239,5 +240,31 @@ async def delete_app_secret(
     )
     return SuccessResponse(
         message="Secret deleted successfully",
+        data=result
+    )
+
+
+@app_router.post("/{namespace}/{name}/environment", response_model=SuccessResponse[EnvironmentCreateResponse])
+async def create_app_environment(
+    payload: EnvironmentCreateRequest,
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_environment_create_usecase: AppEnvironmentCreateUseCase = Depends(AppEnvironmentCreateUseCase)
+):
+    """App 환경 변수 추가 (ConfigMap 생성)
+
+    App의 환경 변수를 ConfigMap으로 생성합니다.
+    - 이미 존재하는 ConfigMap이 있으면 데이터를 병합합니다.
+    - ConfigMap 이름은 {app-name}-env 형식으로 생성됩니다.
+    """
+    result = await app_environment_create_usecase(
+        namespace=namespace,
+        app_name=name,
+        payload=payload,
+        user_id=user.id
+    )
+    return SuccessResponse(
+        message="Environment variables created successfully",
         data=result
     )
