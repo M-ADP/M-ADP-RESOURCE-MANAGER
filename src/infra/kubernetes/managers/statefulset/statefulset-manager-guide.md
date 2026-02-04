@@ -30,7 +30,7 @@ statefulset = await manager.create_statefulset(
     namespace="production",
     service_name="mysql-headless",  # Headless Service 이름 (필수)
     replicas=3,
-    selector={"app": "mysql", "role": "db"},
+    selector={"app_deployment": "mysql", "role": "db"},
     containers=[
         V1Container(
             name="mysql",
@@ -41,7 +41,7 @@ statefulset = await manager.create_statefulset(
             ]
         )
     ],
-    labels={"app": "mysql", "tier": "database"},
+    labels={"app_deployment": "mysql", "tier": "database"},
     volume_claim_templates=[
         V1PersistentVolumeClaim(
             metadata={"name": "data"},
@@ -191,7 +191,7 @@ mysql_sts = await manager.create_statefulset(
     namespace="database",
     service_name="mysql-headless",
     replicas=3,
-    selector={"app": "mysql"},
+    selector={"app_deployment": "mysql"},
     containers=[
         V1Container(
             name="mysql",
@@ -231,7 +231,7 @@ zk_sts = await manager.create_statefulset(
     namespace="kafka",
     service_name="zk-headless",
     replicas=3,
-    selector={"app": "zookeeper"},
+    selector={"app_deployment": "zookeeper"},
     containers=[
         V1Container(
             name="zookeeper",
@@ -322,7 +322,7 @@ await manager.delete_statefulset("mysql", "database")
 # 2. PVC 수동 삭제 (PVC Manager 사용)
 pvcs = await pvc_manager.list_pvcs(
     namespace="database",
-    label_selector="app=mysql"
+    label_selector="app_deployment=mysql"
 )
 
 for pvc in pvcs:
@@ -380,7 +380,7 @@ try:
         namespace="database",
         service_name="mysql-headless",  # 존재하지 않으면 실패
         replicas=3,
-        selector={"app": "mysql"},
+        selector={"app_deployment": "mysql"},
         containers=[...]
     )
 except StatefulSetCreationException as e:

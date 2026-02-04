@@ -85,7 +85,7 @@ class CronJobManager:
             return existing
 
         # 기본 레이블 설정
-        cronjob_labels = labels or {"app": name}
+        cronjob_labels = labels or {"app_deployment": name}
 
         # CronJob 객체 생성
         cronjob = V1CronJob(
@@ -291,7 +291,7 @@ class CronJobManager:
 
         Args:
             namespace: 네임스페이스 (None이면 전체 조회)
-            label_selector: 레이블 셀렉터 (예: "app=myapp")
+            label_selector: 레이블 셀렉터 (예: "app_deployment=myapp")
             field_selector: 필드 셀렉터 (예: "metadata.name=test")
 
         Returns:

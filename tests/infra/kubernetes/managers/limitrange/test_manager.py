@@ -45,7 +45,7 @@ def mock_limitrange():
         metadata=V1ObjectMeta(
             name="test-lr",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1LimitRangeSpec(
@@ -112,7 +112,7 @@ class TestCreateLimitRange:
             name="test-lr",
             namespace="test-ns",
             limits=mock_limit_items,
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -420,14 +420,14 @@ class TestListLimitRanges:
 
         result = await lr_manager.list_limitranges(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-lr",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_limit_range.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-lr",
         )
 
@@ -558,7 +558,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-lr",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

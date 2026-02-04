@@ -70,7 +70,7 @@ class PodManager:
             metadata=V1ObjectMeta(
                 name=name,
                 namespace=namespace,
-                labels=labels or {"app": name},
+                labels=labels or {"app_deployment": name},
                 annotations=annotations or {},
             ),
             spec=V1PodSpec(
@@ -250,7 +250,7 @@ class PodManager:
 
         Args:
             namespace: 네임스페이스 (None이면 전체 조회)
-            label_selector: 레이블 셀렉터 (예: "app=myapp")
+            label_selector: 레이블 셀렉터 (예: "app_deployment=myapp")
             field_selector: 필드 셀렉터 (예: "metadata.name=test")
 
         Returns:

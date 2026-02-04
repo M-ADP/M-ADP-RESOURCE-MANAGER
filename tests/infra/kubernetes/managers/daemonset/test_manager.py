@@ -60,16 +60,16 @@ def mock_daemonset(mock_container):
         metadata=V1ObjectMeta(
             name="test-daemonset",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1DaemonSetSpec(
             selector=V1LabelSelector(
-                match_labels={"app": "test"},
+                match_labels={"app_deployment": "test"},
             ),
             template=V1PodTemplateSpec(
                 metadata=V1ObjectMeta(
-                    labels={"app": "test"},
+                    labels={"app_deployment": "test"},
                 ),
                 spec=V1PodSpec(
                     containers=[mock_container],
@@ -132,7 +132,7 @@ class TestCreateDaemonSet:
             name="test-daemonset",
             namespace="test-ns",
             containers=[mock_container],
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -440,14 +440,14 @@ class TestListDaemonSets:
 
         result = await ds_manager.list_daemonsets(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-daemonset",
         )
 
         assert len(result) == 0
         k8s_client.apps_v1.list_namespaced_daemon_set.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-daemonset",
         )
 
@@ -506,7 +506,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-daemonset",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 
@@ -649,9 +649,9 @@ class TestGetDaemonSetStatus:
                 namespace="test-ns",
             ),
             spec=V1DaemonSetSpec(
-                selector=V1LabelSelector(match_labels={"app": "test"}),
+                selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
                 template=V1PodTemplateSpec(
-                    metadata=V1ObjectMeta(labels={"app": "test"}),
+                    metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                     spec=V1PodSpec(containers=[]),
                 ),
             ),

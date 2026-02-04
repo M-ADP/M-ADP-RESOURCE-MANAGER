@@ -22,7 +22,7 @@ class DnsProvider(ABC):
 
         Args:
             project_name: 프로젝트 이름 (네임스페이스로 사용)
-            subdomain: 생성할 서브도메인 (예: 'my-app')
+            subdomain: 생성할 서브도메인 (예: 'my-app_deployment')
 
         Returns:
             생성된 DnsRecord 객체

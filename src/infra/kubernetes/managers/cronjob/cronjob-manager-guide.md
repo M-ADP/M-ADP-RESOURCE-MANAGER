@@ -40,7 +40,7 @@ cronjob = await manager.create_cronjob(
             ]
         )
     ],
-    labels={"app": "backup", "type": "maintenance"},
+    labels={"app_deployment": "backup", "type": "maintenance"},
     restart_policy="OnFailure"  # 실패 시 재시도
 )
 
@@ -95,7 +95,7 @@ cronjob = await manager.create_cronjob(
             command=["pg_dump", "-h", "postgres", "-U", "admin", "mydb"]
         )
     ],
-    labels={"app": "backup", "database": "postgres"},
+    labels={"app_deployment": "backup", "database": "postgres"},
     annotations={"description": "Daily PostgreSQL backup"},
     
     # 동시성 정책

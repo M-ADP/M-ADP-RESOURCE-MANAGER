@@ -185,9 +185,9 @@ async def create_service_account(
 **사용 예시**:
 ```python
 sa = await sa_manager.create_service_account(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="student-1234",
-    labels={"app": "myapp"},
+    labels={"app_deployment": "myapp"},
     annotations={
         "vault.hashicorp.com/role": "myapp-role",
         "vault.hashicorp.com/agent-inject": "true"
@@ -212,7 +212,7 @@ async def add_image_pull_secret(
 **사용 예시**:
 ```python
 sa = await sa_manager.add_image_pull_secret(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="student-1234",
     secret_name="harbor-registry"
 )
@@ -344,7 +344,7 @@ rb = await rb_manager.create_rolebinding(
     subjects=[
         {
             "kind": "ServiceAccount",
-            "name": "app-sa",
+            "name": "app_deployment-sa",
             "namespace": "student-1234"
         },
         {
@@ -376,7 +376,7 @@ rb = await rb_manager.add_subject(
     namespace="student-1234",
     subject={
         "kind": "ServiceAccount",
-        "name": "new-app-sa",
+        "name": "new-app_deployment-sa",
         "namespace": "student-1234"
     }
 )
@@ -388,7 +388,7 @@ rb = await rb_manager.add_subject(
 ```python
 {
     "kind": "ServiceAccount",
-    "name": "app-sa",
+    "name": "app_deployment-sa",
     "namespace": "student-1234"  # 필수
 }
 ```
@@ -446,18 +446,18 @@ async def create_configmap(
 **사용 예시**:
 ```python
 cm = await cm_manager.create_configmap(
-    name="app-config",
+    name="app_deployment-config",
     namespace="student-1234",
     data={
         "DATABASE_HOST": "postgres.default.svc.cluster.local",
         "DATABASE_PORT": "5432",
         "LOG_LEVEL": "INFO",
-        "app.properties": """
+        "app_deployment.properties": """
 server.port=8080
 spring.application.name=myapp
         """
     },
-    labels={"app": "myapp"}
+    labels={"app_deployment": "myapp"}
 )
 ```
 
@@ -479,7 +479,7 @@ async def update_data(
 ```python
 # 기존 데이터 유지하면서 LOG_LEVEL만 변경
 cm = await cm_manager.update_data(
-    name="app-config",
+    name="app_deployment-config",
     namespace="student-1234",
     data={"LOG_LEVEL": "DEBUG"},
     merge=True
@@ -493,7 +493,7 @@ cm = await cm_manager.update_data(
 # Deployment/StatefulSet에서
 env_from = [
     V1EnvFromSource(
-        config_map_ref=V1ConfigMapEnvSource(name="app-config")
+        config_map_ref=V1ConfigMapEnvSource(name="app_deployment-config")
     )
 ]
 ```
@@ -503,7 +503,7 @@ env_from = [
 volumes = [
     V1Volume(
         name="config-volume",
-        config_map=V1ConfigMapVolumeSource(name="app-config")
+        config_map=V1ConfigMapVolumeSource(name="app_deployment-config")
     )
 ]
 volume_mounts = [
@@ -561,21 +561,21 @@ async def bind_serviceaccount_to_vault(
 **사용 예시**:
 ```python
 binding = await secret_manager.bind_serviceaccount_to_vault(
-    service_account_name="app-sa",
+    service_account_name="app_deployment-sa",
     namespace="student-1234",
-    vault_role_name="student-1234-app-role",
+    vault_role_name="student-1234-app_deployment-role",
     secret_paths=[
-        "secret/data/app/database",
-        "secret/data/app/api-keys"
+        "secret/data/app_deployment/database",
+        "secret/data/app_deployment/api-keys"
     ],
     capabilities=["read"]
 )
 # 반환값:
 # {
-#     "vault_role": "student-1234-app-role",
-#     "vault_policy": "student-1234-app-sa-policy",
-#     "service_account": "student-1234/app-sa",
-#     "secret_paths": ["secret/data/app/database", ...]
+#     "vault_role": "student-1234-app_deployment-role",
+#     "vault_policy": "student-1234-app_deployment-sa-policy",
+#     "service_account": "student-1234/app_deployment-sa",
+#     "secret_paths": ["secret/data/app_deployment/database", ...]
 # }
 ```
 
@@ -598,15 +598,15 @@ async def inject_vault_agent_to_deployment(
 deployment = await secret_manager.inject_vault_agent_to_deployment(
     deployment_name="myapp",
     namespace="student-1234",
-    vault_role="student-1234-app-role",
+    vault_role="student-1234-app_deployment-role",
     secret_configs=[
         {
             "name": "db-creds",
-            "path": "secret/data/app/database"
+            "path": "secret/data/app_deployment/database"
         },
         {
             "name": "api-key",
-            "path": "secret/data/app/api-keys"
+            "path": "secret/data/app_deployment/api-keys"
         }
     ]
 )
@@ -633,13 +633,13 @@ async def setup_secret_access(
 **사용 예시**:
 ```python
 result = await secret_manager.setup_secret_access(
-    service_account_name="app-sa",
+    service_account_name="app_deployment-sa",
     namespace="student-1234",
-    secret_paths=["secret/data/app/database"],
+    secret_paths=["secret/data/app_deployment/database"],
     workload_name="myapp",
     workload_type="deployment",
     secret_configs=[
-        {"name": "db-creds", "path": "secret/data/app/database"}
+        {"name": "db-creds", "path": "secret/data/app_deployment/database"}
     ]
 )
 ```
@@ -649,14 +649,14 @@ result = await secret_manager.setup_secret_access(
 # Vault Policy 생성
 await secret_manager.create_vault_policy(
     policy_name="my-policy",
-    secret_paths=["secret/data/app/*"],
+    secret_paths=["secret/data/app_deployment/*"],
     capabilities=["read", "list"]
 )
 
 # Vault Role 생성
 await secret_manager.create_vault_role(
     role_name="my-role",
-    bound_service_account_names=["app-sa"],
+    bound_service_account_names=["app_deployment-sa"],
     bound_service_account_namespaces=["student-1234"],
     policies=["my-policy"],
     ttl="1h",
@@ -1189,7 +1189,7 @@ deployment = await deployment_manager.create_deployment(
     replicas=3,
     containers=[
         V1Container(
-            name="app",
+            name="app_deployment",
             image="myapp:v1.0.0",
             ports=[V1ContainerPort(container_port=8080)],
             env=[
@@ -1202,7 +1202,7 @@ deployment = await deployment_manager.create_deployment(
             )
         )
     ],
-    labels={"app": "myapp", "version": "v1"},
+    labels={"app_deployment": "myapp", "version": "v1"},
     pod_annotations={
         "vault.hashicorp.com/agent-inject": "true",
         "vault.hashicorp.com/role": "myapp-role"
@@ -1334,7 +1334,7 @@ from kubernetes_asyncio.client import (
 headless_svc = await service_manager.create_service(
     name="redis-svc",
     namespace="student-1234",
-    selector={"app": "redis"},
+    selector={"app_deployment": "redis"},
     ports=[{"port": 6379, "target_port": 6379, "name": "redis"}],
     service_type="ClusterIP",
     cluster_ip="None"  # Headless Service
@@ -1346,7 +1346,7 @@ statefulset = await statefulset_manager.create_statefulset(
     namespace="student-1234",
     service_name="redis-svc",  # Headless Service 이름
     replicas=3,
-    selector={"app": "redis"},
+    selector={"app_deployment": "redis"},
     containers=[
         V1Container(
             name="redis",
@@ -1502,7 +1502,7 @@ async def create_service(
 svc = await service_manager.create_service(
     name="myapp-svc",
     namespace="student-1234",
-    selector={"app": "myapp"},  # app=myapp 레이블을 가진 Pod로 트래픽 전달
+    selector={"app_deployment": "myapp"},  # app_deployment=myapp 레이블을 가진 Pod로 트래픽 전달
     ports=[
         {
             "name": "http",
@@ -1527,7 +1527,7 @@ svc = await service_manager.create_service(
 headless_svc = await service_manager.create_service(
     name="redis-svc",
     namespace="student-1234",
-    selector={"app": "redis"},
+    selector={"app_deployment": "redis"},
     ports=[{"port": 6379, "target_port": 6379}],
     service_type="ClusterIP",
     cluster_ip="None"  # Headless
@@ -1540,7 +1540,7 @@ headless_svc = await service_manager.create_service(
 lb_svc = await service_manager.create_service(
     name="web-lb",
     namespace="student-1234",
-    selector={"app": "web"},
+    selector={"app_deployment": "web"},
     ports=[{"port": 80, "target_port": 8080}],
     service_type="LoadBalancer",
     annotations={
@@ -1570,14 +1570,14 @@ green_deployment = await deployment_manager.create_deployment(
     name="myapp-green",
     namespace="student-1234",
     containers=[...],
-    labels={"app": "myapp", "version": "green"}
+    labels={"app_deployment": "myapp", "version": "green"}
 )
 
 # 2. Service를 Green으로 전환
 await service_manager.update_selector(
     name="myapp-svc",
     namespace="student-1234",
-    selector={"app": "myapp", "version": "green"}
+    selector={"app_deployment": "myapp", "version": "green"}
 )
 ```
 
@@ -1699,7 +1699,7 @@ daemonset = await daemonset_manager.create_daemonset(
             ]
         )
     ],
-    labels={"app": "log-collector"},
+    labels={"app_deployment": "log-collector"},
     # Pod Template에 볼륨 추가
     pod_spec_volumes=[
         V1Volume(
@@ -1847,11 +1847,11 @@ replicaset = await replicaset_manager.create_replicaset(
     replicas=3,
     containers=[
         V1Container(
-            name="app",
+            name="app_deployment",
             image="myapp:v1.0.0"
         )
     ],
-    labels={"app": "myapp", "version": "v1"}
+    labels={"app_deployment": "myapp", "version": "v1"}
 )
 ```
 
@@ -1908,7 +1908,7 @@ deployment = await deployment_manager.create_deployment(
     name="myapp",
     namespace="student-1234",
     replicas=3,
-    containers=[V1Container(name="app", image="myapp:v1.0.0")]
+    containers=[V1Container(name="app_deployment", image="myapp:v1.0.0")]
 )
 # Deployment가 자동으로 myapp-xxxxx ReplicaSet 생성
 
@@ -2500,7 +2500,7 @@ async def list_pods(
 # 특정 애플리케이션의 모든 Pod
 pods = await pod_manager.list_pods(
     namespace="student-1234",
-    label_selector="app=myapp"
+    label_selector="app_deployment=myapp"
 )
 
 # 특정 Node의 모든 Pod
@@ -2559,7 +2559,7 @@ async def get_pod_status(
     ],
     "container_statuses": [
         {
-            "name": "app",
+            "name": "app_deployment",
             "ready": True,
             "restart_count": 0,
             "image": "myapp:v1.0.0",
@@ -2695,7 +2695,7 @@ namespace = await namespace_manager.create_namespace(
 
 # 2. ConfigMap 생성 (설정)
 configmap = await configmap_manager.create_configmap(
-    name="app-config",
+    name="app_deployment-config",
     namespace="student-1234",
     data={
         "DATABASE_HOST": "postgres.default.svc.cluster.local",
@@ -2705,16 +2705,16 @@ configmap = await configmap_manager.create_configmap(
 
 # 3. ServiceAccount 생성
 sa = await sa_manager.create_service_account(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="student-1234"
 )
 
 # 4. Secret 접근 설정 (Vault)
 await secret_manager.bind_serviceaccount_to_vault(
-    service_account_name="app-sa",
+    service_account_name="app_deployment-sa",
     namespace="student-1234",
-    vault_role_name="student-1234-app-role",
-    secret_paths=["secret/data/app/database"]
+    vault_role_name="student-1234-app_deployment-role",
+    secret_paths=["secret/data/app_deployment/database"]
 )
 
 # 5. Role 생성
@@ -2738,7 +2738,7 @@ rb = await rb_manager.create_rolebinding(
     subjects=[
         {
             "kind": "ServiceAccount",
-            "name": "app-sa",
+            "name": "app_deployment-sa",
             "namespace": "student-1234"
         }
     ]
@@ -2748,7 +2748,7 @@ rb = await rb_manager.create_rolebinding(
 service = await service_manager.create_service(
     name="myapp-svc",
     namespace="student-1234",
-    selector={"app": "myapp"},
+    selector={"app_deployment": "myapp"},
     ports=[{"port": 80, "target_port": 8080}]
 )
 
@@ -2759,25 +2759,25 @@ deployment = await deployment_manager.create_deployment(
     replicas=3,
     containers=[
         V1Container(
-            name="app",
+            name="app_deployment",
             image="myapp:v1.0.0",
             env_from=[
                 V1EnvFromSource(
-                    config_map_ref=V1ConfigMapEnvSource(name="app-config")
+                    config_map_ref=V1ConfigMapEnvSource(name="app_deployment-config")
                 )
             ]
         )
     ],
-    labels={"app": "myapp"}
+    labels={"app_deployment": "myapp"}
 )
 
 # 9. Vault 설정 주입
 await secret_manager.inject_vault_agent_to_deployment(
     deployment_name="myapp",
     namespace="student-1234",
-    vault_role="student-1234-app-role",
+    vault_role="student-1234-app_deployment-role",
     secret_configs=[
-        {"name": "db-creds", "path": "secret/data/app/database"}
+        {"name": "db-creds", "path": "secret/data/app_deployment/database"}
     ]
 )
 ```
@@ -2789,7 +2789,7 @@ await secret_manager.inject_vault_agent_to_deployment(
 headless_svc = await service_manager.create_service(
     name="redis-svc",
     namespace="student-1234",
-    selector={"app": "redis"},
+    selector={"app_deployment": "redis"},
     ports=[{"port": 6379, "target_port": 6379}],
     service_type="ClusterIP",
     cluster_ip="None"  # Headless
@@ -2801,7 +2801,7 @@ statefulset = await statefulset_manager.create_statefulset(
     namespace="student-1234",
     service_name="redis-svc",  # Headless Service 참조
     replicas=3,
-    selector={"app": "redis"},
+    selector={"app_deployment": "redis"},
     containers=[
         V1Container(
             name="redis",
@@ -2844,9 +2844,9 @@ green_deployment = await deployment_manager.create_deployment(
     namespace="student-1234",
     replicas=3,
     containers=[
-        V1Container(name="app", image="myapp:v2.0.0")
+        V1Container(name="app_deployment", image="myapp:v2.0.0")
     ],
-    labels={"app": "myapp", "version": "green"}
+    labels={"app_deployment": "myapp", "version": "green"}
 )
 
 # 2. Green 버전 준비 완료 대기
@@ -2861,7 +2861,7 @@ while True:
 await service_manager.update_selector(
     name="myapp-svc",
     namespace="student-1234",
-    selector={"app": "myapp", "version": "green"}
+    selector={"app_deployment": "myapp", "version": "green"}
 )
 
 # 4. (선택) 기존 Blue 버전 삭제
@@ -2873,23 +2873,23 @@ await deployment_manager.delete_deployment("myapp-blue", "student-1234")
 ```python
 # 1. ServiceAccount 생성
 sa = await sa_manager.create_service_account(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="student-1234"
 )
 
 # 2. Vault 접근 설정 (한 번에)
 await secret_manager.setup_secret_access(
-    service_account_name="app-sa",
+    service_account_name="app_deployment-sa",
     namespace="student-1234",
     secret_paths=[
-        "secret/data/app/database",
-        "secret/data/app/api-keys"
+        "secret/data/app_deployment/database",
+        "secret/data/app_deployment/api-keys"
     ],
     workload_name="myapp",
     workload_type="deployment",
     secret_configs=[
-        {"name": "db-creds", "path": "secret/data/app/database"},
-        {"name": "api-key", "path": "secret/data/app/api-keys"}
+        {"name": "db-creds", "path": "secret/data/app_deployment/database"},
+        {"name": "api-key", "path": "secret/data/app_deployment/api-keys"}
     ]
 )
 
@@ -2900,7 +2900,7 @@ deployment = await deployment_manager.create_deployment(
     replicas=2,
     containers=[
         V1Container(
-            name="app",
+            name="app_deployment",
             image="myapp:v1.0.0",
             # Secret은 /vault/secrets/db-creds,
             # /vault/secrets/api-key 경로에 자동 마운트됨
@@ -2939,13 +2939,13 @@ await rb_manager.delete_rolebinding("pod-manager-binding", "student-1234")
 await role_manager.delete_role("pod-manager", "student-1234")
 
 # 5. Vault 바인딩 해제
-await secret_manager.unbind_serviceaccount_from_vault("app-sa", "student-1234")
+await secret_manager.unbind_serviceaccount_from_vault("app_deployment-sa", "student-1234")
 
 # 6. ServiceAccount 삭제
-await sa_manager.delete_service_account("app-sa", "student-1234")
+await sa_manager.delete_service_account("app_deployment-sa", "student-1234")
 
 # 7. ConfigMap 삭제
-await configmap_manager.delete_configmap("app-config", "student-1234")
+await configmap_manager.delete_configmap("app_deployment-config", "student-1234")
 
 # 8. Namespace 삭제 (가장 마지막)
 # Namespace 삭제 시 내부의 모든 리소스가 자동 삭제되므로

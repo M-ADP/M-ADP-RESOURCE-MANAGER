@@ -61,7 +61,7 @@ def mock_cronjob(mock_container):
         metadata=V1ObjectMeta(
             name="test-cronjob",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1CronJobSpec(
@@ -72,12 +72,12 @@ def mock_cronjob(mock_container):
             failed_jobs_history_limit=1,
             job_template=V1JobTemplateSpec(
                 metadata=V1ObjectMeta(
-                    labels={"app": "test"},
+                    labels={"app_deployment": "test"},
                 ),
                 spec=V1JobSpec(
                     template=V1PodTemplateSpec(
                         metadata=V1ObjectMeta(
-                            labels={"app": "test"},
+                            labels={"app_deployment": "test"},
                         ),
                         spec=V1PodSpec(
                             containers=[mock_container],
@@ -132,7 +132,7 @@ class TestCreateCronJob:
             namespace="test-ns",
             schedule="0 */2 * * *",
             containers=[mock_container],
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -472,14 +472,14 @@ class TestListCronJobs:
 
         result = await cronjob_manager.list_cronjobs(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-cronjob",
         )
 
         assert len(result) == 0
         k8s_client.batch_v1.list_namespaced_cron_job.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-cronjob",
         )
 
@@ -538,7 +538,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-cronjob",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

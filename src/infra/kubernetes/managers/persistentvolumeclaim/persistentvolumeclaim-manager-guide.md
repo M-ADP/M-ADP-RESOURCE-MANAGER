@@ -17,12 +17,12 @@ manager = PersistentVolumeClaimManager(k8s_client)
 
 # PVC 생성
 pvc = await manager.create_pvc(
-    name="app-data",
+    name="app_deployment-data",
     namespace="production",
     storage_size="10Gi",
     access_modes=["ReadWriteOnce"],
     storage_class_name="fast-ssd",
-    labels={"app": "myapp", "tier": "data"}
+    labels={"app_deployment": "myapp", "tier": "data"}
 )
 ```
 
@@ -49,7 +49,7 @@ pvc = await manager.create_pvc(
 
 ```python
 pvc = await manager.get_pvc(
-    name="app-data",
+    name="app_deployment-data",
     namespace="production"
 )
 
@@ -63,7 +63,7 @@ if pvc:
 
 ```python
 success = await manager.delete_pvc(
-    name="app-data",
+    name="app_deployment-data",
     namespace="production",
     grace_period_seconds=30
 )
@@ -76,7 +76,7 @@ success = await manager.delete_pvc(
 
 ```python
 pvc = await manager.resize_pvc(
-    name="app-data",
+    name="app_deployment-data",
     namespace="production",
     new_storage_size="20Gi"  # 10Gi -> 20Gi로 확장
 )
@@ -86,7 +86,7 @@ pvc = await manager.resize_pvc(
 
 ```python
 status = await manager.get_pvc_status(
-    name="app-data",
+    name="app_deployment-data",
     namespace="production"
 )
 
@@ -99,7 +99,7 @@ if status:
 ### 7. PVC 바인딩 확인 (`is_bound`)
 
 ```python
-if await manager.is_bound("app-data", "production"):
+if await manager.is_bound("app_deployment-data", "production"):
     print("PVC is bound to a PV")
 else:
     print("PVC is pending or lost")
@@ -114,7 +114,7 @@ pvcs = await manager.list_pvcs(namespace="production")
 # 레이블 셀렉터로 필터링
 pvcs = await manager.list_pvcs(
     namespace="production",
-    label_selector="app=myapp"
+    label_selector="app_deployment=myapp"
 )
 ```
 

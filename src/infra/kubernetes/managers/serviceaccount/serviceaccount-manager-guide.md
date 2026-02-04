@@ -14,9 +14,9 @@
 manager = ServiceAccountManager(k8s_client)
 
 sa = await manager.create_service_account(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
-    labels={"app": "myapp"},
+    labels={"app_deployment": "myapp"},
     annotations={"owner": "platform-team"},
     image_pull_secrets=["registry-cred"],
 )
@@ -26,7 +26,7 @@ sa = await manager.create_service_account(
 
 ```python
 sa = await manager.get_service_account(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
 )
 ```
@@ -35,7 +35,7 @@ sa = await manager.get_service_account(
 
 ```python
 success = await manager.delete_service_account(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
 )
 ```
@@ -50,7 +50,7 @@ service_accounts = await manager.list_service_accounts(namespace="project-a")
 
 ```python
 sa = await manager.update_labels(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
     labels={"tier": "backend"},
     merge=True,
@@ -61,7 +61,7 @@ sa = await manager.update_labels(
 
 ```python
 sa = await manager.update_annotations(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
     annotations={"vault.hashicorp.com/role": "myapp-role"},
     merge=True,
@@ -72,7 +72,7 @@ sa = await manager.update_annotations(
 
 ```python
 sa = await manager.add_image_pull_secret(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
     secret_name="registry-cred",
 )
@@ -92,7 +92,7 @@ await manager.create_service_account(
 ### 2. Vault 연동 어노테이션 설정
 ```python
 await manager.update_annotations(
-    name="app-sa",
+    name="app_deployment-sa",
     namespace="project-a",
     annotations={"vault.hashicorp.com/agent-inject": "true"},
 )

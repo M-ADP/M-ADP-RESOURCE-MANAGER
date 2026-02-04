@@ -45,7 +45,7 @@ def mock_rolebinding():
         metadata=V1ObjectMeta(
             name="test-rb",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
         ),
         role_ref=V1RoleRef(
             api_group="rbac.authorization.k8s.io",
@@ -99,7 +99,7 @@ class TestCreateRoleBinding:
             namespace="test-ns",
             role_name="test-role",
             subjects=[{"kind": "ServiceAccount", "name": "test-sa", "namespace": "test-ns"}],
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
         )
 
         assert result == mock_rolebinding
@@ -374,14 +374,14 @@ class TestListRoleBindings:
 
         result = await rb_manager.list_rolebindings(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-rb",
         )
 
         assert len(result) == 0
         k8s_client.rbac_v1.list_namespaced_role_binding.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-rb",
         )
 
@@ -436,7 +436,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-rb",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             ),
             role_ref=V1RoleRef(
                 api_group="rbac.authorization.k8s.io",

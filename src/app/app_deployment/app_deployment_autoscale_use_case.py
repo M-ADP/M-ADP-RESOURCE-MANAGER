@@ -49,7 +49,7 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
             target_cpu_utilization=payload.target_cpu_utilization,
             target_memory_utilization=payload.target_memory_utilization,
             labels={
-                "app": app_name,
+                "app_deployment": app_name,
                 "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             },

@@ -43,7 +43,7 @@ def mock_configmap():
         metadata=V1ObjectMeta(
             name="test-cm",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         data={"config.yaml": "key: value", "setting": "enabled"},
@@ -86,7 +86,7 @@ class TestCreateConfigMap:
             name="test-cm",
             namespace="test-ns",
             data={"config.yaml": "key: value", "setting": "enabled"},
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -390,14 +390,14 @@ class TestListConfigMaps:
 
         result = await cm_manager.list_configmaps(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-cm",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_config_map.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-cm",
         )
 
@@ -456,7 +456,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-cm",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

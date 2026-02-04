@@ -168,7 +168,7 @@ class AppCreateRequest(BaseModel):
         min_length=1,
         max_length=63,
         description="App 이름 (Deployment 이름)",
-        examples=["my-app"]
+        examples=["my-app_deployment"]
     )
     containers: List[ContainerSpec] = Field(
         ...,
@@ -183,7 +183,7 @@ class AppCreateRequest(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "name": "my-app",
+                    "name": "my-app_deployment",
                     "containers": [
                         {
                             "name": "main",

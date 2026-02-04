@@ -27,7 +27,7 @@ async def list_services(
     ),
     label_selector: Optional[str] = Query(
         default=None,
-        description="Label selector (e.g., 'app=myapp')",
+        description="Label selector (e.g., 'app_deployment=myapp')",
     ),
     service_repo: ServiceRepository = Depends(get_service_repository),
 ):

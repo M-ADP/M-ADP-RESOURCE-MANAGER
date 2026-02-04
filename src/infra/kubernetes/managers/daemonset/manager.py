@@ -78,7 +78,7 @@ class DaemonSetManager:
             return existing
 
         # 기본 레이블 설정
-        daemonset_labels = labels or {"app": name}
+        daemonset_labels = labels or {"app_deployment": name}
         selector_match_labels = selector_labels or daemonset_labels
         pod_template_labels = pod_labels or daemonset_labels
 
@@ -280,7 +280,7 @@ class DaemonSetManager:
 
         Args:
             namespace: 네임스페이스 (None이면 전체 조회)
-            label_selector: 레이블 셀렉터 (예: "app=myapp")
+            label_selector: 레이블 셀렉터 (예: "app_deployment=myapp")
             field_selector: 필드 셀렉터 (예: "metadata.name=test")
 
         Returns:

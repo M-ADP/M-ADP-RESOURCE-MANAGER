@@ -44,7 +44,7 @@ class ProjectPortOpenUseCase(BaseUseCase):
             name=payload.service_name,
             namespace=project_name,
             ports=[service_port],
-            selector={"app": payload.target_deployment_name}, # Deployment의 레이블과 일치해야 함
+            selector={"app_deployment": payload.target_deployment_name}, # Deployment의 레이블과 일치해야 함
             service_type=service_type_value,
             labels={"madp.io/name": payload.service_name},
             # ExternalDNS 연동을 위한 어노테이션 추가 (예시)

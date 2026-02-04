@@ -19,7 +19,7 @@ manager = ServiceManager(k8s_client)
 service = await manager.create_service(
     name="web-service",
     namespace="production",
-    selector={"app": "web"},
+    selector={"app_deployment": "web"},
     ports=[
         V1ServicePort(
             name="http",
@@ -42,7 +42,7 @@ service = await manager.create_service(
 service = await manager.create_service(
     name="backend",
     namespace="default",
-    selector={"app": "backend"},
+    selector={"app_deployment": "backend"},
     ports=[V1ServicePort(port=8080, target_port=8080)],
     service_type="ClusterIP"
 )
@@ -56,7 +56,7 @@ service = await manager.create_service(
 service = await manager.create_service(
     name="frontend",
     namespace="default",
-    selector={"app": "frontend"},
+    selector={"app_deployment": "frontend"},
     ports=[V1ServicePort(
         port=80,
         target_port=8080,
@@ -74,7 +74,7 @@ service = await manager.create_service(
 service = await manager.create_service(
     name="public-api",
     namespace="default",
-    selector={"app": "api"},
+    selector={"app_deployment": "api"},
     ports=[V1ServicePort(port=443, target_port=8443)],
     service_type="LoadBalancer"
 )
@@ -123,7 +123,7 @@ services = await manager.list_services(namespace="production")
 # 레이블 셀렉터로 필터링
 services = await manager.list_services(
     namespace="production",
-    label_selector="app=web"
+    label_selector="app_deployment=web"
 )
 ```
 
@@ -133,9 +133,9 @@ services = await manager.list_services(
 
 ```python
 service = await manager.create_service(
-    name="stateful-app",
+    name="stateful-app_deployment",
     namespace="default",
-    selector={"app": "stateful"},
+    selector={"app_deployment": "stateful"},
     ports=[V1ServicePort(port=80, target_port=8080)],
     session_affinity="ClientIP"  # None (기본) 또는 ClientIP
 )
@@ -149,7 +149,7 @@ Pod IP를 직접 반환 (로드 밸런싱 없음):
 service = await manager.create_service(
     name="database",
     namespace="default",
-    selector={"app": "database"},
+    selector={"app_deployment": "database"},
     ports=[V1ServicePort(port=5432, target_port=5432)],
     cluster_ip="None"  # Headless
 )
@@ -163,7 +163,7 @@ service = await manager.create_service(
 await manager.create_service(
     name="user-service",
     namespace="services",
-    selector={"app": "user"},
+    selector={"app_deployment": "user"},
     ports=[V1ServicePort(port=80, target_port=8080)]
 )
 # 다른 서비스에서 user-service.services.svc.cluster.local로 접근
@@ -175,7 +175,7 @@ await manager.create_service(
 await manager.create_service(
     name="postgres",
     namespace="databases",
-    selector={"app": "postgres"},
+    selector={"app_deployment": "postgres"},
     ports=[V1ServicePort(port=5432, target_port=5432)],
     cluster_ip="None"
 )
@@ -187,7 +187,7 @@ await manager.create_service(
 await manager.create_service(
     name="public-web",
     namespace="frontend",
-    selector={"app": "web"},
+    selector={"app_deployment": "web"},
     ports=[V1ServicePort(port=80, target_port=8080)],
     service_type="LoadBalancer"
 )

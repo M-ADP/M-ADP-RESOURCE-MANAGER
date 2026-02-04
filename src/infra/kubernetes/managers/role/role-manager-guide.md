@@ -14,7 +14,7 @@
 manager = RoleManager(k8s_client)
 
 role = await manager.create_role(
-    name="app-reader",
+    name="app_deployment-reader",
     namespace="project-a",
     rules=[
         {
@@ -30,7 +30,7 @@ role = await manager.create_role(
 
 ```python
 role = await manager.get_role(
-    name="app-reader",
+    name="app_deployment-reader",
     namespace="project-a",
 )
 ```
@@ -39,7 +39,7 @@ role = await manager.get_role(
 
 ```python
 success = await manager.delete_role(
-    name="app-reader",
+    name="app_deployment-reader",
     namespace="project-a",
 )
 ```
@@ -54,7 +54,7 @@ roles = await manager.list_roles(namespace="project-a")
 
 ```python
 role = await manager.update_labels(
-    name="app-reader",
+    name="app_deployment-reader",
     namespace="project-a",
     labels={"scope": "readonly"},
     merge=True,
@@ -66,7 +66,7 @@ role = await manager.update_labels(
 ### 1. 앱 읽기 전용 권한
 ```python
 await manager.create_role(
-    name="app-readonly",
+    name="app_deployment-readonly",
     namespace="project-a",
     rules=[{"apiGroups": [""], "resources": ["pods"], "verbs": ["get", "list"]}],
 )

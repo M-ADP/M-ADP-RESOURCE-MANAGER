@@ -15,7 +15,7 @@ manager = ConfigMapManager(k8s_client)
 
 # ConfigMap 생성
 configmap = await manager.create_configmap(
-    name="app-config",
+    name="app_deployment-config",
     namespace="production",
     data={
         "database.url": "postgres://db.example.com:5432/mydb",
@@ -50,7 +50,7 @@ server {
 
 ```python
 cm = await manager.get_configmap(
-    name="app-config",
+    name="app_deployment-config",
     namespace="production"
 )
 
@@ -62,7 +62,7 @@ if cm:
 
 ```python
 configmap = await manager.update_configmap(
-    name="app-config",
+    name="app_deployment-config",
     namespace="production",
     data={
         "database.url": "postgres://new-db.example.com:5432/mydb",
@@ -75,7 +75,7 @@ configmap = await manager.update_configmap(
 
 ```python
 success = await manager.delete_configmap(
-    name="app-config",
+    name="app_deployment-config",
     namespace="production"
 )
 ```
@@ -88,12 +88,12 @@ success = await manager.delete_configmap(
 from kubernetes_asyncio.client import V1EnvFromSource, V1ConfigMapEnvSource
 
 container = V1Container(
-    name="app",
+    name="app_deployment",
     image="myapp:latest",
     env_from=[
         V1EnvFromSource(
             config_map_ref=V1ConfigMapEnvSource(
-                name="app-config"
+                name="app_deployment-config"
             )
         )
     ]
@@ -106,14 +106,14 @@ container = V1Container(
 from kubernetes_asyncio.client import V1EnvVar, V1EnvVarSource, V1ConfigMapKeySelector
 
 container = V1Container(
-    name="app",
+    name="app_deployment",
     image="myapp:latest",
     env=[
         V1EnvVar(
             name="DB_URL",
             value_from=V1EnvVarSource(
                 config_map_key_ref=V1ConfigMapKeySelector(
-                    name="app-config",
+                    name="app_deployment-config",
                     key="database.url"
                 )
             )
@@ -129,7 +129,7 @@ from kubernetes_asyncio.client import V1Volume, V1VolumeMount, V1ConfigMapVolume
 
 pod_spec = V1PodSpec(
     containers=[V1Container(
-        name="app",
+        name="app_deployment",
         image="nginx",
         volume_mounts=[
             V1VolumeMount(
@@ -154,7 +154,7 @@ pod_spec = V1PodSpec(
 ### 1. 애플리케이션 설정
 ```python
 await manager.create_configmap(
-    name="app-settings",
+    name="app_deployment-settings",
     namespace="apps",
     data={
         "APP_ENV": "production",
@@ -180,11 +180,11 @@ await manager.create_configmap(
 ### 3. 애플리케이션 설정 파일
 ```python
 await manager.create_configmap(
-    name="app-properties",
+    name="app_deployment-properties",
     namespace="apps",
     data={
         "application.properties": """
-spring.datasource.url=jdbc:postgresql://db:5432/app
+spring.datasource.url=jdbc:postgresql://db:5432/app_deployment
 spring.jpa.hibernate.ddl-auto=none
 logging.level.root=INFO
 """

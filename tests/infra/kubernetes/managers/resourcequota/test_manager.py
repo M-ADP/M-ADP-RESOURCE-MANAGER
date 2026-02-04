@@ -45,7 +45,7 @@ def mock_resource_quota():
         metadata=V1ObjectMeta(
             name="test-quota",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1ResourceQuotaSpec(
@@ -114,7 +114,7 @@ class TestCreateResourceQuota:
                 "pods": "50",
                 "services": "10",
             },
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -443,14 +443,14 @@ class TestListResourceQuotas:
 
         result = await rq_manager.list_resource_quotas(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-quota",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_resource_quota.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-quota",
         )
 
@@ -684,7 +684,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-quota",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

@@ -49,15 +49,15 @@ def mock_statefulset():
         metadata=V1ObjectMeta(
             name="test-sts",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1StatefulSetSpec(
             service_name="test-service",
             replicas=3,
-            selector=V1LabelSelector(match_labels={"app": "test"}),
+            selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
             template=V1PodTemplateSpec(
-                metadata=V1ObjectMeta(labels={"app": "test"}),
+                metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                 spec=V1PodSpec(
                     containers=[
                         V1Container(
@@ -115,9 +115,9 @@ class TestCreateStatefulSet:
             namespace="test-ns",
             service_name="test-service",
             replicas=3,
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             containers=[container],
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
         )
 
         assert result == mock_statefulset
@@ -138,7 +138,7 @@ class TestCreateStatefulSet:
             namespace="test-ns",
             service_name="test-service",
             replicas=3,
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             containers=[container],
         )
 
@@ -166,7 +166,7 @@ class TestCreateStatefulSet:
             namespace="test-ns",
             service_name="test-service",
             replicas=3,
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             containers=[container],
         )
 
@@ -192,7 +192,7 @@ class TestCreateStatefulSet:
                 namespace="test-ns",
                 service_name="test-service",
                 replicas=3,
-                selector={"app": "test"},
+                selector={"app_deployment": "test"},
                 containers=[container],
             )
 
@@ -217,7 +217,7 @@ class TestCreateStatefulSet:
                 namespace="test-ns",
                 service_name="test-service",
                 replicas=3,
-                selector={"app": "test"},
+                selector={"app_deployment": "test"},
                 containers=[container],
             )
 
@@ -440,14 +440,14 @@ class TestListStatefulSets:
 
         result = await sts_manager.list_statefulsets(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-sts",
         )
 
         assert len(result) == 0
         k8s_client.apps_v1.list_namespaced_stateful_set.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-sts",
         )
 
@@ -506,7 +506,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-sts",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 
@@ -684,9 +684,9 @@ class TestScaleStatefulSet:
             metadata=V1ObjectMeta(name="test-sts", namespace="test-ns"),
             spec=V1StatefulSetSpec(
                 replicas=5,
-                selector=V1LabelSelector(match_labels={"app": "test"}),
+                selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
                 template=V1PodTemplateSpec(
-                    metadata=V1ObjectMeta(labels={"app": "test"}),
+                    metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                     spec=V1PodSpec(containers=[]),
                 ),
             ),

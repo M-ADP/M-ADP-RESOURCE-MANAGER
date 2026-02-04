@@ -26,11 +26,11 @@ container = V1Container(
 
 # Deployment 생성
 deployment = await manager.create_deployment(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production",
     containers=[container],
     replicas=3,
-    labels={"app": "my-app", "env": "prod"}
+    labels={"app_deployment": "my-app_deployment", "env": "prod"}
 )
 ```
 
@@ -40,7 +40,7 @@ deployment = await manager.create_deployment(
 
 ```python
 deployment = await manager.get_deployment(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production"
 )
 
@@ -54,7 +54,7 @@ if deployment:
 
 ```python
 success = await manager.delete_deployment(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production",
     grace_period_seconds=30
 )
@@ -73,7 +73,7 @@ deployments = await manager.list_deployments(
 # 레이블 셀렉터로 필터링
 deployments = await manager.list_deployments(
     namespace="production",
-    label_selector="app=my-app,env=prod"
+    label_selector="app_deployment=my-app_deployment,env=prod"
 )
 ```
 
@@ -83,7 +83,7 @@ deployments = await manager.list_deployments(
 
 ```python
 deployment = await manager.update_replicas(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production",
     replicas=5
 )
@@ -96,7 +96,7 @@ deployment = await manager.update_replicas(
 ```python
 # 병합 모드 (기본)
 deployment = await manager.update_labels(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production",
     labels={"version": "v2.0"},
     merge=True
@@ -104,9 +104,9 @@ deployment = await manager.update_labels(
 
 # 교체 모드
 deployment = await manager.update_labels(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production",
-    labels={"app": "my-app-v2"},
+    labels={"app_deployment": "my-app_deployment-v2"},
     merge=False
 )
 ```
@@ -117,7 +117,7 @@ deployment = await manager.update_labels(
 
 ```python
 status = await manager.get_deployment_status(
-    name="my-app",
+    name="my-app_deployment",
     namespace="production"
 )
 
@@ -130,7 +130,7 @@ if status:
 ### 8. 존재 여부 확인 (`exists`)
 
 ```python
-if await manager.exists("my-app", "production"):
+if await manager.exists("my-app_deployment", "production"):
     print("Deployment exists")
 ```
 

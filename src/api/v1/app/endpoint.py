@@ -260,7 +260,7 @@ async def create_app_deployment_environment(
 
     App의 환경 변수를 ConfigMap으로 생성합니다.
     - 이미 존재하는 ConfigMap이 있으면 데이터를 병합합니다.
-    - ConfigMap 이름은 {app-name}-env 형식으로 생성됩니다.
+    - ConfigMap 이름은 {app_deployment-name}-env 형식으로 생성됩니다.
     """
     app_deployment_environment_create_result = await app_deployment_environment_create_usecase(
         namespace=namespace,

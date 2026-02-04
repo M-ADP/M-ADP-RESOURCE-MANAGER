@@ -31,7 +31,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
 
         # 2. Selector 업데이트
         if payload.target_deployment_name:
-            updated_service = updated_service.with_selector({"app": payload.target_deployment_name})
+            updated_service = updated_service.with_selector({"app_deployment": payload.target_deployment_name})
         
         if payload.service_name:
             updated_service = updated_service.with_labels({"madp.io/name": payload.service_name})

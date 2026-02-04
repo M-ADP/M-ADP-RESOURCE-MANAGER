@@ -57,7 +57,7 @@ class StatefulSetManager:
             namespace: 네임스페이스
             service_name: Headless Service 이름
             replicas: Pod 개수
-            selector: Pod 선택 레이블 (예: {"app": "myapp"})
+            selector: Pod 선택 레이블 (예: {"app_deployment": "myapp"})
             containers: 컨테이너 리스트
             labels: 레이블 딕셔너리
             annotations: 어노테이션 딕셔너리
@@ -281,7 +281,7 @@ class StatefulSetManager:
 
         Args:
             namespace: 네임스페이스 (None이면 전체 조회)
-            label_selector: 레이블 셀렉터 (예: "app=myapp")
+            label_selector: 레이블 셀렉터 (예: "app_deployment=myapp")
             field_selector: 필드 셀렉터 (예: "metadata.name=test")
 
         Returns:

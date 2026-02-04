@@ -49,9 +49,9 @@ class AppDeploymentEnvironmentCreateUseCase(BaseUseCase):
         configmap_name = f"{app_name}-env"
 
         # 3. ConfigMap 생성 또는 업데이트
-        # 레이블에 app, managed-by 추가
+        # 레이블에 app_deployment, managed-by 추가
         labels = {
-            "app": app_name,
+            "app_deployment": app_name,
             "managed-by": "madp-resource-manager",
         }
 

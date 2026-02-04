@@ -48,7 +48,7 @@ class ServiceManager:
         Args:
             name: Service 이름
             namespace: 네임스페이스
-            selector: Pod 선택 레이블 (예: {"app": "myapp"})
+            selector: Pod 선택 레이블 (예: {"app_deployment": "myapp"})
             ports: 포트 매핑 리스트 (예: [{"port": 80, "target_port": 8080, "protocol": "TCP", "name": "http"}])
             service_type: Service 타입 (ClusterIP, NodePort, LoadBalancer, ExternalName)
             labels: 레이블 딕셔너리
@@ -273,7 +273,7 @@ class ServiceManager:
 
         Args:
             namespace: 네임스페이스 (None이면 전체 조회)
-            label_selector: 레이블 셀렉터 (예: "app=myapp")
+            label_selector: 레이블 셀렉터 (예: "app_deployment=myapp")
             field_selector: 필드 셀렉터 (예: "metadata.name=test")
 
         Returns:

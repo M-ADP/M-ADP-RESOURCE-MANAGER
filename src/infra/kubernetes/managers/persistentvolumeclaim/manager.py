@@ -77,7 +77,7 @@ class PersistentVolumeClaimManager:
             return existing
 
         # 기본값 설정
-        pvc_labels = labels or {"app": name}
+        pvc_labels = labels or {"app_deployment": name}
         pvc_access_modes = access_modes or ["ReadWriteOnce"]
 
         # PVC 객체 생성
@@ -273,7 +273,7 @@ class PersistentVolumeClaimManager:
 
         Args:
             namespace: 네임스페이스 (None이면 전체 조회)
-            label_selector: 레이블 셀렉터 (예: "app=myapp")
+            label_selector: 레이블 셀렉터 (예: "app_deployment=myapp")
             field_selector: 필드 셀렉터 (예: "metadata.name=test")
 
         Returns:

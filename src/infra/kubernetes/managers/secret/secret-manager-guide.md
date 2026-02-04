@@ -132,7 +132,7 @@ success = await manager.delete_secret(
 from kubernetes_asyncio.client import V1EnvVar, V1EnvVarSource, V1SecretKeySelector
 
 container = V1Container(
-    name="app",
+    name="app_deployment",
     image="myapp:latest",
     env=[
         V1EnvVar(
@@ -155,7 +155,7 @@ from kubernetes_asyncio.client import V1Volume, V1VolumeMount, V1SecretVolumeSou
 
 pod_spec = V1PodSpec(
     containers=[V1Container(
-        name="app",
+        name="app_deployment",
         image="myapp",
         volume_mounts=[
             V1VolumeMount(

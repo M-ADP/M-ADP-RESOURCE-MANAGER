@@ -28,7 +28,7 @@ async def list_deployments(
     ),
     label_selector: Optional[str] = Query(
         default=None,
-        description="Label selector (e.g., 'app=myapp')",
+        description="Label selector (e.g., 'app_deployment=myapp')",
     ),
     deployment_repo: DeploymentRepository = Depends(get_deployment_repository),
 ):

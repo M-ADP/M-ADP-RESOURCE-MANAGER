@@ -44,7 +44,7 @@ def mock_role():
         metadata=V1ObjectMeta(
             name="test-role",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
         ),
         rules=[
             V1PolicyRule(
@@ -88,7 +88,7 @@ class TestCreateRole:
             name="test-role",
             namespace="test-ns",
             rules=[{"apiGroups": [""], "resources": ["pods"], "verbs": ["get", "list"]}],
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
         )
 
         assert result == mock_role
@@ -333,14 +333,14 @@ class TestListRoles:
 
         result = await role_manager.list_roles(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-role",
         )
 
         assert len(result) == 0
         k8s_client.rbac_v1.list_namespaced_role.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-role",
         )
 
@@ -391,7 +391,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-role",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

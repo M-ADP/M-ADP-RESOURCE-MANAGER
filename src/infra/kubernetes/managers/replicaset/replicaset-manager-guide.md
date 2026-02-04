@@ -16,7 +16,7 @@ from kubernetes_asyncio.client import V1Container
 manager = ReplicaSetManager(k8s_client)
 
 container = V1Container(
-    name="app",
+    name="app_deployment",
     image="nginx:1.21"
 )
 
@@ -25,7 +25,7 @@ replicaset = await manager.create_replicaset(
     namespace="production",
     containers=[container],
     replicas=3,
-    labels={"app": "web", "version": "v1"}
+    labels={"app_deployment": "web", "version": "v1"}
 )
 ```
 

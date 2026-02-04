@@ -42,7 +42,7 @@ daemonset = await manager.create_daemonset(
             ]
         )
     ],
-    labels={"app": "node-exporter", "tier": "proxmox"},
+    labels={"app_deployment": "node-exporter", "tier": "proxmox"},
     annotations={"prometheus.io/scrape": "true"}
 )
 
@@ -57,9 +57,9 @@ daemonset = await manager.create_daemonset(
     name="fluentd",
     namespace="logging",
     containers=[...],
-    labels={"app": "fluentd", "component": "logging"},  # DaemonSet 레이블
-    selector_labels={"app": "fluentd"},  # Pod 선택 레이블
-    pod_labels={"app": "fluentd", "version": "v2"},  # Pod 레이블
+    labels={"app_deployment": "fluentd", "component": "logging"},  # DaemonSet 레이블
+    selector_labels={"app_deployment": "fluentd"},  # Pod 선택 레이블
+    pod_labels={"app_deployment": "fluentd", "version": "v2"},  # Pod 레이블
     pod_annotations={"sidecar.istio.io/inject": "false"}  # Pod 어노테이션
 )
 ```
@@ -169,7 +169,7 @@ node_exporter = await manager.create_daemonset(
             ]
         )
     ],
-    labels={"app": "node-exporter"},
+    labels={"app_deployment": "node-exporter"},
     pod_annotations={
         "prometheus.io/scrape": "true",
         "prometheus.io/port": "9100"
@@ -210,7 +210,7 @@ fluentd = await manager.create_daemonset(
             ]
         )
     ],
-    labels={"app": "fluentd", "component": "logging"}
+    labels={"app_deployment": "fluentd", "component": "logging"}
 )
 ```
 
@@ -232,7 +232,7 @@ gpu_monitor = await manager.create_daemonset(
             ports=[{"containerPort": 9400}]
         )
     ],
-    labels={"app": "gpu-monitor"}
+    labels={"app_deployment": "gpu-monitor"}
 )
 
 # Note: nodeSelector는 K8s API를 직접 사용하여 spec.template.spec.nodeSelector에 설정
@@ -381,7 +381,7 @@ except DaemonSetCreationException as e:
 # 100개 노드 클러스터 → 100개 Pod 생성
 
 ds = await manager.create_daemonset(
-    name="heavy-app",
+    name="heavy-app_deployment",
     namespace="default",
     containers=[...]  # 리소스가 많이 필요한 컨테이너
 )
@@ -409,9 +409,9 @@ if await manager.exists("node-exporter", "proxmox"):
 # selector를 변경하려면 DaemonSet을 삭제하고 재생성해야 함
 
 ds = await manager.create_daemonset(
-    name="app",
+    name="app_deployment",
     namespace="default",
-    selector_labels={"app": "myapp"},  # 이 값은 불변
+    selector_labels={"app_deployment": "myapp"},  # 이 값은 불변
     containers=[...]
 )
 

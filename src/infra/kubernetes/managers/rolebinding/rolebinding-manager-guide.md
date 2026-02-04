@@ -13,11 +13,11 @@
 manager = RoleBindingManager(k8s_client)
 
 rolebinding = await manager.create_rolebinding(
-    name="app-readonly-binding",
+    name="app_deployment-readonly-binding",
     namespace="project-a",
-    role_name="app-reader",
+    role_name="app_deployment-reader",
     subjects=[
-        {"kind": "ServiceAccount", "name": "app-sa", "namespace": "project-a"}
+        {"kind": "ServiceAccount", "name": "app_deployment-sa", "namespace": "project-a"}
     ],
 )
 ```
@@ -26,7 +26,7 @@ rolebinding = await manager.create_rolebinding(
 
 ```python
 rolebinding = await manager.get_rolebinding(
-    name="app-readonly-binding",
+    name="app_deployment-readonly-binding",
     namespace="project-a",
 )
 ```
@@ -35,7 +35,7 @@ rolebinding = await manager.get_rolebinding(
 
 ```python
 success = await manager.delete_rolebinding(
-    name="app-readonly-binding",
+    name="app_deployment-readonly-binding",
     namespace="project-a",
 )
 ```
@@ -50,7 +50,7 @@ rolebindings = await manager.list_rolebindings(namespace="project-a")
 
 ```python
 rolebinding = await manager.update_labels(
-    name="app-readonly-binding",
+    name="app_deployment-readonly-binding",
     namespace="project-a",
     labels={"team": "platform"},
     merge=True,
@@ -61,7 +61,7 @@ rolebinding = await manager.update_labels(
 
 ```python
 rolebinding = await manager.add_subject(
-    name="app-readonly-binding",
+    name="app_deployment-readonly-binding",
     namespace="project-a",
     subject={"kind": "ServiceAccount", "name": "batch-sa", "namespace": "project-a"},
 )
@@ -72,10 +72,10 @@ rolebinding = await manager.add_subject(
 ### 1. 앱 서비스 계정 권한 부여
 ```python
 await manager.create_rolebinding(
-    name="app-binding",
+    name="app_deployment-binding",
     namespace="project-a",
-    role_name="app-reader",
-    subjects=[{"kind": "ServiceAccount", "name": "app-sa", "namespace": "project-a"}],
+    role_name="app_deployment-reader",
+    subjects=[{"kind": "ServiceAccount", "name": "app_deployment-sa", "namespace": "project-a"}],
 )
 ```
 

@@ -14,7 +14,7 @@ from kubernetes_asyncio.client import V1Container
 pod = await manager.create_pod(
     name="standalone-pod",
     namespace="project-a",
-    containers=[V1Container(name="app", image="nginx:latest")],
+    containers=[V1Container(name="app_deployment", image="nginx:latest")],
     restart_policy="Always",
 )
 ```
@@ -25,7 +25,7 @@ pod = await manager.create_pod(
 manager = PodManager(k8s_client)
 
 pod = await manager.get_pod(
-    name="app-7c9b8f6d9f-abcde",
+    name="app_deployment-7c9b8f6d9f-abcde",
     namespace="project-a",
 )
 ```
@@ -44,7 +44,7 @@ success = await manager.delete_pod(
 ```python
 pods = await manager.list_pods(
     namespace="project-a",
-    label_selector="app=myapp",
+    label_selector="app_deployment=myapp",
 )
 ```
 
@@ -52,7 +52,7 @@ pods = await manager.list_pods(
 
 ```python
 status = await manager.get_pod_status(
-    name="app-7c9b8f6d9f-abcde",
+    name="app_deployment-7c9b8f6d9f-abcde",
     namespace="project-a",
 )
 ```
@@ -61,9 +61,9 @@ status = await manager.get_pod_status(
 
 ```python
 logs = await manager.get_pod_logs(
-    name="app-7c9b8f6d9f-abcde",
+    name="app_deployment-7c9b8f6d9f-abcde",
     namespace="project-a",
-    container="app",
+    container="app_deployment",
     tail_lines=200,
     timestamps=True,
 )
@@ -93,7 +93,7 @@ await manager.create_pod(
 
 ### 2. 배포 상태 모니터링
 ```python
-pods = await manager.list_pods(namespace="project-a", label_selector="app=myapp")
+pods = await manager.list_pods(namespace="project-a", label_selector="app_deployment=myapp")
 for pod in pods:
     status = await manager.get_pod_status(pod.metadata.name, pod.metadata.namespace)
     print(status["phase"])

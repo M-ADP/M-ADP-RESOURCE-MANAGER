@@ -48,11 +48,11 @@ def mock_service():
         metadata=V1ObjectMeta(
             name="test-service",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1ServiceSpec(
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             ports=[
                 V1ServicePort(
                     name="http",
@@ -102,9 +102,9 @@ class TestCreateService:
         result = await service_manager.create_service(
             name="test-service",
             namespace="test-ns",
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             ports=[{"name": "http", "port": 80, "target_port": 8080}],
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -123,7 +123,7 @@ class TestCreateService:
         result = await service_manager.create_service(
             name="test-service",
             namespace="test-ns",
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             ports=[{"port": 80}],
         )
 
@@ -145,7 +145,7 @@ class TestCreateService:
         result = await service_manager.create_service(
             name="test-service",
             namespace="test-ns",
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             ports=[{"port": 80, "node_port": 30080}],
             service_type="NodePort",
         )
@@ -170,7 +170,7 @@ class TestCreateService:
         result = await service_manager.create_service(
             name="test-service",
             namespace="test-ns",
-            selector={"app": "test"},
+            selector={"app_deployment": "test"},
             ports=[{"port": 80}],
         )
 
@@ -193,7 +193,7 @@ class TestCreateService:
             await service_manager.create_service(
                 name="test-service",
                 namespace="test-ns",
-                selector={"app": "test"},
+                selector={"app_deployment": "test"},
                 ports=[{"port": 80}],
             )
 
@@ -215,7 +215,7 @@ class TestCreateService:
             await service_manager.create_service(
                 name="test-service",
                 namespace="test-ns",
-                selector={"app": "test"},
+                selector={"app_deployment": "test"},
                 ports=[{"port": 80}],
             )
 
@@ -438,14 +438,14 @@ class TestListServices:
 
         result = await service_manager.list_services(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-service",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_service.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-service",
         )
 
@@ -504,7 +504,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-service",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 
@@ -680,7 +680,7 @@ class TestUpdateSelector:
         """Selector 업데이트 성공"""
         updated_service = V1Service(
             metadata=V1ObjectMeta(name="test-service", namespace="test-ns"),
-            spec=V1ServiceSpec(selector={"app": "new-app"}),
+            spec=V1ServiceSpec(selector={"app_deployment": "new-app_deployment"}),
         )
 
         k8s_client.core_v1.read_namespaced_service = AsyncMock(
@@ -693,7 +693,7 @@ class TestUpdateSelector:
         result = await service_manager.update_selector(
             name="test-service",
             namespace="test-ns",
-            selector={"app": "new-app"},
+            selector={"app_deployment": "new-app_deployment"},
         )
 
         assert result == updated_service
@@ -709,7 +709,7 @@ class TestUpdateSelector:
             await service_manager.update_selector(
                 name="test-service",
                 namespace="test-ns",
-                selector={"app": "new-app"},
+                selector={"app_deployment": "new-app_deployment"},
             )
 
         assert "does not exist" in str(exc_info.value)
@@ -730,7 +730,7 @@ class TestUpdateSelector:
             await service_manager.update_selector(
                 name="test-service",
                 namespace="test-ns",
-                selector={"app": "new-app"},
+                selector={"app_deployment": "new-app_deployment"},
             )
 
         assert "Internal Server Error" in str(exc_info.value)

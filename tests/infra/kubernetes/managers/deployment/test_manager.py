@@ -60,17 +60,17 @@ def mock_deployment(mock_container):
         metadata=V1ObjectMeta(
             name="test-deployment",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1DeploymentSpec(
             replicas=3,
             selector=V1LabelSelector(
-                match_labels={"app": "test"},
+                match_labels={"app_deployment": "test"},
             ),
             template=V1PodTemplateSpec(
                 metadata=V1ObjectMeta(
-                    labels={"app": "test"},
+                    labels={"app_deployment": "test"},
                 ),
                 spec=V1PodSpec(
                     containers=[mock_container],
@@ -132,7 +132,7 @@ class TestCreateDeployment:
             namespace="test-ns",
             containers=[mock_container],
             replicas=3,
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -440,14 +440,14 @@ class TestListDeployments:
 
         result = await dep_manager.list_deployments(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-deployment",
         )
 
         assert len(result) == 0
         k8s_client.apps_v1.list_namespaced_deployment.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-deployment",
         )
 
@@ -506,7 +506,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-deployment",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 
@@ -609,9 +609,9 @@ class TestUpdateReplicas:
             ),
             spec=V1DeploymentSpec(
                 replicas=5,
-                selector=V1LabelSelector(match_labels={"app": "test"}),
+                selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
                 template=V1PodTemplateSpec(
-                    metadata=V1ObjectMeta(labels={"app": "test"}),
+                    metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                     spec=V1PodSpec(containers=[]),
                 ),
             ),
@@ -725,9 +725,9 @@ class TestGetDeploymentStatus:
             ),
             spec=V1DeploymentSpec(
                 replicas=1,
-                selector=V1LabelSelector(match_labels={"app": "test"}),
+                selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
                 template=V1PodTemplateSpec(
-                    metadata=V1ObjectMeta(labels={"app": "test"}),
+                    metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                     spec=V1PodSpec(containers=[]),
                 ),
             ),

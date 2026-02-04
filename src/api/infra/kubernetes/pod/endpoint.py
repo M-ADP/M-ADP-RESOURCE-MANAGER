@@ -76,7 +76,7 @@ async def list_pods(
     ),
     label_selector: Optional[str] = Query(
         default=None,
-        description="Label selector (e.g., 'app=myapp')",
+        description="Label selector (e.g., 'app_deployment=myapp')",
     ),
     pod_manager: PodManager = Depends(get_pod_manager),
 ):

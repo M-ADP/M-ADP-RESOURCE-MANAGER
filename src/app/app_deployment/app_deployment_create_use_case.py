@@ -48,7 +48,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             name=sa_name,
             namespace=namespace,
             labels={
-                "app": payload.name,
+                "app_deployment": payload.name,
                 "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             }
@@ -74,7 +74,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                     storage_class_name=spec.disk.storage_class,
                     access_modes=["ReadWriteOnce"],
                     labels={
-                        "app": payload.name,
+                        "app_deployment": payload.name,
                         "container": spec.name,
                         "owner": user_id,
                         **DefaultLabel.MANAGED_BY_LABEL,
@@ -106,7 +106,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
         # 레이블 설정 (기본 레이블 + 사용자 레이블)
         labels = {
-            "app": payload.name,
+            "app_deployment": payload.name,
             "owner": user_id,
             **DefaultLabel.MANAGED_BY_LABEL,
         }

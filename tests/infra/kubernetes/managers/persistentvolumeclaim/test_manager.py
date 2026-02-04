@@ -46,7 +46,7 @@ def mock_pvc():
         metadata=V1ObjectMeta(
             name="test-pvc",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1PersistentVolumeClaimSpec(
@@ -103,7 +103,7 @@ class TestCreatePVC:
             storage_size="10Gi",
             access_modes=["ReadWriteOnce"],
             storage_class_name="standard",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -373,14 +373,14 @@ class TestListPVCs:
 
         result = await pvc_manager.list_pvcs(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-pvc",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_persistent_volume_claim.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-pvc",
         )
 
@@ -439,7 +439,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-pvc",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

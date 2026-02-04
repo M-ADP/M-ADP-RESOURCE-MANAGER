@@ -44,7 +44,7 @@ def mock_service_account():
         metadata=V1ObjectMeta(
             name="test-sa",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         image_pull_secrets=[V1LocalObjectReference(name="docker-secret")],
@@ -86,7 +86,7 @@ class TestCreateServiceAccount:
         result = await sa_manager.create_service_account(
             name="test-sa",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
             image_pull_secrets=["docker-secret"],
         )
@@ -391,14 +391,14 @@ class TestListServiceAccounts:
 
         result = await sa_manager.list_service_accounts(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-sa",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_service_account.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-sa",
         )
 
@@ -457,7 +457,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-sa",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 

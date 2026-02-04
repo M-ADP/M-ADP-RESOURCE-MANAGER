@@ -60,17 +60,17 @@ def mock_replicaset(mock_container):
         metadata=V1ObjectMeta(
             name="test-replicaset",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         ),
         spec=V1ReplicaSetSpec(
             replicas=3,
             selector=V1LabelSelector(
-                match_labels={"app": "test"},
+                match_labels={"app_deployment": "test"},
             ),
             template=V1PodTemplateSpec(
                 metadata=V1ObjectMeta(
-                    labels={"app": "test"},
+                    labels={"app_deployment": "test"},
                 ),
                 spec=V1PodSpec(
                     containers=[mock_container],
@@ -131,7 +131,7 @@ class TestCreateReplicaSet:
             namespace="test-ns",
             containers=[mock_container],
             replicas=3,
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             annotations={"key": "value"},
         )
 
@@ -439,14 +439,14 @@ class TestListReplicaSets:
 
         result = await rs_manager.list_replicasets(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-replicaset",
         )
 
         assert len(result) == 0
         k8s_client.apps_v1.list_namespaced_replica_set.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-replicaset",
         )
 
@@ -505,7 +505,7 @@ class TestUpdateLabels:
             metadata=V1ObjectMeta(
                 name="test-replicaset",
                 namespace="test-ns",
-                labels={"app": "test", "env": "prod"},
+                labels={"app_deployment": "test", "env": "prod"},
             )
         )
 
@@ -608,9 +608,9 @@ class TestUpdateReplicas:
             ),
             spec=V1ReplicaSetSpec(
                 replicas=5,
-                selector=V1LabelSelector(match_labels={"app": "test"}),
+                selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
                 template=V1PodTemplateSpec(
-                    metadata=V1ObjectMeta(labels={"app": "test"}),
+                    metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                     spec=V1PodSpec(containers=[]),
                 ),
             ),
@@ -723,9 +723,9 @@ class TestGetReplicaSetStatus:
             ),
             spec=V1ReplicaSetSpec(
                 replicas=1,
-                selector=V1LabelSelector(match_labels={"app": "test"}),
+                selector=V1LabelSelector(match_labels={"app_deployment": "test"}),
                 template=V1PodTemplateSpec(
-                    metadata=V1ObjectMeta(labels={"app": "test"}),
+                    metadata=V1ObjectMeta(labels={"app_deployment": "test"}),
                     spec=V1PodSpec(containers=[]),
                 ),
             ),

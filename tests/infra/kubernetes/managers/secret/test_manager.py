@@ -130,7 +130,7 @@ class TestVaultPolicyManagement:
         """Vault Policy 생성 테스트"""
         result = await secret_manager.create_vault_policy(
             policy_name="test-policy",
-            secret_paths=["secret/data/app/db"],
+            secret_paths=["secret/data/app_deployment/db"],
         )
 
         assert result is True
@@ -180,7 +180,7 @@ class TestServiceAccountBinding:
             service_account_name="test-sa",
             namespace="test-ns",
             vault_role_name="test-vault-role",
-            secret_paths=["secret/data/app/db"],
+            secret_paths=["secret/data/app_deployment/db"],
         )
 
         assert result["vault_role"] == "test-vault-role"
@@ -203,7 +203,7 @@ class TestServiceAccountBinding:
                 service_account_name="test-sa",
                 namespace="test-ns",
                 vault_role_name="test-vault-role",
-                secret_paths=["secret/data/app/db"],
+                secret_paths=["secret/data/app_deployment/db"],
             )
 
         assert "Vault error" in str(exc_info.value)
@@ -271,7 +271,7 @@ class TestVaultInjection:
             namespace="test-ns",
             vault_role="test-vault-role",
             secret_configs=[
-                {"name": "db-creds", "path": "secret/data/app/db"},
+                {"name": "db-creds", "path": "secret/data/app_deployment/db"},
             ],
         )
 
@@ -295,7 +295,7 @@ class TestVaultInjection:
             namespace="test-ns",
             vault_role="test-vault-role",
             secret_configs=[
-                {"name": "db-creds", "path": "secret/data/app/db"},
+                {"name": "db-creds", "path": "secret/data/app_deployment/db"},
             ],
         )
 
@@ -317,7 +317,7 @@ class TestVaultInjection:
                 namespace="test-ns",
                 vault_role="test-vault-role",
                 secret_configs=[
-                    {"name": "db-creds", "path": "secret/data/app/db"},
+                    {"name": "db-creds", "path": "secret/data/app_deployment/db"},
                 ],
             )
 
@@ -337,7 +337,7 @@ class TestIntegratedSetup:
         result = await secret_manager.setup_secret_access(
             service_account_name="test-sa",
             namespace="test-ns",
-            secret_paths=["secret/data/app/db"],
+            secret_paths=["secret/data/app_deployment/db"],
         )
 
         assert result["vault_role"] == "test-ns-test-sa-role"
@@ -356,10 +356,10 @@ class TestIntegratedSetup:
         result = await secret_manager.setup_secret_access(
             service_account_name="test-sa",
             namespace="test-ns",
-            secret_paths=["secret/data/app/db"],
+            secret_paths=["secret/data/app_deployment/db"],
             workload_name="test-deployment",
             workload_type="deployment",
-            secret_configs=[{"name": "db", "path": "secret/data/app/db"}],
+            secret_configs=[{"name": "db", "path": "secret/data/app_deployment/db"}],
         )
 
         assert result["vault_role"] == "test-ns-test-sa-role"

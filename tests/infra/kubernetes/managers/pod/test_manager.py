@@ -53,7 +53,7 @@ def mock_pod():
         metadata=V1ObjectMeta(
             name="test-pod",
             namespace="test-ns",
-            labels={"app": "test"},
+            labels={"app_deployment": "test"},
             owner_references=[
                 V1OwnerReference(
                     api_version="apps/v1",
@@ -298,14 +298,14 @@ class TestListPods:
 
         result = await pod_manager.list_pods(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-pod",
         )
 
         assert len(result) == 0
         k8s_client.core_v1.list_namespaced_pod.assert_called_once_with(
             namespace="test-ns",
-            label_selector="app=test",
+            label_selector="app_deployment=test",
             field_selector="metadata.name=test-pod",
         )
 

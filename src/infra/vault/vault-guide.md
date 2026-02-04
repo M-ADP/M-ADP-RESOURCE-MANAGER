@@ -168,10 +168,10 @@ vault_client = VaultClient(
 
 # Kubernetes Auth Role 생성
 await vault_client.create_kubernetes_role(
-    role_name="my-app-role",
-    bound_service_account_names=["my-app-sa"],
+    role_name="my-app_deployment-role",
+    bound_service_account_names=["my-app_deployment-sa"],
     bound_service_account_namespaces=["default"],
-    policies=["my-app-policy"],
+    policies=["my-app_deployment-policy"],
     ttl="1h",
     max_ttl="24h",
 )
@@ -179,25 +179,25 @@ await vault_client.create_kubernetes_role(
 
 #### Role 조회
 ```python
-role = await vault_client.get_kubernetes_role("my-app-role")
+role = await vault_client.get_kubernetes_role("my-app_deployment-role")
 print(role)
 # {
-#   "bound_service_account_names": ["my-app-sa"],
+#   "bound_service_account_names": ["my-app_deployment-sa"],
 #   "bound_service_account_namespaces": ["default"],
-#   "policies": ["my-app-policy"],
+#   "policies": ["my-app_deployment-policy"],
 #   ...
 # }
 ```
 
 #### Role 삭제
 ```python
-await vault_client.delete_kubernetes_role("my-app-role")
+await vault_client.delete_kubernetes_role("my-app_deployment-role")
 ```
 
 #### Role 목록 조회
 ```python
 roles = await vault_client.list_kubernetes_roles()
-print(roles)  # ["my-app-role", "another-role", ...]
+print(roles)  # ["my-app_deployment-role", "another-role", ...]
 ```
 
 ### 2. Policy 관리
@@ -215,7 +215,7 @@ policy_hcl = VaultClient.generate_policy_hcl(
 
 # Policy 생성
 await vault_client.create_policy(
-    policy_name="my-app-policy",
+    policy_name="my-app_deployment-policy",
     policy_hcl=policy_hcl,
 )
 ```
@@ -233,13 +233,13 @@ path "secret/data/myapp/api-key" {
 
 #### Policy 조회
 ```python
-policy = await vault_client.get_policy("my-app-policy")
+policy = await vault_client.get_policy("my-app_deployment-policy")
 print(policy)  # HCL 문자열
 ```
 
 #### Policy 삭제
 ```python
-await vault_client.delete_policy("my-app-policy")
+await vault_client.delete_policy("my-app_deployment-policy")
 ```
 
 ### 3. Secret 값 관리 (KV v2)
@@ -347,7 +347,7 @@ await vault_client.create_secret(
 
 # 2. 접근 권한 설정
 await secret_manager.setup_secret_access(
-    service_account_name="my-app-sa",
+    service_account_name="my-app_deployment-sa",
     namespace="default",
     secret_paths=[
         "secret/data/myapp/db",
@@ -574,14 +574,14 @@ run_in_executor로 비동기 래핑하여 단점을 보완했습니다.
 ```python
 # Namespace A
 await secret_manager.setup_secret_access(
-    service_account_name="app-sa",
+    service_account_name="app_deployment-sa",
     namespace="namespace-a",
     secret_paths=["secret/data/shared/db"],
 )
 
 # Namespace B (별도 설정 필요)
 await secret_manager.setup_secret_access(
-    service_account_name="app-sa",
+    service_account_name="app_deployment-sa",
     namespace="namespace-b",
     secret_paths=["secret/data/shared/db"],  # 같은 Secret
 )

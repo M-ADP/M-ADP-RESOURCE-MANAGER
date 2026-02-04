@@ -109,7 +109,7 @@ class SecretManager:
         Args:
             policy_name: Policy 이름
             secret_paths: 접근 가능한 Secret 경로 리스트
-                         예: ["secret/data/app/db-credentials"]
+                         예: ["secret/data/app_deployment/db-credentials"]
             capabilities: 권한 리스트 (read, create, update, delete 등)
             
         Returns:
@@ -332,8 +332,8 @@ class SecretManager:
             vault_role: 사용할 Vault Role
             secret_configs: Secret 설정 리스트
                 [
-                    {"name": "db-creds", "path": "secret/data/app/db"},
-                    {"name": "api-key", "path": "secret/data/app/api"},
+                    {"name": "db-creds", "path": "secret/data/app_deployment/db"},
+                    {"name": "api-key", "path": "secret/data/app_deployment/api"},
                 ]
             
         Returns:
