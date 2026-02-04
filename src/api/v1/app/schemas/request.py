@@ -170,12 +170,6 @@ class AppCreateRequest(BaseModel):
         description="App 이름 (Deployment 이름)",
         examples=["my-app"]
     )
-    namespace: str = Field(
-        ...,
-        min_length=1,
-        description="배포할 네임스페이스 (프로젝트)",
-        examples=["my-project"]
-    )
     containers: List[ContainerSpec] = Field(
         ...,
         min_length=1,
@@ -190,7 +184,6 @@ class AppCreateRequest(BaseModel):
             "examples": [
                 {
                     "name": "my-app",
-                    "namespace": "my-project",
                     "containers": [
                         {
                             "name": "main",

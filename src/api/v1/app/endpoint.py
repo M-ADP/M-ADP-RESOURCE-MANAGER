@@ -27,9 +27,10 @@ from src.core.user.model import User
 app_router = APIRouter(prefix="/apps", tags=["apps"])
 
 
-@app_router.post("", response_model=SuccessResponse[AppCreateResponse])
+@app_router.post("/{namespace}", response_model=SuccessResponse[AppCreateResponse])
 async def create_app_deployment(
     payload: AppCreateRequest,
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
     user: User = Depends(get_user),
     app_deployment_create_usecase: AppDeploymentCreateUseCase = Depends(AppDeploymentCreateUseCase)
 ):
@@ -40,8 +41,9 @@ async def create_app_deployment(
     - 최대 리소스 (CPU, Memory) 설정 가능
     """
     app_deployment_create_result = await app_deployment_create_usecase(
-        payload,
-        user.id
+        namespace=namespace,
+        payload=payload,
+        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment created successfully",

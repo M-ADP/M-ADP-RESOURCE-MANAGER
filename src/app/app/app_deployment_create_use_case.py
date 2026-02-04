@@ -36,6 +36,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
     async def __call__(
             self,
+            namespace: str,
             payload: AppCreateRequest,
             user_id: str
     ) -> AppCreateResponse:
@@ -45,7 +46,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         sa_name = f"{payload.name}-sa"
         sa_domain = ServiceAccount(
             name=sa_name,
-            namespace=payload.namespace,
+            namespace=namespace,
             labels={
                 "app": payload.name,
                 "owner": user_id,
@@ -68,7 +69,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 # PVC 도메인 객체 생성
                 pvc_domain = PersistentVolumeClaim(
                     name=pvc_name,
-                    namespace=payload.namespace,
+                    namespace=namespace,
                     storage=spec.disk.size,
                     storage_class_name=spec.disk.storage_class,
                     access_modes=["ReadWriteOnce"],
@@ -115,7 +116,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         # Deployment 도메인 객체 생성
         deployment_domain = Deployment(
             name=payload.name,
-            namespace=payload.namespace,
+            namespace=namespace,
             replicas=payload.replicas,
             containers=containers,
             volumes=volumes,
