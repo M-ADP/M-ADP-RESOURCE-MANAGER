@@ -1,4 +1,4 @@
-"""App Secret 삭제 Use Case"""
+"""App Deployment Secret 삭제 Use Case"""
 
 from typing import List
 
@@ -10,8 +10,8 @@ from src.dependencies.vault import get_vault_client
 from src.infra.vault.client import VaultClient
 
 
-class AppSecretDeleteUseCase(BaseUseCase):
-    """App Secret 삭제 Use Case"""
+class AppDeploymentSecretDeleteUseCase(BaseUseCase):
+    """App Deployment Secret 삭제 Use Case"""
 
     def __init__(
         self,

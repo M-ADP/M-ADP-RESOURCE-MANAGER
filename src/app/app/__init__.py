@@ -1,7 +1,7 @@
-"""App Use Case 모듈"""
+"""App Deployment Use Case 모듈"""
 
-from .app_create_use_case import AppCreateUseCase
-from .app_delete_use_case import AppDeleteUseCase
-from .app_revision_use_case import AppRevisionUseCase
+from .app_deployment_create_use_case import AppDeploymentCreateUseCase
+from .app_deployment_delete_use_case import AppDeploymentDeleteUseCase
+from .app_deployment_revision_use_case import AppDeploymentRevisionUseCase
 
-__all__ = ["AppCreateUseCase", "AppDeleteUseCase", "AppRevisionUseCase"]
+__all__ = ["AppDeploymentCreateUseCase", "AppDeploymentDeleteUseCase", "AppDeploymentRevisionUseCase"]

@@ -1,4 +1,4 @@
-"""App Auto Scale Use Case"""
+"""App Deployment Auto Scale Use Case"""
 
 from fastapi import Depends
 
@@ -11,8 +11,8 @@ from src.app.app.exceptions import DeploymentNotFoundException
 from src.dependencies.kubernetes import get_deployment_repository, get_hpa_repository
 
 
-class AppAutoScaleUseCase(BaseUseCase):
-    """App Auto Scale (HPA 생성/수정) Use Case"""
+class AppDeploymentAutoScaleUseCase(BaseUseCase):
+    """App Deployment Auto Scale (HPA 생성/수정) Use Case"""
 
     def __init__(
         self,

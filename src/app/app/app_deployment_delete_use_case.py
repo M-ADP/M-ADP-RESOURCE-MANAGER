@@ -1,4 +1,4 @@
-"""App 삭제 Use Case"""
+"""App Deployment 삭제 Use Case"""
 
 from fastapi import Depends
 
@@ -7,8 +7,8 @@ from src.app.base_use_case import BaseUseCase
 from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
 
 
-class AppDeleteUseCase(BaseUseCase):
-    """App(Deployment) 삭제 Use Case"""
+class AppDeploymentDeleteUseCase(BaseUseCase):
+    """App Deployment 삭제 Use Case"""
 
     def __init__(
             self,

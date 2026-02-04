@@ -1,4 +1,4 @@
-"""App 이벤트 조회 UseCase"""
+"""App Deployment 이벤트 조회 UseCase"""
 
 from fastapi import Depends
 
@@ -9,8 +9,8 @@ from src.core.kubernetes.pod import PodRepository
 from src.dependencies.kubernetes import get_deployment_repository, get_pod_repository
 
 
-class AppEventsUseCase:
-    """App(Deployment) 이벤트 조회 UseCase"""
+class AppDeploymentEventsUseCase:
+    """App Deployment 이벤트 조회 UseCase"""
 
     def __init__(
         self,

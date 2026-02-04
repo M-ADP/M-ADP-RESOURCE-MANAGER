@@ -1,4 +1,4 @@
-"""App 생성 Use Case"""
+"""App Deployment 생성 Use Case"""
 
 from typing import List
 
@@ -19,8 +19,8 @@ from src.core.kubernetes.service_account import ServiceAccount
 from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
 
 
-class AppCreateUseCase(BaseUseCase):
-    """App(Deployment) 생성 Use Case"""
+class AppDeploymentCreateUseCase(BaseUseCase):
+    """App Deployment 생성 Use Case"""
 
     def __init__(
             self,

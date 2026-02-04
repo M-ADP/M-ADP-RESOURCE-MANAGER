@@ -1,4 +1,4 @@
-"""App Secret 생성 Use Case"""
+"""App Deployment Secret 생성 Use Case"""
 
 from fastapi import Depends
 
@@ -11,8 +11,8 @@ from src.infra.vault.client import VaultClient
 from src.app.app.exceptions import DeploymentNotFoundException
 
 
-class AppSecretCreateUseCase(BaseUseCase):
-    """App Secret 생성 Use Case"""
+class AppDeploymentSecretCreateUseCase(BaseUseCase):
+    """App Deployment Secret 생성 Use Case"""
 
     def __init__(
         self,

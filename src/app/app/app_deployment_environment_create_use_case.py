@@ -1,4 +1,4 @@
-"""App Environment 생성 Use Case (ConfigMap 생성)"""
+"""App Deployment Environment 생성 Use Case (ConfigMap 생성)"""
 
 from fastapi import Depends
 
@@ -10,8 +10,8 @@ from src.infra.kubernetes.managers.configmap import ConfigMapManager
 from src.app.app.exceptions import DeploymentNotFoundException
 
 
-class AppEnvironmentCreateUseCase(BaseUseCase):
-    """App Environment 생성 Use Case (ConfigMap 생성)"""
+class AppDeploymentEnvironmentCreateUseCase(BaseUseCase):
+    """App Deployment Environment 생성 Use Case (ConfigMap 생성)"""
 
     def __init__(
         self,

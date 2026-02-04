@@ -1,4 +1,4 @@
-"""App 로그 조회 UseCase"""
+"""App Deployment 로그 조회 UseCase"""
 
 from typing import Optional
 
@@ -11,8 +11,8 @@ from src.core.kubernetes.pod import PodRepository
 from src.dependencies.kubernetes import get_deployment_repository, get_pod_repository
 
 
-class AppLogsUseCase:
-    """App(Deployment) 로그 조회 UseCase"""
+class AppDeploymentLogsUseCase:
+    """App Deployment 로그 조회 UseCase"""
 
     def __init__(
         self,

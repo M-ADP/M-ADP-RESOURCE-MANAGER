@@ -1,4 +1,4 @@
-"""App 수정 Use Case"""
+"""App Deployment 수정 Use Case"""
 
 import re
 from typing import Optional, Dict
@@ -51,8 +51,8 @@ def parse_size_to_bytes(size_str: str) -> int:
     return int(value * units[unit])
 
 
-class AppRevisionUseCase(BaseUseCase):
-    """App(Deployment) 리소스 수정 Use Case"""
+class AppDeploymentRevisionUseCase(BaseUseCase):
+    """App Deployment 리소스 수정 Use Case"""
 
     def __init__(
             self,

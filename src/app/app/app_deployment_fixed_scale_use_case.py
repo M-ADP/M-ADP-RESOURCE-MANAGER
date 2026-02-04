@@ -1,4 +1,4 @@
-"""App Fixed Scale Use Case"""
+"""App Deployment Fixed Scale Use Case"""
 
 from fastapi import Depends
 
@@ -9,8 +9,8 @@ from src.app.app.exceptions import DeploymentNotFoundException
 from src.dependencies.kubernetes import get_deployment_repository, get_hpa_repository
 
 
-class AppFixedScaleUseCase(BaseUseCase):
-    """App Fixed Scale (HPA 삭제 + 고정 레플리카) Use Case"""
+class AppDeploymentFixedScaleUseCase(BaseUseCase):
+    """App Deployment Fixed Scale (HPA 삭제 + 고정 레플리카) Use Case"""
 
     def __init__(
         self,
