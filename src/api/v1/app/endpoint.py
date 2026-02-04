@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentCreateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse
+from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentCreateRequest, EnvironmentUpdateRequest
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse, EnvironmentUpdateResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.api.v1.deps.user import get_user
@@ -19,6 +19,7 @@ from src.app.app.app_fixed_scale_use_case import AppFixedScaleUseCase
 from src.app.app.app_secret_create_use_case import AppSecretCreateUseCase
 from src.app.app.app_secret_delete_use_case import AppSecretDeleteUseCase
 from src.app.app.app_environment_create_use_case import AppEnvironmentCreateUseCase
+from src.app.app.app_environment_update_use_case import AppEnvironmentUpdateUseCase
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
@@ -266,5 +267,31 @@ async def create_app_environment(
     )
     return SuccessResponse(
         message="Environment variables created successfully",
+        data=result
+    )
+
+
+@app_router.put("/{namespace}/{name}/environment", response_model=SuccessResponse[EnvironmentUpdateResponse])
+async def update_app_environment(
+    payload: EnvironmentUpdateRequest,
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_environment_update_usecase: AppEnvironmentUpdateUseCase = Depends(AppEnvironmentUpdateUseCase)
+):
+    """App 환경 변수 수정 (ConfigMap 데이터 교체)
+
+    App의 환경 변수 ConfigMap 데이터를 완전히 교체합니다.
+    - 기존 데이터는 모두 삭제되고 새로운 데이터로 교체됩니다.
+    - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
+    """
+    result = await app_environment_update_usecase(
+        namespace=namespace,
+        app_name=name,
+        payload=payload,
+        user_id=user.id
+    )
+    return SuccessResponse(
+        message="Environment variables updated successfully",
         data=result
     )

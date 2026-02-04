@@ -234,3 +234,24 @@ class EnvironmentCreateRequest(BaseModel):
             ]
         }
     }
+
+
+class EnvironmentUpdateRequest(BaseModel):
+    """환경 변수 수정 요청 모델 (ConfigMap 데이터 교체)"""
+
+    data: Dict[str, str] = Field(..., description="환경 변수 데이터 (key-value) - 기존 데이터를 완전히 교체")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": {
+                        "DATABASE_URL": "postgresql://newhost:5432/newdb",
+                        "REDIS_HOST": "new-redis.example.com",
+                        "LOG_LEVEL": "DEBUG",
+                        "NEW_VAR": "new_value"
+                    }
+                }
+            ]
+        }
+    }

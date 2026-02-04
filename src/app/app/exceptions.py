@@ -36,3 +36,11 @@ class DiskReductionNotAllowedException(BadRequestException):
 
     def __init__(self, current: str, requested: str):
         super().__init__(f"Disk size can only be increased. Current: {current}, Requested: {requested}")
+
+
+class ConfigMapNotFoundException(NotFoundException):
+    """ConfigMap 미발견"""
+    detail = "ConfigMap not found"
+
+    def __init__(self, name: str, namespace: str):
+        super().__init__(f"ConfigMap '{name}' not found in namespace '{namespace}'")

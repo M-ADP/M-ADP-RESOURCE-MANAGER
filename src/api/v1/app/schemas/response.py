@@ -125,3 +125,12 @@ class EnvironmentCreateResponse(BaseModel):
     namespace: str = Field(..., description="네임스페이스")
     app_name: str = Field(..., description="App 이름")
     data_keys: List[str] = Field(..., description="생성된 환경 변수 키 목록")
+
+
+class EnvironmentUpdateResponse(BaseModel):
+    """환경 변수 수정 응답 모델"""
+
+    name: str = Field(..., description="수정된 ConfigMap 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    app_name: str = Field(..., description="App 이름")
+    data_keys: List[str] = Field(..., description="수정된 환경 변수 키 목록")
