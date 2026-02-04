@@ -111,7 +111,7 @@ async def get_app_logs(
 
     Deployment에 속한 모든 Pod의 로그를 조회합니다.
     """
-    result = await app_logs_usecase(
+    app_logs_result = await app_logs_usecase(
         app_name=name,
         namespace=namespace,
         tail_lines=tail_lines,
@@ -120,7 +120,7 @@ async def get_app_logs(
     )
     return SuccessResponse(
         message="App logs retrieved successfully",
-        data=result,
+        data=app_logs_result,
     )
 
 
@@ -135,13 +135,13 @@ async def get_app_events(
 
     Deployment, ReplicaSet, Pod 관련 Kubernetes 이벤트를 조회합니다.
     """
-    result = await app_events_usecase(
+    app_events_result = await app_events_usecase(
         app_name=name,
         namespace=namespace,
     )
     return SuccessResponse(
         message="App events retrieved successfully",
-        data=result,
+        data=app_events_result,
     )
 
 
@@ -159,7 +159,7 @@ async def set_auto_scale(
     - CPU/Memory 사용률 기반 자동 스케일링
     - 최소/최대 레플리카 수 지정
     """
-    result = await autoscale_usecase(
+    app_autoscale_result = await autoscale_usecase(
         app_name=name,
         namespace=namespace,
         payload=payload,
@@ -167,7 +167,7 @@ async def set_auto_scale(
     )
     return SuccessResponse(
         message="Auto scale configured successfully",
-        data=result,
+        data=app_autoscale_result,
     )
 
 
@@ -185,7 +185,7 @@ async def set_fixed_scale(
     - HPA가 존재하면 삭제
     - 고정 레플리카 수 지정
     """
-    result = await fixed_scale_usecase(
+    app_fixed_scale_result = await fixed_scale_usecase(
         app_name=name,
         namespace=namespace,
         payload=payload,
@@ -193,7 +193,7 @@ async def set_fixed_scale(
     )
     return SuccessResponse(
         message="Fixed scale configured successfully",
-        data=result,
+        data=app_fixed_scale_result,
     )
 
 
@@ -209,7 +209,7 @@ async def create_app_secret(
 
     Vault에 Secret을 저장하고, Pod가 접근할 수 있도록 Policy와 Role을 자동 설정합니다.
     """
-    result = await app_secret_create_usecase(
+    app_secret_create_result = await app_secret_create_usecase(
         namespace=namespace,
         app_name=name,
         payload=payload,
@@ -217,7 +217,7 @@ async def create_app_secret(
     )
     return SuccessResponse(
         message="Secret created and configured successfully",
-        data=result
+        data=app_secret_create_result
     )
 
 
@@ -234,7 +234,7 @@ async def delete_app_secret(
     Vault에서 Secret을 삭제합니다.
     만약 해당 App의 모든 Secret이 삭제되면, 관련된 Policy와 Role도 자동으로 정리됩니다.
     """
-    result = await app_secret_delete_usecase(
+    app_secret_delete_result = await app_secret_delete_usecase(
         namespace=namespace,
         app_name=name,
         secret_name=secret_name,
@@ -242,7 +242,7 @@ async def delete_app_secret(
     )
     return SuccessResponse(
         message="Secret deleted successfully",
-        data=result
+        data=app_secret_delete_result
     )
 
 
@@ -260,7 +260,7 @@ async def create_app_environment(
     - 이미 존재하는 ConfigMap이 있으면 데이터를 병합합니다.
     - ConfigMap 이름은 {app-name}-env 형식으로 생성됩니다.
     """
-    result = await app_environment_create_usecase(
+    app_environment_create_result = await app_environment_create_usecase(
         namespace=namespace,
         app_name=name,
         payload=payload,
@@ -268,7 +268,7 @@ async def create_app_environment(
     )
     return SuccessResponse(
         message="Environment variables created successfully",
-        data=result
+        data=app_environment_create_result
     )
 
 
@@ -286,7 +286,7 @@ async def update_app_environment(
     - 기존 데이터는 모두 삭제되고 새로운 데이터로 교체됩니다.
     - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
     """
-    result = await app_environment_update_usecase(
+    app_environment_update_result = await app_environment_update_usecase(
         namespace=namespace,
         app_name=name,
         payload=payload,
@@ -294,7 +294,7 @@ async def update_app_environment(
     )
     return SuccessResponse(
         message="Environment variables updated successfully",
-        data=result
+        data=app_environment_update_result
     )
 
 
@@ -310,12 +310,12 @@ async def delete_app_environment(
     App의 환경 변수 ConfigMap을 삭제합니다.
     - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
     """
-    result = await app_environment_delete_usecase(
+    app_environment_delete_result = await app_environment_delete_usecase(
         namespace=namespace,
         app_name=name,
         user_id=user.id
     )
     return SuccessResponse(
         message="Environment variables deleted successfully",
-        data=result
+        data=app_environment_delete_result
     )
