@@ -24,7 +24,7 @@ class AppAutoScaleUseCase(BaseUseCase):
 
     async def __call__(
         self,
-        name: str,
+        app_name: str,
         namespace: str,
         payload: AutoScaleRequest,
         user_id: str,
@@ -32,24 +32,24 @@ class AppAutoScaleUseCase(BaseUseCase):
         """App에 HPA 설정"""
 
         # 1. Deployment 존재 확인
-        deployment = await self.deployment_repository.find_by_name(name, namespace)
+        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
         if not deployment:
-            raise DeploymentNotFoundException(name=name, namespace=namespace)
+            raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
         # 2. HPA 이름 생성
-        hpa_name = f"{name}-hpa"
+        hpa_name = f"{app_name}-hpa"
 
         # 3. HPA 도메인 객체 생성
         hpa = HorizontalPodAutoscaler.for_deployment(
             name=hpa_name,
             namespace=namespace,
-            deployment_name=name,
+            deployment_name=app_name,
             min_replicas=payload.min_replicas,
             max_replicas=payload.max_replicas,
             target_cpu_utilization=payload.target_cpu_utilization,
             target_memory_utilization=payload.target_memory_utilization,
             labels={
-                "app": name,
+                "app": app_name,
                 "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             },

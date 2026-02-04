@@ -22,14 +22,14 @@ class AppDeleteUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            name: str,
+            app_name: str,
             namespace: str,
             user_id: str
     ) -> AppDeleteResponse:
         """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 삭제"""
 
         # 1. Deployment 조회하여 연관 PVC 확인
-        deployment = await self.deployment_repository.find_by_name(name, namespace)
+        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
         pvc_names = []
 
         if deployment and deployment.volumes:
@@ -39,14 +39,14 @@ class AppDeleteUseCase(BaseUseCase):
 
         # 2. Deployment 삭제
         deleted = await self.deployment_repository.delete(
-            name=name,
+            name=app_name,
             namespace=namespace,
         )
 
         # 3. ServiceAccount 삭제
         try:
             await self.service_account_repository.delete(
-                name=f"{name}-sa",
+                name=f"{app_name}-sa",
                 namespace=namespace,
             )
         except Exception:
@@ -64,7 +64,7 @@ class AppDeleteUseCase(BaseUseCase):
                 pass
 
         return AppDeleteResponse(
-            name=name,
+            name=app_name,
             namespace=namespace,
             deleted=deleted,
         )

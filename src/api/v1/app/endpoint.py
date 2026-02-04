@@ -61,7 +61,7 @@ async def delete_app(
     Deployment 자원을 삭제합니다.
     """
     app_delete_result = await app_delete_usecase(
-        name=name,
+        app_name=name,
         namespace=namespace,
         user_id=user.id
     )
@@ -86,7 +86,7 @@ async def revise_app(
     - 레플리카 수 조정
     """
     app_revision_result = await app_revision_usecase(
-        name=name,
+        app_name=name,
         namespace=namespace,
         payload=payload,
         user_id=user.id
@@ -112,7 +112,7 @@ async def get_app_logs(
     Deployment에 속한 모든 Pod의 로그를 조회합니다.
     """
     result = await app_logs_usecase(
-        name=name,
+        app_name=name,
         namespace=namespace,
         tail_lines=tail_lines,
         since_seconds=since_seconds,
@@ -136,7 +136,7 @@ async def get_app_events(
     Deployment, ReplicaSet, Pod 관련 Kubernetes 이벤트를 조회합니다.
     """
     result = await app_events_usecase(
-        name=name,
+        app_name=name,
         namespace=namespace,
     )
     return SuccessResponse(
@@ -160,7 +160,7 @@ async def set_auto_scale(
     - 최소/최대 레플리카 수 지정
     """
     result = await autoscale_usecase(
-        name=name,
+        app_name=name,
         namespace=namespace,
         payload=payload,
         user_id=user.id,
@@ -186,7 +186,7 @@ async def set_fixed_scale(
     - 고정 레플리카 수 지정
     """
     result = await fixed_scale_usecase(
-        name=name,
+        app_name=name,
         namespace=namespace,
         payload=payload,
         user_id=user.id,

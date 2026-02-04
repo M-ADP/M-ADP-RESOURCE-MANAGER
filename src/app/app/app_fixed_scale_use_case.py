@@ -22,7 +22,7 @@ class AppFixedScaleUseCase(BaseUseCase):
 
     async def __call__(
         self,
-        name: str,
+        app_name: str,
         namespace: str,
         payload: FixedScaleRequest,
         user_id: str,
@@ -30,23 +30,23 @@ class AppFixedScaleUseCase(BaseUseCase):
         """App에 고정 레플리카 설정 (HPA 삭제)"""
 
         # 1. Deployment 존재 확인
-        deployment = await self.deployment_repository.find_by_name(name, namespace)
+        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
         if not deployment:
-            raise DeploymentNotFoundException(name=name, namespace=namespace)
+            raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
         # 2. HPA가 있으면 삭제
-        hpa_name = f"{name}-hpa"
+        hpa_name = f"{app_name}-hpa"
         hpa_deleted = await self.hpa_repository.delete(hpa_name, namespace)
 
         # 3. Deployment replicas 업데이트
         await self.deployment_repository.update_replicas(
-            name=name,
+            name=app_name,
             namespace=namespace,
             replicas=payload.replicas,
         )
 
         # 4. 최신 상태 조회
-        updated_deployment = await self.deployment_repository.find_by_name(name, namespace)
+        updated_deployment = await self.deployment_repository.find_by_name(app_name, namespace)
 
         return FixedScaleResponse(
             name=updated_deployment.name,

@@ -24,7 +24,7 @@ class AppLogsUseCase:
 
     async def __call__(
         self,
-        name: str,
+        app_name: str,
         namespace: str,
         tail_lines: Optional[int] = 100,
         since_seconds: Optional[int] = None,
@@ -33,7 +33,7 @@ class AppLogsUseCase:
         """App 로그 조회
 
         Args:
-            name: App(Deployment) 이름
+            app_name: App(Deployment) 이름
             namespace: 네임스페이스
             tail_lines: 마지막 N줄만 조회
             since_seconds: 최근 N초 동안의 로그만 조회
@@ -46,12 +46,12 @@ class AppLogsUseCase:
             NotFoundException: Deployment가 존재하지 않는 경우
         """
         # 1. Deployment 존재 확인
-        deployment = await self.deployment_repository.find_by_name(name, namespace)
+        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
         if not deployment:
-            raise DeploymentNotFoundException(name=name, namespace=namespace)
+            raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
         # 2. Pod 목록 조회
-        pods = await self.pod_repository.find_by_deployment(name, namespace)
+        pods = await self.pod_repository.find_by_deployment(app_name, namespace)
 
         # 3. 각 Pod 로그 수집
         pod_logs = []
@@ -71,7 +71,7 @@ class AppLogsUseCase:
             )
 
         return AppLogsResponse(
-            deployment_name=name,
+            deployment_name=app_name,
             namespace=namespace,
             pod_logs=pod_logs,
         )

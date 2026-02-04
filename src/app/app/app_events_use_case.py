@@ -22,13 +22,13 @@ class AppEventsUseCase:
 
     async def __call__(
         self,
-        name: str,
+        app_name: str,
         namespace: str,
     ) -> AppEventsResponse:
         """App 이벤트 조회
 
         Args:
-            name: App(Deployment) 이름
+            app_name: App(Deployment) 이름
             namespace: 네임스페이스
 
         Returns:
@@ -38,15 +38,15 @@ class AppEventsUseCase:
             NotFoundException: Deployment가 존재하지 않는 경우
         """
         # 1. Deployment 존재 확인
-        deployment = await self.deployment_repository.find_by_name(name, namespace)
+        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
         if not deployment:
-            raise DeploymentNotFoundException(name=name, namespace=namespace)
+            raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
         # 2. 이벤트 조회
-        events = await self.pod_repository.get_events_by_deployment(name, namespace)
+        events = await self.pod_repository.get_events_by_deployment(app_name, namespace)
 
         return AppEventsResponse(
-            deployment_name=name,
+            deployment_name=app_name,
             namespace=namespace,
             events=[
                 EventInfo(

@@ -64,7 +64,7 @@ class AppRevisionUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            name: str,
+            app_name: str,
             namespace: str,
             payload: AppRevisionRequest,
             user_id: str
@@ -72,14 +72,14 @@ class AppRevisionUseCase(BaseUseCase):
         """App(Deployment) 리소스 수정"""
 
         # 기존 Deployment 조회
-        existing = await self.deployment_repository.find_by_name(name, namespace)
+        existing = await self.deployment_repository.find_by_name(app_name, namespace)
         if not existing:
-            raise DeploymentNotFoundException(name=name, namespace=namespace)
+            raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
         # 컨테이너 이름 결정
         containers = existing.containers
         if not containers:
-            raise ContainerNotFoundException(deployment_name=name)
+            raise ContainerNotFoundException(deployment_name=app_name)
 
         container_name = payload.container_name or containers[0].name
 
@@ -104,7 +104,7 @@ class AppRevisionUseCase(BaseUseCase):
         # 리소스 업데이트 실행
         if requests_dict or limits_dict:
             await self.deployment_repository.update_container_resources(
-                name=name,
+                name=app_name,
                 namespace=namespace,
                 container_name=container_name,
                 requests=requests_dict,
@@ -115,7 +115,7 @@ class AppRevisionUseCase(BaseUseCase):
         pvc_info: Optional[PvcInfo] = None
         if payload.disk:
             # 컨테이너에 연결된 PVC 찾기
-            pvc_name = f"{name}-{container_name}-pvc"
+            pvc_name = f"{app_name}-{container_name}-pvc"
             existing_pvc = await self.pvc_repository.find_by_name(pvc_name, namespace)
 
             if not existing_pvc:
@@ -157,13 +157,13 @@ class AppRevisionUseCase(BaseUseCase):
         # 레플리카 업데이트
         if payload.replicas is not None:
             await self.deployment_repository.update_replicas(
-                name=name,
+                name=app_name,
                 namespace=namespace,
                 replicas=payload.replicas,
             )
 
         # 최신 상태 조회
-        updated = await self.deployment_repository.find_by_name(name, namespace)
+        updated = await self.deployment_repository.find_by_name(app_name, namespace)
 
         # 수정된 컨테이너 리소스 정보 추출
         updated_container = None
