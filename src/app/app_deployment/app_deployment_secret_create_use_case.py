@@ -8,7 +8,7 @@ from src.app.base_use_case import BaseUseCase
 from src.dependencies.kubernetes import get_deployment_repository
 from src.dependencies.vault import get_vault_client
 from src.infra.vault.client import VaultClient
-from src.app.app.exceptions import DeploymentNotFoundException
+from src.app.app_deployment.exceptions import DeploymentNotFoundException
 
 
 class AppDeploymentSecretCreateUseCase(BaseUseCase):

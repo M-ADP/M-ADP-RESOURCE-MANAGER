@@ -6,7 +6,7 @@ from src.api.v1.app.schemas.response import EnvironmentDeleteResponse
 from src.app.base_use_case import BaseUseCase
 from src.dependencies.kubernetes import get_deployment_repository, get_configmap_manager
 from src.infra.kubernetes.managers.configmap import ConfigMapManager
-from src.app.app.exceptions import DeploymentNotFoundException, ConfigMapNotFoundException
+from src.app.app_deployment.exceptions import DeploymentNotFoundException, ConfigMapNotFoundException
 
 
 class AppDeploymentEnvironmentDeleteUseCase(BaseUseCase):

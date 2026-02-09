@@ -3,7 +3,7 @@
 from fastapi import Depends
 
 from src.api.v1.app.schemas.event_response import AppEventsResponse, EventInfo
-from src.app.app.exceptions import DeploymentNotFoundException
+from src.app.app_deployment.exceptions import DeploymentNotFoundException
 from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.kubernetes.pod import PodRepository
 from src.dependencies.kubernetes import get_deployment_repository, get_pod_repository

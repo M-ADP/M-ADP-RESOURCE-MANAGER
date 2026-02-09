@@ -13,7 +13,7 @@ from src.api.v1.app.schemas.response import (
     PvcInfo,
 )
 from src.app.base_use_case import BaseUseCase
-from src.app.app.exceptions import (
+from src.app.app_deployment.exceptions import (
     DeploymentNotFoundException,
     ContainerNotFoundException,
     PvcNotFoundException,

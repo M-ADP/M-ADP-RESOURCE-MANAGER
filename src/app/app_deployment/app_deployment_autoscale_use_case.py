@@ -7,7 +7,7 @@ from src.api.v1.app.schemas.response import AutoScaleResponse
 from src.app.base_use_case import BaseUseCase
 from src.common.const import DefaultLabel
 from src.core.kubernetes.hpa import HorizontalPodAutoscaler
-from src.app.app.exceptions import DeploymentNotFoundException
+from src.app.app_deployment.exceptions import DeploymentNotFoundException
 from src.dependencies.kubernetes import get_deployment_repository, get_hpa_repository
 
 
