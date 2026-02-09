@@ -29,6 +29,7 @@ from src.infra.kubernetes.managers.statefulset import StatefulSetManager
 from src.infra.kubernetes.managers.job import JobManager
 from src.infra.kubernetes.managers.cronjob import CronJobManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
+from src.infra.kubernetes.managers.node import NodeManager
 from src.infra.kubernetes.repository import (
     K8sNamespaceRepository,
     K8sResourceQuotaRepository,
@@ -192,3 +193,15 @@ async def get_hpa_repository() -> HpaRepository:
     k8s_client = await get_kubernetes_client()
     manager = HpaManager(k8s_client)
     return K8sHpaRepository(manager)
+
+
+async def get_node_manager() -> NodeManager:
+    """NodeManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return NodeManager(k8s_client)
+
+
+async def get_resource_quota_manager() -> ResourceQuotaManager:
+    """ResourceQuotaManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return ResourceQuotaManager(k8s_client)

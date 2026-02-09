@@ -47,3 +47,62 @@ class UnitConverter:
             return int(value * decimal_units[unit])
         else:
             return int(value)
+
+    @staticmethod
+    def parse_cpu_to_millicores(cpu_str: str) -> int:
+        """CPU 문자열을 밀리코어 단위로 변환합니다.
+        
+        지원 형식:
+            - "100m" -> 100 밀리코어
+            - "1" -> 1000 밀리코어 (1 코어)
+            - "1.5" -> 1500 밀리코어
+            - "2000m" -> 2000 밀리코어
+        
+        Args:
+            cpu_str: CPU 문자열 (예: "100m", "1", "1.5")
+        
+        Returns:
+            밀리코어 단위의 정수값
+        """
+        if not cpu_str:
+            return 0
+        
+        cpu_str = str(cpu_str).strip()
+        
+        # 밀리코어 (예: "100m", "2000m")
+        if cpu_str.endswith('m'):
+            try:
+                return int(cpu_str[:-1])
+            except ValueError:
+                return 0
+        
+        # 코어 (예: "1", "1.5", "2")
+        try:
+            cores = float(cpu_str)
+            return int(cores * 1000)
+        except ValueError:
+            return 0
+
+    @staticmethod
+    def millicores_to_cores(millicores: int) -> float:
+        """밀리코어를 코어로 변환합니다.
+        
+        Args:
+            millicores: 밀리코어 값
+        
+        Returns:
+            코어 단위의 부동소수점 값
+        """
+        return millicores / 1000.0
+
+    @staticmethod
+    def bytes_to_gibibytes(bytes_val: int) -> float:
+        """바이트를 GiB로 변환합니다.
+        
+        Args:
+            bytes_val: 바이트 값
+        
+        Returns:
+            GiB 단위의 부동소수점 값
+        """
+        return bytes_val / (1024 ** 3)

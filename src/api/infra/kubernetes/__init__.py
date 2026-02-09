@@ -11,6 +11,7 @@ from src.api.infra.kubernetes.statefulset.endpoint import statefulset_router
 from src.api.infra.kubernetes.job.endpoint import job_router
 from src.api.infra.kubernetes.cronjob.endpoint import cronjob_router
 from src.api.infra.kubernetes.pvc.endpoint import pvc_router
+from src.api.infra.kubernetes.monitoring.endpoint import monitoring_router
 
 kubernetes_router = APIRouter(
     prefix="/kubernetes",
@@ -27,3 +28,4 @@ kubernetes_router.include_router(statefulset_router)
 kubernetes_router.include_router(job_router)
 kubernetes_router.include_router(cronjob_router)
 kubernetes_router.include_router(pvc_router)
+kubernetes_router.include_router(monitoring_router)
