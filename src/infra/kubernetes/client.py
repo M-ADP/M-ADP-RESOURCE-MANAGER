@@ -1,5 +1,5 @@
 from kubernetes_asyncio import client, config
-from kubernetes_asyncio.client import CoreV1Api, AppsV1Api, RbacAuthorizationV1Api, BatchV1Api, AutoscalingV2Api
+from kubernetes_asyncio.client import CoreV1Api, AppsV1Api, RbacAuthorizationV1Api, BatchV1Api, AutoscalingV2Api, StorageV1Api
 
 from src.core.kubernetes.kubernetes_client import KubernetesClient
 
@@ -47,6 +47,7 @@ class KubernetesClientImpl(KubernetesClient):
         self.rbac_v1 = RbacAuthorizationV1Api(self.api_client)
         self.batch_v1 = BatchV1Api(self.api_client)
         self.autoscaling_v2 = AutoscalingV2Api(self.api_client)
+        self.storage_v1 = StorageV1Api(self.api_client)
 
         self.logger.info("Kubernetes API 클라이언트 초기화 완료")
 

@@ -30,6 +30,7 @@ from src.infra.kubernetes.managers.job import JobManager
 from src.infra.kubernetes.managers.cronjob import CronJobManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
 from src.infra.kubernetes.managers.node import NodeManager
+from src.infra.kubernetes.managers.storage_class import StorageClassManager
 from src.infra.kubernetes.repository import (
     K8sNamespaceRepository,
     K8sResourceQuotaRepository,
@@ -205,3 +206,9 @@ async def get_resource_quota_manager() -> ResourceQuotaManager:
     """ResourceQuotaManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
     return ResourceQuotaManager(k8s_client)
+
+
+async def get_storage_class_manager() -> StorageClassManager:
+    """StorageClassManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return StorageClassManager(k8s_client)

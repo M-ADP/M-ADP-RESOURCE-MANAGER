@@ -66,13 +66,16 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             if spec.disk:
                 pvc_name = f"{payload.name}-{spec.name}-pvc"
 
+                # CephFS일 경우 ReadWriteMany 사용, 그 외(Block 등)는 ReadWriteOnce 사용
+                access_modes = ["ReadWriteMany"] if spec.disk.storage_class == "rook-cephfs" else ["ReadWriteOnce"]
+
                 # PVC 도메인 객체 생성
                 pvc_domain = PersistentVolumeClaim(
                     name=pvc_name,
                     namespace=namespace,
                     storage=spec.disk.size,
                     storage_class_name=spec.disk.storage_class,
-                    access_modes=["ReadWriteOnce"],
+                    access_modes=access_modes,
                     labels={
                         "app_deployment": payload.name,
                         "container": spec.name,

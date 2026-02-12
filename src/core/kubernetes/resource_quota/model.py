@@ -17,6 +17,8 @@ class ResourceQuotaLimits:
             "requests.memory": self.memory,
             "limits.memory": self.memory,
             "requests.storage": self.disk,
+            "rook-ceph-block.storageclass.storage.k8s.io/requests.storage": self.disk,
+            "rook-cephfs.storageclass.storage.k8s.io/requests.storage": self.disk,
         }
 
 
