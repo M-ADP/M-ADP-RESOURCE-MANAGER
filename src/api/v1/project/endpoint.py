@@ -22,10 +22,27 @@ from src.app.project.project_dns_delete_use_case import ProjectDnsDeleteUseCase
 from src.app.project.project_dns_update_use_case import ProjectDnsUpdateUseCase
 from src.app.project.project_dns_port_bind_use_case import ProjectDnsPortBindUseCase
 from src.app.project.project_resource_update_use_case import ProjectResourceUpdateUseCase
+from src.app.monitoring.project_resource_status_use_case import ProjectResourceStatusUseCase
+from src.app.monitoring.dto import ProjectResourceStatusResponse
 from src.core.response import SuccessResponse
 from src.core.user.model import User
 
 project_router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+@project_router.get("/{name}/resource", response_model=SuccessResponse[ProjectResourceStatusResponse])
+async def get_project_resources(
+    name: str,
+    user: User = Depends(get_user),
+    project_resource_status_usecase: ProjectResourceStatusUseCase = Depends(ProjectResourceStatusUseCase)
+):
+    resource_status = await project_resource_status_usecase(
+        project_id=name
+    )
+    return SuccessResponse(
+        message="Project resource status retrieved successfully",
+        data=resource_status
+    )
 
 
 @project_router.post("", response_model=SuccessResponse[ProjectCreateResponse])
