@@ -8,12 +8,14 @@ from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest,
 from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse, EnvironmentUpdateResponse, EnvironmentDeleteResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
+from src.app.monitoring.dto import AppResourceStatusResponse
 from src.api.v1.deps.user import get_user
 from src.app.app_deployment.app_deployment_create_use_case import AppDeploymentCreateUseCase
 from src.app.app_deployment.app_deployment_delete_use_case import AppDeploymentDeleteUseCase
 from src.app.app_deployment.app_deployment_revision_use_case import AppDeploymentRevisionUseCase
 from src.app.app_deployment.app_deployment_logs_use_case import AppDeploymentLogsUseCase
 from src.app.app_deployment.app_deployment_events_use_case import AppDeploymentEventsUseCase
+from src.app.monitoring.app_resource_status_use_case import AppResourceStatusUseCase
 from src.app.app_deployment.app_deployment_autoscale_use_case import AppDeploymentAutoScaleUseCase
 from src.app.app_deployment.app_deployment_fixed_scale_use_case import AppDeploymentFixedScaleUseCase
 from src.app.app_deployment.app_deployment_secret_create_use_case import AppDeploymentSecretCreateUseCase
@@ -144,6 +146,27 @@ async def get_app_deployment_events(
     return SuccessResponse(
         message="App deployment events retrieved successfully",
         data=app_deployment_events_result,
+    )
+
+
+@app_router.get("/{namespace}/{name}/resource", response_model=SuccessResponse[AppResourceStatusResponse])
+async def get_app_deployment_resource(
+    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    user: User = Depends(get_user),
+    app_resource_status_usecase: AppResourceStatusUseCase = Depends(AppResourceStatusUseCase),
+):
+    """App Deployment 리소스 상태 조회
+
+    Deployment의 리소스 설정(Request/Limit)과 현재 상태(Replicas)를 조회합니다.
+    """
+    app_resource_status_result = await app_resource_status_usecase(
+        project_id=namespace,
+        app_id=name,
+    )
+    return SuccessResponse(
+        message="App deployment resource status retrieved successfully",
+        data=app_resource_status_result,
     )
 
 
