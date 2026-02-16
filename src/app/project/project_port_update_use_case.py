@@ -17,12 +17,13 @@ class ProjectPortUpdateUseCase(BaseUseCase):
     async def __call__(
             self,
             project_name: str,
-            port_number: int, # Path parameter로 받은 포트 번호 (업데이트 대상 포트)
             payload: ProjectPortUpdateRequest
     ) -> Service:
-        """Project 포트 수정 (Service 업데이트)"""
-        # 1. 기존 Service 조회
-        # payload.service_id을 사용하여 서비스 조회
+        """Project 포트 수정 (Service 업데이트)
+
+        service_id로 Service를 찾아 업데이트합니다.
+        """
+        # 1. 기존 Service 조회 (service_id로 조회)
         existing_service = await self.service_repo.find_by_id(id=payload.service_id, namespace=project_name)
         if not existing_service:
             raise ServiceNotFoundException()
@@ -32,7 +33,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
         # 2. Selector 업데이트
         if payload.target_deployment_name:
             updated_service = updated_service.with_selector({"app_deployment": payload.target_deployment_name})
-        
+
         if payload.service_name:
             updated_service = updated_service.with_labels({"madp.io/name": payload.service_name})
 
@@ -50,16 +51,18 @@ class ProjectPortUpdateUseCase(BaseUseCase):
                 pass # 일단은 그냥 둠
 
         # 4. Port 정보 업데이트 (target_port, protocol)
+        # service_id로 찾은 Service의 첫 번째 포트를 업데이트
         if payload.target_port or payload.protocol:
+            if not existing_service.ports:
+                raise PortNotFoundException()
+
+            # 첫 번째 포트의 port 번호를 사용하여 업데이트
+            first_port_number = existing_service.ports[0].port
             updated_service = updated_service.update_port_by_number(
-                port_number=port_number, # Path parameter의 port_id 사용
+                port_number=first_port_number,
                 new_target_port=payload.target_port,
                 new_protocol=payload.protocol
             )
-            # 포트 번호에 해당하는 포트가 Service에 없는 경우 예외 처리
-            if updated_service == existing_service and (payload.target_port or payload.protocol):
-                 raise PortNotFoundException()
-
 
         # 5. Service 저장 (업데이트)
         saved_service = await self.service_repo.save(updated_service)

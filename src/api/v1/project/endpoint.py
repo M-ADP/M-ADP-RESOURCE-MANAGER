@@ -101,14 +101,14 @@ async def open_project_port(
 @project_router.put("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortUpdateResponse])
 async def update_project_port(
     name: str,
-    port_id: int, # path parameter로 받은 포트 번호
+    port_id: int,  # path parameter (하위 호환성 유지, 실제로는 사용하지 않음)
     payload: ProjectPortUpdateRequest,
     user: User = Depends(get_user),
     project_port_update_usecase: ProjectPortUpdateUseCase = Depends(ProjectPortUpdateUseCase)
 ):
+    # service_id로 Service를 찾아 업데이트 (port_id는 사용하지 않음)
     service = await project_port_update_usecase(
         project_name=name,
-        port_number=port_id, # Path Parameter에서 받은 포트 번호를 전달
         payload=payload
     )
 

@@ -23,15 +23,32 @@ class K8sServiceRepository(ServiceRepository):
             }
             for p in service.ports
         ]
-        v1_svc = await self._manager.create_service(
-            name=service.id,
-            namespace=service.namespace,
-            ports=ports,
-            selector=service.selector if service.selector else None,
-            service_type=service.service_type,
-            labels=service.labels if service.labels else None,
-            annotations=service.annotations if service.annotations else None,
-        )
+
+        # 기존 Service 존재 여부 확인
+        existing = await self._manager.get_service(service.id, service.namespace)
+
+        if existing:
+            # 업데이트
+            v1_svc = await self._manager.update_service(
+                name=service.id,
+                namespace=service.namespace,
+                ports=ports,
+                selector=service.selector if service.selector else None,
+                service_type=service.service_type,
+                labels=service.labels if service.labels else None,
+                annotations=service.annotations if service.annotations else None,
+            )
+        else:
+            # 생성
+            v1_svc = await self._manager.create_service(
+                name=service.id,
+                namespace=service.namespace,
+                ports=ports,
+                selector=service.selector if service.selector else None,
+                service_type=service.service_type,
+                labels=service.labels if service.labels else None,
+                annotations=service.annotations if service.annotations else None,
+            )
         return self._to_domain(v1_svc)
 
     async def find_by_id(self, id: str, namespace: str) -> Optional[Service]:

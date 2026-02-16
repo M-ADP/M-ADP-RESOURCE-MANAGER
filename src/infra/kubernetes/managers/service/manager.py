@@ -546,6 +546,118 @@ class ServiceManager:
                 reason=str(e),
             )
 
+    async def update_service(
+        self,
+        name: str,
+        namespace: str,
+        selector: Optional[Dict[str, str]] = None,
+        ports: Optional[List[Dict[str, any]]] = None,
+        service_type: Optional[str] = None,
+        labels: Optional[Dict[str, str]] = None,
+        annotations: Optional[Dict[str, str]] = None,
+    ) -> V1Service:
+        """Service 전체 업데이트 (replace)
+
+        Args:
+            name: Service 이름
+            namespace: 네임스페이스
+            selector: Pod 선택 레이블
+            ports: 포트 매핑 리스트
+            service_type: Service 타입
+            labels: 레이블 딕셔너리
+            annotations: 어노테이션 딕셔너리
+
+        Returns:
+            업데이트된 V1Service 객체
+
+        Raises:
+            ServiceUpdateException: 업데이트 실패 시
+        """
+        self.logger.info(
+            f"Service 업데이트 시도: {name} (namespace: {namespace})"
+        )
+
+        # 기존 Service 조회
+        existing = await self.get_service(name, namespace)
+        if not existing:
+            raise ServiceUpdateException(
+                service_name=name,
+                namespace=namespace,
+                reason="Service does not exist",
+            )
+
+        # 기존 값 유지하면서 새 값으로 업데이트
+        new_selector = selector if selector is not None else existing.spec.selector
+        new_service_type = service_type if service_type is not None else existing.spec.type
+        new_labels = labels if labels is not None else existing.metadata.labels
+        new_annotations = annotations if annotations is not None else existing.metadata.annotations
+
+        # 포트 처리
+        if ports is not None:
+            service_ports = []
+            for port_config in ports:
+                service_port = V1ServicePort(
+                    name=port_config.get("name"),
+                    port=port_config["port"],
+                    target_port=port_config.get("targetPort", port_config["port"]),
+                    protocol=port_config.get("protocol", "TCP"),
+                    node_port=port_config.get("nodePort"),
+                )
+                service_ports.append(service_port)
+        else:
+            service_ports = existing.spec.ports
+
+        # Service 객체 생성 (replace용)
+        service = V1Service(
+            api_version="v1",
+            kind="Service",
+            metadata=V1ObjectMeta(
+                name=name,
+                namespace=namespace,
+                labels=new_labels or {},
+                annotations=new_annotations or {},
+                resource_version=existing.metadata.resource_version,  # 필수: 낙관적 잠금
+            ),
+            spec=V1ServiceSpec(
+                selector=new_selector,
+                ports=service_ports,
+                type=new_service_type,
+                cluster_ip=existing.spec.cluster_ip,  # ClusterIP는 변경 불가, 기존 값 유지
+            ),
+        )
+
+        try:
+            svc = await self.k8s_client.core_v1.replace_namespaced_service(
+                name=name,
+                namespace=namespace,
+                body=service,
+            )
+            self.logger.info(
+                f"Service 업데이트 완료: {name} (namespace: {namespace})"
+            )
+            return svc
+
+        except ApiException as e:
+            self.logger.error(
+                f"Service 업데이트 실패: {name} - {e.reason}, body: {e.body}"
+            )
+            raise ServiceUpdateException(
+                service_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"Service 업데이트 중 예외 발생: {name} - {str(e)}"
+            )
+            raise ServiceUpdateException(
+                service_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
+
     async def get_service_endpoints(
         self,
         name: str,
