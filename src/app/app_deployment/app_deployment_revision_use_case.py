@@ -1,6 +1,5 @@
 """App Deployment 수정 Use Case"""
 
-import re
 from typing import Optional, Dict
 
 from fastapi import Depends
@@ -19,36 +18,9 @@ from src.app.app_deployment.exceptions import (
     PvcNotFoundException,
     DiskReductionNotAllowedException,
 )
-from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository
-
-
-def parse_size_to_bytes(size_str: str) -> int:
-    """크기 문자열을 바이트로 변환 (예: 1Gi -> 1073741824)"""
-    units = {
-        'Ki': 1024,
-        'Mi': 1024 ** 2,
-        'Gi': 1024 ** 3,
-        'Ti': 1024 ** 4,
-        'K': 1000,
-        'M': 1000 ** 2,
-        'G': 1000 ** 3,
-        'T': 1000 ** 4,
-    }
-
-    match = re.match(r'^(\d+(?:\.\d+)?)\s*([A-Za-z]*)$', size_str.strip())
-    if not match:
-        raise ValueError(f"Invalid size format: {size_str}")
-
-    value = float(match.group(1))
-    unit = match.group(2)
-
-    if unit == '':
-        return int(value)
-
-    if unit not in units:
-        raise ValueError(f"Unknown unit: {unit}")
-
-    return int(value * units[unit])
+from src.common.util import UnitConverter
+from src.core.app_deployment import AppDeploymentRepository
+from src.dependencies.kubernetes import get_app_deployment_repository
 
 
 class AppDeploymentRevisionUseCase(BaseUseCase):
@@ -56,11 +28,9 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
 
     def __init__(
             self,
-            deployment_repository=Depends(get_deployment_repository),
-            pvc_repository=Depends(get_pvc_repository),
+            app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
     ):
-        self.deployment_repository = deployment_repository
-        self.pvc_repository = pvc_repository
+        self.app_deployment_repo = app_deployment_repo
 
     async def __call__(
             self,
@@ -71,19 +41,16 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
     ) -> AppRevisionResponse:
         """App(Deployment) 리소스 수정"""
 
-        # 기존 Deployment 조회
-        existing = await self.deployment_repository.find_by_name(app_name, namespace)
-        if not existing:
+        deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
+        if not deployment:
             raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
-        # 컨테이너 이름 결정
-        containers = existing.containers
-        if not containers:
+        if not deployment.containers:
             raise ContainerNotFoundException(deployment_name=app_name)
 
-        container_name = payload.container_name or containers[0].name
+        container_name = payload.container_name or deployment.containers[0].name
 
-        # 리소스 업데이트
+        # 컨테이너 리소스 조정
         requests_dict: Optional[Dict[str, str]] = None
         limits_dict: Optional[Dict[str, str]] = None
 
@@ -101,45 +68,40 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
             if payload.limits.memory:
                 limits_dict["memory"] = payload.limits.memory
 
-        # 리소스 업데이트 실행
         if requests_dict or limits_dict:
-            await self.deployment_repository.update_container_resources(
-                name=app_name,
-                namespace=namespace,
+            deployment = await self.app_deployment_repo.resize_container(
+                deployment=deployment,
                 container_name=container_name,
                 requests=requests_dict,
                 limits=limits_dict,
             )
 
-        # PVC 크기 수정 (증가만 가능)
+        # 스토리지 확장
         pvc_info: Optional[PvcInfo] = None
         if payload.disk:
-            # 컨테이너에 연결된 PVC 찾기
             pvc_name = f"{app_name}-{container_name}-pvc"
-            existing_pvc = await self.pvc_repository.find_by_name(pvc_name, namespace)
+            existing_pvc = await self.app_deployment_repo.find_storage(pvc_name, namespace)
 
             if not existing_pvc:
                 raise PvcNotFoundException(name=pvc_name, namespace=namespace)
 
-            # 현재 크기 확인
-            current_size = existing_pvc.storage
-            current_bytes = parse_size_to_bytes(current_size)
-            new_bytes = parse_size_to_bytes(payload.disk.size)
+            current_bytes = UnitConverter.parse_storage_to_bytes(existing_pvc.storage)
+            new_bytes = UnitConverter.parse_storage_to_bytes(payload.disk.size)
 
             if new_bytes < current_bytes:
-                raise DiskReductionNotAllowedException(current=current_size, requested=payload.disk.size)
-
-            if new_bytes > current_bytes:
-                # PVC 크기 증가
-                updated_pvc = await self.pvc_repository.resize(
-                    name=pvc_name,
-                    namespace=namespace,
-                    new_storage=payload.disk.size,
+                raise DiskReductionNotAllowedException(
+                    current=existing_pvc.storage,
+                    requested=payload.disk.size,
                 )
 
-                # 마운트 경로 찾기
+            if new_bytes > current_bytes:
+                updated_pvc = await self.app_deployment_repo.expand_storage(
+                    pvc=existing_pvc,
+                    new_size=payload.disk.size,
+                )
+
                 mount_path = "/data"
-                for c in containers:
+                for c in deployment.containers:
                     if c.name == container_name and c.volume_mounts:
                         for vm in c.volume_mounts:
                             if vm.get("name") == f"{container_name}-volume":
@@ -154,20 +116,12 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
                     phase=updated_pvc.phase,
                 )
 
-        # 레플리카 업데이트
+        # 레플리카 수 조정
         if payload.replicas is not None:
-            await self.deployment_repository.update_replicas(
-                name=app_name,
-                namespace=namespace,
-                replicas=payload.replicas,
-            )
+            deployment = await self.app_deployment_repo.scale(deployment, payload.replicas)
 
-        # 최신 상태 조회
-        updated = await self.deployment_repository.find_by_name(app_name, namespace)
-
-        # 수정된 컨테이너 리소스 정보 추출
         updated_container = None
-        for c in updated.containers:
+        for c in deployment.containers:
             if c.name == container_name:
                 updated_container = c
                 break
@@ -187,9 +141,9 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
                 )
 
         return AppRevisionResponse(
-            name=updated.name,
-            namespace=updated.namespace,
-            replicas=updated.replicas,
+            name=deployment.name,
+            namespace=deployment.namespace,
+            replicas=deployment.replicas,
             container_name=container_name,
             resources=resources_info,
             pvc=pvc_info,

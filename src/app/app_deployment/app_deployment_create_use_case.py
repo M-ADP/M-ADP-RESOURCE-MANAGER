@@ -14,10 +14,11 @@ from src.api.v1.app.schemas.response import (
 from src.app.base_use_case import BaseUseCase
 from src.app.project.exceptions import ProjectNotFoundException
 from src.common.const import DefaultLabel
+from src.core.app_deployment import AppDeploymentRepository
 from src.core.kubernetes.deployment import Deployment, Container, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
 from src.core.kubernetes.service_account import ServiceAccount
-from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
+from src.dependencies.kubernetes import get_app_deployment_repository
 from src.infra.kubernetes.managers.namespace.exceptions import NamespaceNotFoundException
 
 
@@ -26,13 +27,9 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
     def __init__(
             self,
-            deployment_repository=Depends(get_deployment_repository),
-            pvc_repository=Depends(get_pvc_repository),
-            service_account_repository=Depends(get_service_account_repository),
+            app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
     ):
-        self.deployment_repository = deployment_repository
-        self.pvc_repository = pvc_repository
-        self.service_account_repository = service_account_repository
+        self.app_deployment_repo = app_deployment_repo
 
     async def __call__(
             self,
@@ -42,10 +39,13 @@ class AppDeploymentCreateUseCase(BaseUseCase):
     ) -> AppCreateResponse:
         """App(Deployment) 생성"""
 
-        # 1. ServiceAccount 생성
-        sa_name = f"{payload.name}-sa"
-        sa_domain = ServiceAccount(
-            name=sa_name,
+        # naming convention은 Deployment 도메인 객체에서 결정되므로
+        # 임시 객체로 이름을 도출한다
+        _name_ref = Deployment(name=payload.name, namespace=namespace)
+
+        # 1. ID(ServiceAccount) 바인딩
+        sa = ServiceAccount(
+            name=_name_ref.sa_name,
             namespace=namespace,
             labels={
                 "app_deployment": payload.name,
@@ -54,23 +54,20 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             }
         )
         try:
-            await self.service_account_repository.save(sa_domain)
+            await self.app_deployment_repo.bind_identity(sa)
         except NamespaceNotFoundException as exc:
             raise ProjectNotFoundException() from exc
 
-        # 2. PVC 생성 및 정보 수집
+        # 2. 스토리지 프로비저닝
         pvc_infos: List[PvcInfo] = []
         volumes: List[Volume] = []
 
         for spec in payload.containers:
             if spec.disk:
                 pvc_name = f"{payload.name}-{spec.name}-pvc"
-
-                # CephFS일 경우 ReadWriteMany 사용, 그 외(Block 등)는 ReadWriteOnce 사용
                 access_modes = ["ReadWriteMany"] if spec.disk.storage_class == "rook-cephfs" else ["ReadWriteOnce"]
 
-                # PVC 도메인 객체 생성
-                pvc_domain = PersistentVolumeClaim(
+                pvc = PersistentVolumeClaim(
                     name=pvc_name,
                     namespace=namespace,
                     storage=spec.disk.size,
@@ -84,18 +81,9 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                     },
                 )
 
-                # Repository를 통해 PVC 저장
-                saved_pvc = await self.pvc_repository.save(pvc_domain)
+                saved_pvc = await self.app_deployment_repo.provision_storage(pvc)
 
-                # Volume 정의 추가
-                volumes.append(
-                    Volume(
-                        name=f"{spec.name}-volume",
-                        pvc_name=pvc_name
-                    )
-                )
-
-                # PVC 정보 수집
+                volumes.append(Volume(name=f"{spec.name}-volume", pvc_name=pvc_name))
                 pvc_infos.append(PvcInfo(
                     name=pvc_name,
                     size=spec.disk.size,
@@ -104,10 +92,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                     phase=saved_pvc.phase,
                 ))
 
-        # ContainerSpec -> Container 도메인 객체 변환
-        containers = self._build_containers(payload.containers)
-
-        # 레이블 설정 (기본 레이블 + 사용자 레이블)
+        # 3. Deployment 배포
         labels = {
             "app_deployment": payload.name,
             "owner": user_id,
@@ -116,27 +101,21 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         if payload.labels:
             labels.update(payload.labels)
 
-        # Deployment 도메인 객체 생성
-        deployment_domain = Deployment(
+        deployment = Deployment(
             name=payload.name,
             namespace=namespace,
             replicas=payload.replicas,
-            containers=containers,
+            containers=self._build_containers(payload.containers),
             volumes=volumes,
             labels=labels,
             annotations=payload.annotations or {},
-            service_account_name=sa_name,
+            service_account_name=_name_ref.sa_name,
         )
 
-        # Repository를 통해 Deployment 저장
-        saved_deployment = await self.deployment_repository.save(deployment_domain)
+        saved_deployment = await self.app_deployment_repo.deploy(deployment)
 
-        # 응답 생성
         container_infos = [
-            ContainerInfo(
-                name=c.name,
-                image=c.image
-            )
+            ContainerInfo(name=c.name, image=c.image)
             for c in saved_deployment.containers
         ]
 
@@ -160,16 +139,12 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         )
 
     def _build_containers(self, container_specs: List[ContainerSpec]) -> List[Container]:
-        """ContainerSpec 리스트를 Container 도메인 객체 리스트로 변환"""
         containers = []
-
         for spec in container_specs:
-            # 포트 설정
             ports = []
-            if spec.ports and len(spec.ports) > 0:
+            if spec.ports:
                 ports = [{"container_port": port} for port in spec.ports]
 
-            # 리소스 설정
             resources = {
                 "requests": {
                     "cpu": spec.resources.requests.cpu,
@@ -181,22 +156,15 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 },
             }
 
-            # 환경 변수 설정
             env = []
             if spec.env:
                 env = [{"name": key, "value": value} for key, value in spec.env.items()]
 
-            # 볼륨 마운트 설정
             volume_mounts = []
             if spec.disk:
-                volume_mounts = [
-                    {
-                        "name": f"{spec.name}-volume",
-                        "mount_path": spec.disk.mount_path,
-                    }
-                ]
+                volume_mounts = [{"name": f"{spec.name}-volume", "mount_path": spec.disk.mount_path}]
 
-            container = Container(
+            containers.append(Container(
                 name=spec.name,
                 image=spec.image,
                 ports=ports,
@@ -205,7 +173,5 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 command=spec.command,
                 args=spec.args,
                 volume_mounts=volume_mounts,
-            )
-            containers.append(container)
-
+            ))
         return containers

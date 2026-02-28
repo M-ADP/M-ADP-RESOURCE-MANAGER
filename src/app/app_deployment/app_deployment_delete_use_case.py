@@ -5,7 +5,8 @@ from fastapi import Depends
 from src.api.v1.app.schemas.response import AppDeleteResponse
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
 from src.app.base_use_case import BaseUseCase
-from src.dependencies.kubernetes import get_deployment_repository, get_pvc_repository, get_service_account_repository
+from src.core.app_deployment import AppDeploymentRepository
+from src.dependencies.kubernetes import get_app_deployment_repository
 
 
 class AppDeploymentDeleteUseCase(BaseUseCase):
@@ -13,13 +14,9 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
 
     def __init__(
             self,
-            deployment_repository=Depends(get_deployment_repository),
-            pvc_repository=Depends(get_pvc_repository),
-            service_account_repository=Depends(get_service_account_repository),
+            app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
     ):
-        self.deployment_repository = deployment_repository
-        self.pvc_repository = pvc_repository
-        self.service_account_repository = service_account_repository
+        self.app_deployment_repo = app_deployment_repo
 
     async def __call__(
             self,
@@ -27,44 +24,29 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
             namespace: str,
             user_id: str
     ) -> AppDeleteResponse:
-        """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 삭제"""
+        """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 정리"""
 
-        # 1. Deployment 조회하여 연관 PVC 확인
-        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
+        # 1. Deployment 조회하여 연관 PVC 목록 확인
+        deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:
             raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
-        pvc_names = []
+        pvc_names = [v.pvc_name for v in deployment.volumes if v.pvc_name]
 
-        if deployment and deployment.volumes:
-            for volume in deployment.volumes:
-                if volume.pvc_name:
-                    pvc_names.append(volume.pvc_name)
+        # 2. Deployment 제거
+        deleted = await self.app_deployment_repo.undeploy(deployment)
 
-        # 2. Deployment 삭제
-        deleted = await self.deployment_repository.delete(
-            name=app_name,
-            namespace=namespace,
-        )
-
-        # 3. ServiceAccount 삭제
+        # 3. ID(ServiceAccount) 바인딩 해제 (deployment.sa_name 자동 활용)
         try:
-            await self.service_account_repository.delete(
-                name=f"{app_name}-sa",
-                namespace=namespace,
-            )
+            await self.app_deployment_repo.unbind_identity(deployment.sa_name, namespace)
         except Exception:
             pass
 
-        # 4. 연관 PVC 삭제
+        # 4. 스토리지 해제
         for pvc_name in pvc_names:
             try:
-                await self.pvc_repository.delete(
-                    name=pvc_name,
-                    namespace=namespace,
-                )
+                await self.app_deployment_repo.deprovision_storage(pvc_name, namespace)
             except Exception:
-                # PVC 삭제 실패해도 Deployment는 이미 삭제됨
                 pass
 
         return AppDeleteResponse(

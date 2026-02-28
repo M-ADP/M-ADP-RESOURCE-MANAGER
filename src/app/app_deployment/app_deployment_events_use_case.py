@@ -4,9 +4,8 @@ from fastapi import Depends
 
 from src.api.v1.app.schemas.event_response import AppEventsResponse, EventInfo
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
-from src.core.kubernetes.deployment import DeploymentRepository
-from src.core.kubernetes.pod import PodRepository
-from src.dependencies.kubernetes import get_deployment_repository, get_pod_repository
+from src.core.app_deployment import AppDeploymentRepository
+from src.dependencies.kubernetes import get_app_deployment_repository
 
 
 class AppDeploymentEventsUseCase:
@@ -14,40 +13,28 @@ class AppDeploymentEventsUseCase:
 
     def __init__(
         self,
-        deployment_repository: DeploymentRepository = Depends(get_deployment_repository),
-        pod_repository: PodRepository = Depends(get_pod_repository),
+        app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
     ):
-        self.deployment_repository = deployment_repository
-        self.pod_repository = pod_repository
+        self.app_deployment_repo = app_deployment_repo
 
     async def __call__(
         self,
         app_name: str,
         namespace: str,
     ) -> AppEventsResponse:
-        """App 이벤트 조회
+        """App 이벤트 조회"""
 
-        Args:
-            app_name: App(Deployment) 이름
-            namespace: 네임스페이스
-
-        Returns:
-            AppEventsResponse: 이벤트 응답
-
-        Raises:
-            NotFoundException: Deployment가 존재하지 않는 경우
-        """
-        # 1. Deployment 존재 확인
-        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
+        # 1. Deployment 조회
+        deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:
             raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
-        # 2. 이벤트 조회
-        events = await self.pod_repository.get_events_by_deployment(app_name, namespace)
+        # 2. 이벤트 조회 (deployment 객체 전달)
+        events = await self.app_deployment_repo.get_events(deployment)
 
         return AppEventsResponse(
-            deployment_name=app_name,
-            namespace=namespace,
+            deployment_name=deployment.name,
+            namespace=deployment.namespace,
             events=[
                 EventInfo(
                     type=e.type,

@@ -6,9 +6,9 @@ from src.api.v1.app.schemas.request import AutoScaleRequest
 from src.api.v1.app.schemas.response import AutoScaleResponse
 from src.app.base_use_case import BaseUseCase
 from src.common.const import DefaultLabel
-from src.core.kubernetes.hpa import HorizontalPodAutoscaler
+from src.core.app_deployment import AppDeploymentRepository
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
-from src.dependencies.kubernetes import get_deployment_repository, get_hpa_repository
+from src.dependencies.kubernetes import get_app_deployment_repository
 
 
 class AppDeploymentAutoScaleUseCase(BaseUseCase):
@@ -16,11 +16,9 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
 
     def __init__(
         self,
-        deployment_repository=Depends(get_deployment_repository),
-        hpa_repository=Depends(get_hpa_repository),
+        app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
     ):
-        self.deployment_repository = deployment_repository
-        self.hpa_repository = hpa_repository
+        self.app_deployment_repo = app_deployment_repo
 
     async def __call__(
         self,
@@ -31,35 +29,27 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
     ) -> AutoScaleResponse:
         """App에 HPA 설정"""
 
-        # 1. Deployment 존재 확인
-        deployment = await self.deployment_repository.find_by_name(app_name, namespace)
+        # 1. Deployment 조회
+        deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:
             raise DeploymentNotFoundException(name=app_name, namespace=namespace)
 
-        # 2. HPA 이름 생성
-        hpa_name = f"{app_name}-hpa"
-
-        # 3. HPA 도메인 객체 생성
-        hpa = HorizontalPodAutoscaler.for_deployment(
-            name=hpa_name,
-            namespace=namespace,
-            deployment_name=app_name,
+        # 2. Deployment에서 HPA 도메인 객체 생성 (naming은 deployment이 결정)
+        hpa = deployment.create_hpa(
             min_replicas=payload.min_replicas,
             max_replicas=payload.max_replicas,
             target_cpu_utilization=payload.target_cpu_utilization,
             target_memory_utilization=payload.target_memory_utilization,
             labels={
-                "app_deployment": app_name,
+                "app_deployment": deployment.name,
                 "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             },
         )
 
-        # 4. HPA 저장 (생성 또는 수정)
-        saved_hpa = await self.hpa_repository.save(hpa)
+        # 3. 오토스케일 활성화
+        saved_hpa = await self.app_deployment_repo.enable_autoscale(hpa)
 
-        # 5. 응답 생성
-        # CPU utilization 찾기
         target_cpu = None
         target_memory = None
         for metric in saved_hpa.metrics:
