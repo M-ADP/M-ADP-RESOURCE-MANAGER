@@ -3,20 +3,17 @@ from fastapi import Depends
 from src.api.v1.project.schmas.response import ProjectDeleteResponse
 from src.app.base_use_case import BaseUseCase
 from src.app.project.exceptions import ProjectNotFoundException
-from src.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
-from src.core.kubernetes.namespace import NamespaceRepository
-from src.core.kubernetes.resource_quota import ResourceQuotaRepository
+from src.core.project import ProjectRepository
+from src.dependencies.kubernetes import get_project_repository
 
 
 class ProjectDeleteUseCase(BaseUseCase):
 
     def __init__(
             self,
-            namespace_repo: NamespaceRepository = Depends(get_namespace_repository),
-            resource_quota_repo: ResourceQuotaRepository = Depends(get_resource_quota_repository),
+            project_repo: ProjectRepository = Depends(get_project_repository),
     ):
-        self.namespace_repo = namespace_repo
-        self.resource_quota_repo = resource_quota_repo
+        self.project_repo = project_repo
 
     async def __call__(
             self,
@@ -25,21 +22,21 @@ class ProjectDeleteUseCase(BaseUseCase):
     ) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
         project_id = id
-        
+
         # 1. Project 존재 여부 확인
-        if not await self.namespace_repo.exists(project_id):
+        if not await self.project_repo.exists_namespace(project_id):
             raise ProjectNotFoundException()
 
         quota_id = f"{id}-quota"
 
-        # ResourceQuota 삭제 (존재하는 경우)
+        # 2. ResourceQuota 삭제 (존재하는 경우)
         resource_quota_deleted = False
-        if await self.resource_quota_repo.exists(quota_id, project_id):
-            await self.resource_quota_repo.delete(quota_id, project_id)
+        if await self.project_repo.exists_resource_quota(quota_id, project_id):
+            await self.project_repo.delete_resource_quota(quota_id, project_id)
             resource_quota_deleted = True
 
-        # Namespace 삭제
-        await self.namespace_repo.delete(project_id)
+        # 3. Namespace 삭제
+        await self.project_repo.delete_namespace(project_id)
 
         return ProjectDeleteResponse(
             namespace_id=project_id,

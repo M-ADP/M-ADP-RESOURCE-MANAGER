@@ -1,6 +1,8 @@
 from typing import Optional
 
 from src.common.config.kubernetes import KubernetesConfig
+from src.core.app_deployment import AppDeploymentRepository
+from src.core.project import ProjectRepository
 from src.core.kubernetes.gateway import GatewayRepository
 from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.kubernetes.resource_quota import ResourceQuotaRepository
@@ -44,6 +46,7 @@ from src.infra.kubernetes.repository import (
     K8sPersistentVolumeClaimRepository,
     K8sPodRepository,
 )
+from src.infra.repository import K8sAppDeploymentRepository, K8sProjectRepository
 
 
 _k8s_client_instance: Optional[KubernetesClientImpl] = None
@@ -212,3 +215,33 @@ async def get_storage_class_manager() -> StorageClassManager:
     """StorageClassManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
     return StorageClassManager(k8s_client)
+
+
+# ── 도메인 Repository 팩토리 ─────────────────────────────────────────────────
+
+
+async def get_app_deployment_repository() -> AppDeploymentRepository:
+    """AppDeploymentRepository 인스턴스 반환"""
+    from src.dependencies.vault import get_vault_client
+
+    k8s_client = await get_kubernetes_client()
+    vault_client = get_vault_client()
+    return K8sAppDeploymentRepository(
+        deployment_manager=DeploymentManager(k8s_client),
+        pvc_manager=PersistentVolumeClaimManager(k8s_client),
+        service_account_manager=ServiceAccountManager(k8s_client),
+        hpa_manager=HpaManager(k8s_client),
+        pod_manager=PodManager(k8s_client),
+        configmap_manager=ConfigMapManager(k8s_client),
+        vault_client=vault_client,
+    )
+
+
+async def get_project_repository() -> ProjectRepository:
+    """ProjectRepository 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return K8sProjectRepository(
+        namespace_manager=NamespaceManager(k8s_client),
+        resource_quota_manager=ResourceQuotaManager(k8s_client),
+        service_manager=ServiceManager(k8s_client),
+    )

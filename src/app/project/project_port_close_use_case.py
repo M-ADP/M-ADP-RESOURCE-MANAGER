@@ -1,17 +1,17 @@
 from fastapi import Depends
 
 from src.app.base_use_case import BaseUseCase
-from src.dependencies.kubernetes import get_service_repository
-from src.core.kubernetes.service import ServiceRepository
+from src.core.project import ProjectRepository
+from src.dependencies.kubernetes import get_project_repository
 
 
 class ProjectPortCloseUseCase(BaseUseCase):
 
     def __init__(
             self,
-            service_repo: ServiceRepository = Depends(get_service_repository),
+            project_repo: ProjectRepository = Depends(get_project_repository),
     ):
-        self.service_repo = service_repo
+        self.project_repo = project_repo
 
     async def __call__(
             self,
@@ -19,5 +19,4 @@ class ProjectPortCloseUseCase(BaseUseCase):
             service_name: str
     ) -> bool:
         """Project 포트 정리 (Service 삭제)"""
-        closed = await self.service_repo.delete(id=service_name, namespace=project_name)
-        return closed
+        return await self.project_repo.delete_service(id=service_name, namespace=project_name)

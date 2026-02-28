@@ -4,20 +4,19 @@ from src.api.v1.project.schmas.request import ProjectCreateRequest
 from src.api.v1.project.schmas.response import ProjectCreateResponse
 from src.app.base_use_case import BaseUseCase
 from src.common.const import DefaultLabel
-from src.dependencies.kubernetes import get_namespace_repository, get_resource_quota_repository
-from src.core.kubernetes.namespace import Namespace, NamespaceRepository
-from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits, ResourceQuotaRepository
+from src.core.project import ProjectRepository
+from src.core.kubernetes.namespace import Namespace
+from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits
+from src.dependencies.kubernetes import get_project_repository
 
 
 class ProjectCreateUseCase(BaseUseCase):
 
     def __init__(
             self,
-            namespace_repo: NamespaceRepository = Depends(get_namespace_repository),
-            resource_quota_repo: ResourceQuotaRepository = Depends(get_resource_quota_repository),
+            project_repo: ProjectRepository = Depends(get_project_repository),
     ):
-        self.namespace_repo = namespace_repo
-        self.resource_quota_repo = resource_quota_repo
+        self.project_repo = project_repo
 
     async def __call__(
             self,
@@ -25,15 +24,16 @@ class ProjectCreateUseCase(BaseUseCase):
             user_id: str
     ) -> ProjectCreateResponse:
         """Project 생성 (Namespace + ResourceQuota)"""
-        # Namespace 도메인 객체 생성 및 저장
+
+        # Namespace 생성
         namespace = (
             Namespace
-                     .for_project(user_id=user_id, project_id=payload.id, project_name=payload.name)
-                     .with_labels(DefaultLabel.MANAGED_BY_LABEL)
+            .for_project(user_id=user_id, project_id=payload.id, project_name=payload.name)
+            .with_labels(DefaultLabel.MANAGED_BY_LABEL)
         )
-        saved_namespace = await self.namespace_repo.save(namespace)
+        saved_namespace = await self.project_repo.save_namespace(namespace)
 
-        # ResourceQuota 도메인 객체 생성 및 저장
+        # ResourceQuota 생성
         limits = ResourceQuotaLimits(
             cpu=payload.cpu,
             memory=payload.memory,
@@ -44,9 +44,8 @@ class ProjectCreateUseCase(BaseUseCase):
             project_name=payload.name,
             namespace=saved_namespace.id,
             limits=limits,
-            # labels=MANAGED_BY_LABEL,
         )
-        saved_quota = await self.resource_quota_repo.save(resource_quota)
+        saved_quota = await self.project_repo.save_resource_quota(resource_quota)
 
         return ProjectCreateResponse(
             namespace_id=saved_namespace.id,

@@ -1,7 +1,12 @@
 """HPA 도메인 모델"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from src.core.kubernetes.deployment.model import Deployment
 
 
 @dataclass(frozen=True)
@@ -46,16 +51,14 @@ class HorizontalPodAutoscaler:
     @classmethod
     def for_deployment(
         cls,
-        name: str,
-        namespace: str,
-        deployment_name: str,
+        deployment: Deployment,
         min_replicas: int = 1,
         max_replicas: int = 10,
         target_cpu_utilization: int = 80,
         target_memory_utilization: Optional[int] = None,
         labels: Optional[Dict[str, str]] = None,
     ) -> "HorizontalPodAutoscaler":
-        """특정 Deployment를 위한 HPA 객체를 생성합니다."""
+        """Deployment 객체를 대상으로 하는 HPA 도메인 객체를 생성합니다."""
         metrics = [
             HpaMetricSpec(
                 type="Resource",
@@ -76,12 +79,12 @@ class HorizontalPodAutoscaler:
             )
 
         return cls(
-            name=name,
-            namespace=namespace,
+            name=deployment.hpa_name,
+            namespace=deployment.namespace,
             scale_target_ref=HpaScaleTargetRef(
                 api_version="apps/v1",
                 kind="Deployment",
-                name=deployment_name,
+                name=deployment.name,
             ),
             min_replicas=min_replicas,
             max_replicas=max_replicas,

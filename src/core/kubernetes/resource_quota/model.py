@@ -82,3 +82,43 @@ class ResourceQuota:
             labels={**self.labels, **labels},
             annotations=self.annotations,
         )
+
+    def with_cpu(self, cpu: str) -> "ResourceQuota":
+        """CPU 제한이 변경된 ResourceQuota 반환"""
+        new_limits = {
+            **self.hard_limits,
+            "requests.cpu": cpu,
+            "limits.cpu": cpu,
+        }
+        return ResourceQuota(
+            id=self.id, name=self.name, namespace=self.namespace,
+            hard_limits=new_limits, used=self.used,
+            labels=self.labels, annotations=self.annotations,
+        )
+
+    def with_memory(self, memory: str) -> "ResourceQuota":
+        """메모리 제한이 변경된 ResourceQuota 반환"""
+        new_limits = {
+            **self.hard_limits,
+            "requests.memory": memory,
+            "limits.memory": memory,
+        }
+        return ResourceQuota(
+            id=self.id, name=self.name, namespace=self.namespace,
+            hard_limits=new_limits, used=self.used,
+            labels=self.labels, annotations=self.annotations,
+        )
+
+    def with_disk(self, disk: str) -> "ResourceQuota":
+        """디스크 제한이 변경된 ResourceQuota 반환"""
+        new_limits = {
+            **self.hard_limits,
+            "requests.storage": disk,
+            "rook-ceph-block.storageclass.storage.k8s.io/requests.storage": disk,
+            "rook-cephfs.storageclass.storage.k8s.io/requests.storage": disk,
+        }
+        return ResourceQuota(
+            id=self.id, name=self.name, namespace=self.namespace,
+            hard_limits=new_limits, used=self.used,
+            labels=self.labels, annotations=self.annotations,
+        )
