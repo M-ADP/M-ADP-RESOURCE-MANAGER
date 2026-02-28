@@ -124,57 +124,23 @@ class StorageClassManager:
                 return True
             raise StorageClassDeletionException(sc_name=name, reason=e.reason)
 
-    async def ensure_rook_ceph_storage_classes(
+    async def ensure_linstor_storage_classes(
         self,
-        cluster_id: str = "rook-ceph-external",
-        rbd_pool_name: str = "replicapool",
-        fs_name: str = "myfs",
-        fs_pool_name: str = "myfs-data0",
-        secret_namespace: str = "rook-ceph-external"
+        storage_pool: str = "fast",
     ):
-        """Rook Ceph StorageClasses 생성 보장
+        """Linstor StorageClass 생성 보장
 
         Args:
-            cluster_id: Ceph 클러스터 ID (Namespace)
-            rbd_pool_name: RBD 풀 이름
-            fs_name: CephFS 이름
-            fs_pool_name: CephFS 데이터 풀 이름
-            secret_namespace: 시크릿 네임스페이스
+            storage_pool: Linstor 스토리지 풀 이름
         """
-        
-        # Block Storage
-        await self.create_storage_class(
-            name="rook-ceph-block",
-            provisioner="rook-ceph.rbd.csi.ceph.com",
-            parameters={
-                "clusterID": cluster_id,
-                "pool": rbd_pool_name,
-                "imageFormat": "2",
-                "imageFeatures": "layering",
-                "csi.storage.k8s.io/provisioner-secret-name": "rook-csi-rbd-provisioner",
-                "csi.storage.k8s.io/provisioner-secret-namespace": secret_namespace,
-                "csi.storage.k8s.io/node-stage-secret-name": "rook-csi-rbd-node",
-                "csi.storage.k8s.io/node-stage-secret-namespace": secret_namespace,
-            },
-            reclaim_policy="Delete",
-            allow_volume_expansion=True,
-            volume_binding_mode="Immediate"
-        )
 
-        # FileSystem Storage
         await self.create_storage_class(
-            name="rook-cephfs",
-            provisioner="rook-ceph.cephfs.csi.ceph.com",
+            name="linstor-pv-fast",
+            provisioner="linstor.csi.linbit.com",
             parameters={
-                "clusterID": cluster_id,
-                "fsName": fs_name,
-                "pool": fs_pool_name,
-                "csi.storage.k8s.io/provisioner-secret-name": "rook-csi-cephfs-provisioner",
-                "csi.storage.k8s.io/provisioner-secret-namespace": secret_namespace,
-                "csi.storage.k8s.io/node-stage-secret-name": "rook-csi-cephfs-node",
-                "csi.storage.k8s.io/node-stage-secret-namespace": secret_namespace,
+                "linstor.csi.linbit.com/storagePool": storage_pool,
             },
             reclaim_policy="Delete",
             allow_volume_expansion=True,
-            volume_binding_mode="Immediate"
+            volume_binding_mode="WaitForFirstConsumer"
         )

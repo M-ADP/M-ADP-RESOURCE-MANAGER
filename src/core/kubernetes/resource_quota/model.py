@@ -17,8 +17,7 @@ class ResourceQuotaLimits:
             "requests.memory": self.memory,
             "limits.memory": self.memory,
             "requests.storage": self.disk,
-            "rook-ceph-block.storageclass.storage.k8s.io/requests.storage": self.disk,
-            "rook-cephfs.storageclass.storage.k8s.io/requests.storage": self.disk,
+            "linstor-pv-fast.storageclass.storage.k8s.io/requests.storage": self.disk,
         }
 
 
@@ -114,8 +113,7 @@ class ResourceQuota:
         new_limits = {
             **self.hard_limits,
             "requests.storage": disk,
-            "rook-ceph-block.storageclass.storage.k8s.io/requests.storage": disk,
-            "rook-cephfs.storageclass.storage.k8s.io/requests.storage": disk,
+            "linstor-pv-fast.storageclass.storage.k8s.io/requests.storage": disk,
         }
         return ResourceQuota(
             id=self.id, name=self.name, namespace=self.namespace,

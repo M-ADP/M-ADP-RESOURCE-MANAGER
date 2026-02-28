@@ -65,7 +65,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         for spec in payload.containers:
             if spec.disk:
                 pvc_name = f"{payload.name}-{spec.name}-pvc"
-                access_modes = ["ReadWriteMany"] if spec.disk.storage_class == "rook-cephfs" else ["ReadWriteOnce"]
+                access_modes = ["ReadWriteOnce"]
 
                 pvc = PersistentVolumeClaim(
                     name=pvc_name,

@@ -24,7 +24,7 @@ class DiskSpec(BaseModel):
 
     size: str = Field(..., description="디스크 크기 (예: 1Gi, 500Mi)", examples=["1Gi"])
     mount_path: str = Field(default="/data", description="마운트 경로", examples=["/data"])
-    storage_class: str = Field(default="rook-cephfs", description="StorageClass 이름")
+    storage_class: str = Field(default="linstor-pv-fast", description="StorageClass 이름")
 
 
 class ContainerSpec(BaseModel):
