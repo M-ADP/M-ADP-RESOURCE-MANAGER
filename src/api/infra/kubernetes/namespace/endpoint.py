@@ -8,9 +8,9 @@ from src.api.infra.kubernetes.namespace.schema import (
     NamespaceListResponse,
     NamespaceDetailResponse,
 )
-from src.core.kubernetes.namespace import NamespaceRepository
 from src.core.response import SuccessResponse
-from src.dependencies.kubernetes import get_namespace_repository
+from src.dependencies.kubernetes import get_namespace_manager
+from src.infra.kubernetes.managers.namespace import NamespaceManager
 
 namespace_router = APIRouter(
     prefix="/namespaces",
@@ -24,17 +24,17 @@ async def list_namespaces(
         default=None,
         description="Label selector (e.g., 'madp.io/name=myproject')",
     ),
-    namespace_repo: NamespaceRepository = Depends(get_namespace_repository),
+    namespace_manager: NamespaceManager = Depends(get_namespace_manager),
 ):
     """Kubernetes Namespace 목록 조회"""
-    namespaces = await namespace_repo.find_all(label_selector=label_selector)
+    namespaces = await namespace_manager.list_namespaces(label_selector=label_selector)
 
     namespace_infos = [
         NamespaceInfo(
-            name=ns.id,
-            status=ns.status,
-            labels=ns.labels,
-            annotations=ns.annotations,
+            name=ns.metadata.name,
+            status=ns.status.phase if ns.status else None,
+            labels=ns.metadata.labels or {},
+            annotations=ns.metadata.annotations or {},
         )
         for ns in namespaces
     ]
@@ -51,19 +51,19 @@ async def list_namespaces(
 @namespace_router.get("/{name}", response_model=SuccessResponse[NamespaceDetailResponse])
 async def get_namespace(
     name: str,
-    namespace_repo: NamespaceRepository = Depends(get_namespace_repository),
+    namespace_manager: NamespaceManager = Depends(get_namespace_manager),
 ):
     """특정 Namespace 상세 조회"""
-    namespace = await namespace_repo.find_by_id(name)
+    ns = await namespace_manager.get_namespace(name)
 
-    if namespace is None:
+    if ns is None:
         raise HTTPException(status_code=404, detail=f"Namespace '{name}' not found")
 
     namespace_info = NamespaceInfo(
-        name=namespace.id,
-        status=namespace.status,
-        labels=namespace.labels,
-        annotations=namespace.annotations,
+        name=ns.metadata.name,
+        status=ns.status.phase if ns.status else None,
+        labels=ns.metadata.labels or {},
+        annotations=ns.metadata.annotations or {},
     )
 
     return SuccessResponse(

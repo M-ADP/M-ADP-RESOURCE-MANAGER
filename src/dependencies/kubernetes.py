@@ -3,17 +3,6 @@ from typing import Optional
 from src.common.config.kubernetes import KubernetesConfig
 from src.core.app_deployment import AppDeploymentRepository
 from src.core.project import ProjectRepository
-from src.core.kubernetes.gateway import GatewayRepository
-from src.core.kubernetes.namespace import NamespaceRepository
-from src.core.kubernetes.resource_quota import ResourceQuotaRepository
-from src.core.kubernetes.service import ServiceRepository
-from src.core.kubernetes.vpa import VpaRepository
-from src.core.kubernetes.hpa import HpaRepository
-from src.core.kubernetes.limit_range import LimitRangeRepository
-from src.core.kubernetes.deployment import DeploymentRepository
-from src.core.kubernetes.service_account import ServiceAccountRepository
-from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaimRepository
-from src.core.kubernetes.pod import PodRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
 from src.infra.kubernetes.managers.gateway import IstioGatewayManager
@@ -33,19 +22,6 @@ from src.infra.kubernetes.managers.cronjob import CronJobManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
 from src.infra.kubernetes.managers.node import NodeManager
 from src.infra.kubernetes.managers.storage_class import StorageClassManager
-from src.infra.kubernetes.repository import (
-    K8sNamespaceRepository,
-    K8sResourceQuotaRepository,
-    K8sServiceRepository,
-    K8sLimitRangeRepository,
-    K8sDeploymentRepository,
-    K8sServiceAccountRepository,
-    K8sGatewayRepository,
-    K8sVpaRepository,
-    K8sHpaRepository,
-    K8sPersistentVolumeClaimRepository,
-    K8sPodRepository,
-)
 from src.infra.repository import K8sAppDeploymentRepository, K8sProjectRepository
 
 
@@ -80,60 +56,46 @@ async def get_kubernetes_client(
     return _k8s_client_instance
 
 
-async def get_namespace_repository() -> NamespaceRepository:
-    """NamespaceRepository 인스턴스 반환"""
+async def get_namespace_manager() -> NamespaceManager:
+    """NamespaceManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = NamespaceManager(k8s_client)
-    return K8sNamespaceRepository(manager)
+    return NamespaceManager(k8s_client)
 
 
-async def get_resource_quota_repository() -> ResourceQuotaRepository:
-    """ResourceQuotaRepository 인스턴스 반환"""
+async def get_resource_quota_manager() -> ResourceQuotaManager:
+    """ResourceQuotaManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = ResourceQuotaManager(k8s_client)
-    return K8sResourceQuotaRepository(manager)
+    return ResourceQuotaManager(k8s_client)
 
 
-async def get_gateway_repository() -> GatewayRepository:
-    """GatewayRepository 인스턴스 반환"""
+async def get_gateway_manager() -> IstioGatewayManager:
+    """IstioGatewayManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = IstioGatewayManager(k8s_client)
-    return K8sGatewayRepository(manager)
+    return IstioGatewayManager(k8s_client)
 
 
-async def get_service_repository() -> ServiceRepository:
-    """ServiceRepository 인스턴스 반환"""
+async def get_service_manager() -> ServiceManager:
+    """ServiceManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = ServiceManager(k8s_client)
-    return K8sServiceRepository(manager)
+    return ServiceManager(k8s_client)
 
 
-async def get_vpa_repository() -> VpaRepository:
-    """VpaRepository 인스턴스 반환"""
+async def get_vpa_manager() -> VpaManager:
+    """VpaManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = VpaManager(k8s_client)
-    return K8sVpaRepository(manager)
+    return VpaManager(k8s_client)
 
 
-async def get_limit_range_repository() -> LimitRangeRepository:
-    """LimitRangeRepository 인스턴스 반환"""
+async def get_limit_range_manager() -> LimitRangeManager:
+    """LimitRangeManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = LimitRangeManager(k8s_client)
-    return K8sLimitRangeRepository(manager)
+    return LimitRangeManager(k8s_client)
 
 
-async def get_deployment_repository() -> DeploymentRepository:
-    """DeploymentRepository 인스턴스 반환"""
+async def get_service_account_manager() -> ServiceAccountManager:
+    """ServiceAccountManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = DeploymentManager(k8s_client)
-    return K8sDeploymentRepository(manager)
-
-
-async def get_service_account_repository() -> ServiceAccountRepository:
-    """ServiceAccountRepository 인스턴스 반환"""
-    k8s_client = await get_kubernetes_client()
-    manager = ServiceAccountManager(k8s_client)
-    return K8sServiceAccountRepository(manager)
+    return ServiceAccountManager(k8s_client)
 
 
 async def get_deployment_manager() -> DeploymentManager:
@@ -178,37 +140,16 @@ async def get_pvc_manager() -> PersistentVolumeClaimManager:
     return PersistentVolumeClaimManager(k8s_client)
 
 
-async def get_pvc_repository() -> PersistentVolumeClaimRepository:
-    """PersistentVolumeClaimRepository 인스턴스 반환"""
+async def get_hpa_manager() -> HpaManager:
+    """HpaManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
-    manager = PersistentVolumeClaimManager(k8s_client)
-    return K8sPersistentVolumeClaimRepository(manager)
-
-
-async def get_pod_repository() -> PodRepository:
-    """PodRepository 인스턴스 반환"""
-    k8s_client = await get_kubernetes_client()
-    manager = PodManager(k8s_client)
-    return K8sPodRepository(manager)
-
-
-async def get_hpa_repository() -> HpaRepository:
-    """HpaRepository 인스턴스 반환"""
-    k8s_client = await get_kubernetes_client()
-    manager = HpaManager(k8s_client)
-    return K8sHpaRepository(manager)
+    return HpaManager(k8s_client)
 
 
 async def get_node_manager() -> NodeManager:
     """NodeManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
     return NodeManager(k8s_client)
-
-
-async def get_resource_quota_manager() -> ResourceQuotaManager:
-    """ResourceQuotaManager 인스턴스 반환"""
-    k8s_client = await get_kubernetes_client()
-    return ResourceQuotaManager(k8s_client)
 
 
 async def get_storage_class_manager() -> StorageClassManager:

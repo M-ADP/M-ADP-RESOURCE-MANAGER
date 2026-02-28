@@ -10,14 +10,43 @@ from src.api.infra.kubernetes.deployment.schema import (
     DeploymentListResponse,
     DeploymentDetailResponse,
 )
-from src.core.kubernetes.deployment import DeploymentRepository
 from src.core.response import SuccessResponse
-from src.dependencies.kubernetes import get_deployment_repository
+from src.dependencies.kubernetes import get_deployment_manager
+from src.infra.kubernetes.managers.deployment import DeploymentManager
 
 deployment_router = APIRouter(
     prefix="/deployments",
     tags=["kubernetes-deployment"],
 )
+
+
+def _build_deployment_info(dep) -> DeploymentInfo:
+    containers = []
+    if dep.spec and dep.spec.template and dep.spec.template.spec:
+        containers = [
+            ContainerInfo(name=c.name, image=c.image)
+            for c in dep.spec.template.spec.containers or []
+        ]
+
+    status = None
+    if dep.status:
+        status = DeploymentStatusInfo(
+            replicas=dep.status.replicas,
+            ready_replicas=dep.status.ready_replicas,
+            available_replicas=dep.status.available_replicas,
+            updated_replicas=dep.status.updated_replicas,
+        )
+
+    return DeploymentInfo(
+        name=dep.metadata.name,
+        namespace=dep.metadata.namespace,
+        replicas=dep.spec.replicas if dep.spec else 1,
+        containers=containers,
+        labels=dep.metadata.labels or {},
+        annotations=dep.metadata.annotations or {},
+        selector_labels=dep.spec.selector.match_labels if dep.spec and dep.spec.selector else {},
+        status=status,
+    )
 
 
 @deployment_router.get("", response_model=SuccessResponse[DeploymentListResponse])
@@ -30,41 +59,19 @@ async def list_deployments(
         default=None,
         description="Label selector (e.g., 'app_deployment=myapp')",
     ),
-    deployment_repo: DeploymentRepository = Depends(get_deployment_repository),
+    deployment_manager: DeploymentManager = Depends(get_deployment_manager),
 ):
     """Kubernetes Deployment 목록 조회"""
-    deployments = await deployment_repo.find_all(
+    deployments = await deployment_manager.list_deployments(
         namespace=namespace,
         label_selector=label_selector,
     )
 
-    deployment_infos = [
-        DeploymentInfo(
-            name=dep.name,
-            namespace=dep.namespace,
-            replicas=dep.replicas,
-            containers=[
-                ContainerInfo(name=c.name, image=c.image)
-                for c in dep.containers
-            ],
-            labels=dep.labels,
-            annotations=dep.annotations,
-            selector_labels=dep.selector_labels,
-            status=DeploymentStatusInfo(
-                replicas=dep.status.replicas,
-                ready_replicas=dep.status.ready_replicas,
-                available_replicas=dep.status.available_replicas,
-                updated_replicas=dep.status.updated_replicas,
-            ) if dep.status else None,
-        )
-        for dep in deployments
-    ]
-
     return SuccessResponse(
         message="Deployments retrieved successfully",
         data=DeploymentListResponse(
-            deployments=deployment_infos,
-            total=len(deployment_infos),
+            deployments=[_build_deployment_info(dep) for dep in deployments],
+            total=len(deployments),
         ),
     )
 
@@ -73,37 +80,18 @@ async def list_deployments(
 async def get_deployment(
     namespace: str,
     name: str,
-    deployment_repo: DeploymentRepository = Depends(get_deployment_repository),
+    deployment_manager: DeploymentManager = Depends(get_deployment_manager),
 ):
     """특정 Deployment 상세 조회"""
-    deployment = await deployment_repo.find_by_name(name, namespace)
+    dep = await deployment_manager.get_deployment(name, namespace)
 
-    if deployment is None:
+    if dep is None:
         raise HTTPException(
             status_code=404,
             detail=f"Deployment '{name}' not found in namespace '{namespace}'",
         )
 
-    deployment_info = DeploymentInfo(
-        name=deployment.name,
-        namespace=deployment.namespace,
-        replicas=deployment.replicas,
-        containers=[
-            ContainerInfo(name=c.name, image=c.image)
-            for c in deployment.containers
-        ],
-        labels=deployment.labels,
-        annotations=deployment.annotations,
-        selector_labels=deployment.selector_labels,
-        status=DeploymentStatusInfo(
-            replicas=deployment.status.replicas,
-            ready_replicas=deployment.status.ready_replicas,
-            available_replicas=deployment.status.available_replicas,
-            updated_replicas=deployment.status.updated_replicas,
-        ) if deployment.status else None,
-    )
-
     return SuccessResponse(
         message="Deployment retrieved successfully",
-        data=DeploymentDetailResponse(deployment=deployment_info),
+        data=DeploymentDetailResponse(deployment=_build_deployment_info(dep)),
     )

@@ -1,7 +1,9 @@
+from kubernetes_asyncio.client import V1Service
+
 from src.core.dns import DnsProvider, DnsRecord
-from src.core.kubernetes.service import Service, ServiceRepository
-from src.dependencies.kubernetes import get_service_repository
-from src.core.kubernetes.service import ServiceNotFoundException
+from src.core.kubernetes.service import Service, ServicePort, ServiceNotFoundException
+from src.dependencies.kubernetes import get_service_manager
+from src.infra.kubernetes.managers.service import ServiceManager
 from fastapi import Depends
 
 
@@ -10,9 +12,36 @@ class ExternalDnsProvider(DnsProvider):
 
     def __init__(
         self,
-        service_repo: ServiceRepository = Depends(get_service_repository),
+        service_manager: ServiceManager = Depends(get_service_manager),
     ):
-        self.service_repo = service_repo
+        self.service_manager = service_manager
+
+    def _to_domain(self, v1_svc: V1Service) -> Service:
+        """V1Service를 도메인 객체로 변환"""
+        ports = []
+        if v1_svc.spec and v1_svc.spec.ports:
+            for p in v1_svc.spec.ports:
+                target_port = p.target_port if isinstance(p.target_port, int) else int(p.target_port)
+                ports.append(ServicePort(
+                    port=p.port,
+                    target_port=target_port,
+                    protocol=p.protocol or "TCP",
+                    name=p.name,
+                    node_port=p.node_port,
+                ))
+        labels = v1_svc.metadata.labels or {}
+        return Service(
+            id=v1_svc.metadata.name,
+            name=labels.get("madp.io/name", ""),
+            namespace=v1_svc.metadata.namespace,
+            ports=ports,
+            selector=v1_svc.spec.selector if v1_svc.spec else {},
+            service_type=v1_svc.spec.type if v1_svc.spec else "ClusterIP",
+            labels=labels,
+            annotations=v1_svc.metadata.annotations or {},
+            cluster_ip=v1_svc.spec.cluster_ip if v1_svc.spec else None,
+            external_ips=v1_svc.spec.external_ips if v1_svc.spec and v1_svc.spec.external_ips else [],
+        )
 
     async def create_subdomain_record(self, project_name: str, subdomain: str) -> DnsRecord:
         """
@@ -24,33 +53,27 @@ class ExternalDnsProvider(DnsProvider):
         service_name = f"dns-record-{subdomain}"
 
         # 멱등성을 위해 동일한 이름의 서비스가 있는지 확인
-        existing_service = await self.service_repo.find_by_name(name=service_name, namespace=project_name)
+        existing_service = await self.service_manager.get_service(service_name, project_name)
         if existing_service:
             # 이미 존재하는 경우, 해당 DNS 정보를 반환
-            # 실제로는 저장된 어노테이션 값을 읽어와야 하지만, 여기서는 예측 가능한 값을 반환합니다.
             return DnsRecord(
                 name=full_domain,
                 type="TXT",
                 value=f"Placeholder for {full_domain}"
             )
 
-        # Service 도메인 객체 생성 (헤드리스, no selector)
-        dns_service = Service(
+        await self.service_manager.create_service(
             name=service_name,
             namespace=project_name,
+            selector={},
+            ports=[],
             service_type="ClusterIP",
-            cluster_ip="None",  # 헤드리스 서비스로 만들기
-            selector={}, # selector를 비워둠
+            cluster_ip="None",
             annotations={
-                # ExternalDNS가 이 호스트네임으로 DNS 레코드를 생성하도록 함
                 "external-dns.alpha.kubernetes.io/hostname": full_domain,
-                # CNAME이나 A 레코드를 위한 IP가 없으므로, TXT 레코드를 생성하여 소유권을 표시
                 "external-dns.alpha.kubernetes.io/txt": f"madp-dns-placeholder={full_domain}"
-            }
+            },
         )
-
-        # Service 저장 (생성)
-        await self.service_repo.save(dns_service)
 
         return DnsRecord(
             name=full_domain,
@@ -63,7 +86,7 @@ class ExternalDnsProvider(DnsProvider):
         서브도메인에 해당하는 헤드리스 서비스를 삭제하여 DNS 레코드를 제거합니다.
         """
         service_name = f"dns-record-{subdomain}"
-        return await self.service_repo.delete(name=service_name, namespace=project_name)
+        return await self.service_manager.delete_service(service_name, project_name)
 
     async def update_subdomain_record(self, project_name: str, old_subdomain: str, new_subdomain: str) -> DnsRecord:
         """
@@ -76,27 +99,27 @@ class ExternalDnsProvider(DnsProvider):
         new_record = await self.create_subdomain_record(project_name, new_subdomain)
 
         return new_record
-    
+
     async def bind_dns_to_service(self, project_name: str, subdomain: str, target_service_name: str) -> Service:
         """
         생성된 DNS 레코드를 실제 애플리케이션 서비스에 매핑(연결)합니다.
         """
         # 1. 대상 애플리케이션 서비스 조회
-        target_service = await self.service_repo.find_by_name(name=target_service_name, namespace=project_name)
-        if not target_service:
+        target_v1_service = await self.service_manager.get_service(target_service_name, project_name)
+        if not target_v1_service:
             raise ServiceNotFoundException()
 
         # 2. 호스트네임 어노테이션 추가
         full_domain = f"{subdomain}.mdeveloper.platform"
-        annotated_service = target_service.with_annotations({
-            "external-dns.alpha.kubernetes.io/hostname": full_domain
-        })
-        
-        # 3. 대상 서비스 업데이트
-        updated_service = await self.service_repo.save(annotated_service)
+        updated_v1_service = await self.service_manager.update_annotations(
+            name=target_service_name,
+            namespace=project_name,
+            annotations={"external-dns.alpha.kubernetes.io/hostname": full_domain},
+            merge=True,
+        )
 
-        # 4. 기존의 플레이스홀더 DNS 서비스 삭제
+        # 3. 기존의 플레이스홀더 DNS 서비스 삭제
         placeholder_service_name = f"dns-record-{subdomain}"
-        await self.service_repo.delete(name=placeholder_service_name, namespace=project_name)
+        await self.service_manager.delete_service(placeholder_service_name, project_name)
 
-        return updated_service
+        return self._to_domain(updated_v1_service)

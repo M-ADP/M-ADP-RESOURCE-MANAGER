@@ -9,14 +9,40 @@ from src.api.infra.kubernetes.service.schema import (
     ServiceListResponse,
     ServiceDetailResponse,
 )
-from src.core.kubernetes.service import ServiceRepository
 from src.core.response import SuccessResponse
-from src.dependencies.kubernetes import get_service_repository
+from src.dependencies.kubernetes import get_service_manager
+from src.infra.kubernetes.managers.service import ServiceManager
 
 service_router = APIRouter(
     prefix="/services",
     tags=["kubernetes-service"],
 )
+
+
+def _build_service_info(svc) -> ServiceInfo:
+    ports = []
+    if svc.spec and svc.spec.ports:
+        for p in svc.spec.ports:
+            target_port = p.target_port if isinstance(p.target_port, int) else int(p.target_port) if p.target_port else None
+            ports.append(ServicePortInfo(
+                port=p.port,
+                target_port=target_port,
+                protocol=p.protocol,
+                name=p.name,
+                node_port=p.node_port,
+            ))
+
+    return ServiceInfo(
+        name=svc.metadata.name,
+        namespace=svc.metadata.namespace,
+        ports=ports,
+        selector=svc.spec.selector if svc.spec else {},
+        service_type=svc.spec.type if svc.spec else "ClusterIP",
+        labels=svc.metadata.labels or {},
+        annotations=svc.metadata.annotations or {},
+        cluster_ip=svc.spec.cluster_ip if svc.spec else None,
+        external_ips=svc.spec.external_ips if svc.spec and svc.spec.external_ips else [],
+    )
 
 
 @service_router.get("", response_model=SuccessResponse[ServiceListResponse])
@@ -29,43 +55,19 @@ async def list_services(
         default=None,
         description="Label selector (e.g., 'app_deployment=myapp')",
     ),
-    service_repo: ServiceRepository = Depends(get_service_repository),
+    service_manager: ServiceManager = Depends(get_service_manager),
 ):
     """Kubernetes Service 목록 조회"""
-    services = await service_repo.find_all(
+    services = await service_manager.list_services(
         namespace=namespace,
         label_selector=label_selector,
     )
 
-    service_infos = [
-        ServiceInfo(
-            name=svc.id,
-            namespace=svc.namespace,
-            ports=[
-                ServicePortInfo(
-                    port=p.port,
-                    target_port=p.target_port,
-                    protocol=p.protocol,
-                    name=p.name,
-                    node_port=p.node_port,
-                )
-                for p in svc.ports
-            ],
-            selector=svc.selector,
-            service_type=svc.service_type,
-            labels=svc.labels,
-            annotations=svc.annotations,
-            cluster_ip=svc.cluster_ip,
-            external_ips=svc.external_ips,
-        )
-        for svc in services
-    ]
-
     return SuccessResponse(
         message="Services retrieved successfully",
         data=ServiceListResponse(
-            services=service_infos,
-            total=len(service_infos),
+            services=[_build_service_info(svc) for svc in services],
+            total=len(services),
         ),
     )
 
@@ -74,39 +76,18 @@ async def list_services(
 async def get_service(
     namespace: str,
     name: str,
-    service_repo: ServiceRepository = Depends(get_service_repository),
+    service_manager: ServiceManager = Depends(get_service_manager),
 ):
     """특정 Service 상세 조회"""
-    service = await service_repo.find_by_id(name, namespace)
+    svc = await service_manager.get_service(name, namespace)
 
-    if service is None:
+    if svc is None:
         raise HTTPException(
             status_code=404,
             detail=f"Service '{name}' not found in namespace '{namespace}'",
         )
 
-    service_info = ServiceInfo(
-        name=service.id,
-        namespace=service.namespace,
-        ports=[
-            ServicePortInfo(
-                port=p.port,
-                target_port=p.target_port,
-                protocol=p.protocol,
-                name=p.name,
-                node_port=p.node_port,
-            )
-            for p in service.ports
-        ],
-        selector=service.selector,
-        service_type=service.service_type,
-        labels=service.labels,
-        annotations=service.annotations,
-        cluster_ip=service.cluster_ip,
-        external_ips=service.external_ips,
-    )
-
     return SuccessResponse(
         message="Service retrieved successfully",
-        data=ServiceDetailResponse(service=service_info),
+        data=ServiceDetailResponse(service=_build_service_info(svc)),
     )
