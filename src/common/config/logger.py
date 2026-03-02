@@ -1,8 +1,16 @@
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class LoggerConfig(BaseSettings):
     """로거 설정"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="LOG_",
+        extra="ignore",
+        env_file="/vault/secrets/.env",
+        env_file_encoding="utf-8",
+    )
 
     # 로그 레벨
     log_level: str = "INFO"
@@ -21,6 +29,3 @@ class LoggerConfig(BaseSettings):
 
     # 로그 파일 경로
     log_file_path: Optional[str] = None
-
-    class Config:
-        env_prefix = "LOG_"  # 환경변수 접두사: LOG_LEVEL, LOG_FORMAT 등

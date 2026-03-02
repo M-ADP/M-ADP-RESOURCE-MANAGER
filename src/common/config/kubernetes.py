@@ -1,8 +1,16 @@
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class KubernetesConfig(BaseSettings):
     """Kubernetes 클라이언트 설정"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="K8S_",
+        extra="ignore",
+        env_file="/vault/secrets/.env",
+        env_file_encoding="utf-8",
+    )
 
     # Kubeconfig 파일 경로 (None이면 in-cluster 또는 기본 경로)
     kubeconfig_path: Optional[str] = None
@@ -21,6 +29,3 @@ class KubernetesConfig(BaseSettings):
 
     # 재시도 횟수
     max_retries: int = 3
-
-    class Config:
-        env_prefix = "K8S_"  # 환경변수 접두사: K8S_KUBECONFIG_PATH 등

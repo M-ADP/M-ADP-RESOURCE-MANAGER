@@ -1,9 +1,16 @@
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class VaultConfig(BaseSettings):
     """Vault 클라이언트 설정"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="VAULT_",
+        extra="ignore",
+        env_file="/vault/secrets/.env",
+        env_file_encoding="utf-8",
+    )
 
     # Vault 서버 주소
     addr: str = "http://localhost:8200"
@@ -25,8 +32,5 @@ class VaultConfig(BaseSettings):
 
     # 재시도 횟수
     max_retries: int = 3
-
-    class Config:
-        env_prefix = "VAULT_"  # 환경변수 접두사: VAULT_ADDR, VAULT_TOKEN 등
 
 VAULT_CONFIG = VaultConfig()
