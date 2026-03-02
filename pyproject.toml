@@ -30,7 +30,6 @@ dependencies = [
     "packaging==25.0",
     "pluggy==1.6.0",
     "propcache==0.4.1",
-    "proxmoxer>=2.2.0",
     "pyasn1==0.6.1",
     "pyasn1-modules==0.4.2",
     "pydantic==2.12.5",

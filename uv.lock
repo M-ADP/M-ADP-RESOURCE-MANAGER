@@ -639,15 +639,6 @@ wheels = [
 ]
 
 [[package]]
-name = "proxmoxer"
-version = "2.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6a/54/dc2919eed681ca31220a9021e35935a3995335069b520279b4d55b9df822/proxmoxer-2.2.0.tar.gz", hash = "sha256:3ed63a58e5c0822841afdb3801f9d913a4996955c1c54f7319b5842ba2615006", size = 29666, upload-time = "2024-12-15T02:08:36.351Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/9a/0c3570e2ccce07d304c8a25f7238accc5174c234f5eddb3b666e20777898/proxmoxer-2.2.0-py3-none-any.whl", hash = "sha256:7e4431fd38e1a9321eedf6d860ddc373fc2b29ce1845fa8b072d7580d99f6b90", size = 19217, upload-time = "2024-12-15T02:08:34.047Z" },
-]
-
-[[package]]
 name = "pyasn1"
 version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -931,7 +922,6 @@ dependencies = [
     { name = "packaging" },
     { name = "pluggy" },
     { name = "propcache" },
-    { name = "proxmoxer" },
     { name = "pyasn1" },
     { name = "pyasn1-modules" },
     { name = "pydantic" },
@@ -983,7 +973,6 @@ requires-dist = [
     { name = "packaging", specifier = "==25.0" },
     { name = "pluggy", specifier = "==1.6.0" },
     { name = "propcache", specifier = "==0.4.1" },
-    { name = "proxmoxer", specifier = ">=2.2.0" },
     { name = "pyasn1", specifier = "==0.6.1" },
     { name = "pyasn1-modules", specifier = "==0.4.2" },
     { name = "pydantic", specifier = "==2.12.5" },
