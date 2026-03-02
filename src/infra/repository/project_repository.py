@@ -89,10 +89,10 @@ class K8sProjectRepository(ProjectRepository):
         ports = [
             {
                 "port": p.port,
-                "targetPort": p.target_port,
+                "target_port": p.target_port,
                 "protocol": p.protocol,
                 "name": p.name,
-                "nodePort": p.node_port,
+                "node_port": p.node_port,
             }
             for p in service.ports
         ]

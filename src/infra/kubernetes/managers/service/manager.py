@@ -599,7 +599,7 @@ class ServiceManager:
                 service_port = V1ServicePort(
                     name=port_config.get("name"),
                     port=port_config["port"],
-                    target_port=port_config.get("targetPort", port_config["port"]),
+                    target_port=port_config.get("target_port", port_config["port"]),
                     protocol=port_config.get("protocol", "TCP"),
                     node_port=port_config.get("nodePort"),
                 )
