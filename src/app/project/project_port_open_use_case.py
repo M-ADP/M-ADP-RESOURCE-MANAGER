@@ -48,7 +48,7 @@ class ProjectPortOpenUseCase(BaseUseCase):
             service_type=service_type_value,
             labels={"madp.io/name": payload.service_name},
             annotations={
-                "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.example.com"
+                "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.mdeveloper.platform"
             } if service_type_value == "LoadBalancer" else {},
         )
 
