@@ -1,6 +1,6 @@
 """App API 라우터"""
 
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
@@ -149,20 +149,21 @@ async def get_app_deployment_events(
     )
 
 
-@app_router.get("/{namespace}/{name}/resource", response_model=SuccessResponse[AppResourceStatusResponse])
+@app_router.get("/{namespace}/resource", response_model=SuccessResponse[List[AppResourceStatusResponse]])
 async def get_app_deployment_resource(
     namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    names: List[str] = Query(..., description="App 이름 목록 (Deployment 이름)"),
     user: User = Depends(get_user),
     app_resource_status_usecase: AppResourceStatusUseCase = Depends(AppResourceStatusUseCase),
 ):
     """App Deployment 리소스 상태 조회
 
-    Deployment의 리소스 설정(Request/Limit)과 현재 상태(Replicas)를 조회합니다.
+    여러 Deployment의 리소스 설정(Request/Limit)과 현재 상태(Replicas)를 조회합니다.
+    존재하지 않는 앱은 결과에서 제외됩니다.
     """
     app_resource_status_result = await app_resource_status_usecase(
         project_id=namespace,
-        app_id=name,
+        app_ids=names,
     )
     return SuccessResponse(
         message="App deployment resource status retrieved successfully",
