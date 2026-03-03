@@ -168,7 +168,7 @@ class AppCreateRequest(BaseModel):
         min_length=1,
         max_length=63,
         description="App 이름 (Deployment 이름)",
-        examples=["my-app_deployment"]
+        examples=["my-app-deployment"]
     )
     containers: List[ContainerSpec] = Field(
         ...,

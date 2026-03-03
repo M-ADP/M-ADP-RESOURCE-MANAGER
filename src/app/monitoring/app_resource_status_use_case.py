@@ -1,4 +1,5 @@
-from typing import Dict, Any, List
+import asyncio
+from typing import List
 from fastapi import Depends
 
 from src.app.base_use_case import BaseUseCase
@@ -17,79 +18,72 @@ class AppResourceStatusUseCase(BaseUseCase):
     ):
         self.deployment_manager = deployment_manager
 
-    async def __call__(self, project_id: str, app_id: str) -> AppResourceStatusResponse:
-        """애플리케이션 리소스 상태 조회"""
+    async def __call__(self, project_id: str, app_ids: List[str]) -> List[AppResourceStatusResponse]:
+        """여러 애플리케이션 리소스 상태 일괄 조회
+
+        존재하지 않는 앱은 결과에서 제외됩니다.
+        """
+        results = await asyncio.gather(
+            *[self._get_single(project_id, app_id) for app_id in app_ids],
+            return_exceptions=True,
+        )
+        return [r for r in results if isinstance(r, AppResourceStatusResponse)]
+
+    async def _get_single(self, project_id: str, app_id: str) -> AppResourceStatusResponse:
         from src.app.app_deployment.exceptions import DeploymentNotFoundException
-        
+
         deployment = await self.deployment_manager.get_deployment(name=app_id, namespace=project_id)
         if not deployment:
             raise DeploymentNotFoundException(name=app_id, namespace=project_id)
 
-        # Replicas
         replicas_limit = deployment.spec.replicas or 1
         replicas_used = deployment.status.ready_replicas or 0 if deployment.status else 0
-        
-        # Resources per pod
+
         pod_requests = {"cpu": 0, "memory": 0, "storage": 0}
         pod_limits = {"cpu": 0, "memory": 0, "storage": 0}
-        
+
         if deployment.spec.template.spec.containers:
             for container in deployment.spec.template.spec.containers:
                 if not container.resources:
                     continue
-                    
-                # Requests
+
                 if container.resources.requests:
                     req = container.resources.requests
                     pod_requests["cpu"] += UnitConverter.parse_cpu_to_millicores(req.get("cpu", "0"))
                     pod_requests["memory"] += UnitConverter.parse_storage_to_bytes(req.get("memory", "0"))
                     pod_requests["storage"] += UnitConverter.parse_storage_to_bytes(req.get("ephemeral-storage", "0"))
 
-                # Limits
                 if container.resources.limits:
                     lim = container.resources.limits
                     pod_limits["cpu"] += UnitConverter.parse_cpu_to_millicores(lim.get("cpu", "0"))
                     pod_limits["memory"] += UnitConverter.parse_storage_to_bytes(lim.get("memory", "0"))
                     pod_limits["storage"] += UnitConverter.parse_storage_to_bytes(lim.get("ephemeral-storage", "0"))
 
-        # Volume Storage (PVC)
-        # Deployment level volume claims (if template has volumeClaimTemplates - usually StatefulSet)
-        # Or checking volumes in spec.
-        # For simplicity, if we want "Disk" usage, we should check PVCs associated.
-        # But here we only check "Requested" resources in Pod Spec.
-        # PVC size is usually defined in PVC resource, not Pod Resource.
-        # If the app uses PVC, we should look it up.
-        # But existing AppDeploymentCreateUseCase creates PVCs.
-        # For now, let's stick to ephemeral-storage in container resources for "Disk" metric in "App Resource",
-        # or we might need to fetch PVCs.
-        # Given complexity, ephemeral-storage is "pod disk", PVC is "persistent disk".
-        # Let's count ephemeral-storage as "Disk" for now, or 0 if not set.
-        
         return AppResourceStatusResponse(
             app_id=app_id,
             project_id=project_id,
             cpu=self._create_resource_metric(
-                pod_limits["cpu"] * replicas_limit, 
-                pod_requests["cpu"] * replicas_used, 
-                "cores", 
-                1000.0
+                pod_limits["cpu"] * replicas_limit,
+                pod_requests["cpu"] * replicas_used,
+                "cores",
+                1000.0,
             ),
             memory=self._create_resource_metric(
-                pod_limits["memory"] * replicas_limit, 
-                pod_requests["memory"] * replicas_used, 
-                "GiB", 
-                1024**3
+                pod_limits["memory"] * replicas_limit,
+                pod_requests["memory"] * replicas_used,
+                "GiB",
+                1024**3,
             ),
             disk=self._create_resource_metric(
-                pod_limits["storage"] * replicas_limit, 
-                pod_requests["storage"] * replicas_used, 
-                "GiB", 
-                1024**3
+                pod_limits["storage"] * replicas_limit,
+                pod_requests["storage"] * replicas_used,
+                "GiB",
+                1024**3,
             ),
             instance=InstanceMetric(
                 limit=replicas_limit,
                 used=replicas_used,
-                percentage=round((replicas_used / replicas_limit) * 100, 2) if replicas_limit > 0 else 0.0
+                percentage=round((replicas_used / replicas_limit) * 100, 2) if replicas_limit > 0 else 0.0,
             ),
         )
 
