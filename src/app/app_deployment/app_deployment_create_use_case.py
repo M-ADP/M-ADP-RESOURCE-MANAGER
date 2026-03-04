@@ -96,8 +96,11 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         labels = {
             "app_deployment": payload.name,
             "owner": user_id,
+            "x-project-id": namespace,
+            "x-app-deployment-id": payload.name,
             **DefaultLabel.MANAGED_BY_LABEL,
         }
+
         if payload.labels:
             labels.update(payload.labels)
 

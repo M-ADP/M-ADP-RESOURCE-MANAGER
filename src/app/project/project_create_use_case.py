@@ -29,7 +29,10 @@ class ProjectCreateUseCase(BaseUseCase):
         namespace = (
             Namespace
             .for_project(user_id=user_id, project_id=payload.id, project_name=payload.name)
-            .with_labels(DefaultLabel.MANAGED_BY_LABEL)
+            .with_labels({
+                **DefaultLabel.MANAGED_BY_LABEL,
+                "x-project-id": payload.id,
+            })
         )
         saved_namespace = await self.project_repo.save_namespace(namespace)
 

@@ -46,7 +46,11 @@ class ProjectPortOpenUseCase(BaseUseCase):
             ports=[service_port],
             selector={"app_deployment": payload.target_deployment_name},
             service_type=service_type_value,
-            labels={"madp.io/name": payload.service_name},
+            labels={
+                "madp.io/name": payload.service_name,
+                "x-project-id": project_name,
+                "x-app-deployment-id": payload.target_deployment_name,
+            },
             annotations={
                 "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.mdeveloper.platform"
             } if service_type_value == "LoadBalancer" else {},
