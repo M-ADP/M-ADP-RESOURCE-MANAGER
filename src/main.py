@@ -5,7 +5,7 @@ from src.api import create_app
 
 app = create_app()
 
-@app.get(status_code=HTTPStatus.ACCEPTED)
+@app.get(status_code=HTTPStatus.OK)
 async def health_check():
     return
 
