@@ -23,9 +23,13 @@ class KubernetesClientImpl(KubernetesClient):
                 self.logger.info(f"Kubernetes 설정 파일 로드 중: {self.config.kubeconfig_path}")
                 await config.load_kube_config(config_file=self.config.kubeconfig_path)
             else:
-                # 기본 kubeconfig 사용 (~/.kube/config)
-                self.logger.info("기본 Kubernetes 설정 로드 중")
-                await config.load_kube_config()
+                # in-cluster 자동 감지 후 기본 kubeconfig 폴백
+                try:
+                    config.load_incluster_config()
+                    self.logger.info("클러스터 내부 Kubernetes 설정 자동 감지 완료")
+                except Exception:
+                    self.logger.info("기본 Kubernetes 설정 로드 중")
+                    await config.load_kube_config()
 
             self.logger.info("Kubernetes 설정 로드 완료")
 
