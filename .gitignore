@@ -1,3 +1,14 @@
 .venv
 .idea
 .env
+CLAUDE.md
+.claude
+.serena
+AGENTS.md
+
+__pycache__/
+*.pyc
+*.pyo
+*.cpython-*
+
+*.tar
