@@ -123,7 +123,7 @@ class NamespaceManager:
             if e.status == 404:
                 return None
             else:
-                self.logger.error(message="Namespace '{name}' 조회 실패: {e.reason}")
+                self.logger.error(message=f"Namespace '{name}' 조회 실패: {e.reason}")
                 raise NamespaceReadException(
                     namespace_name=name,
                     reason=e.reason or "알 수 없는 오류",
