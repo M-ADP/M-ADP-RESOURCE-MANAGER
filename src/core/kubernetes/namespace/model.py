@@ -15,7 +15,7 @@ class Namespace:
     @classmethod
     def for_project(cls, user_id: str, project_id: str, project_name: str) -> "Namespace":
         """Creates a Namespace for a project with a standardized name."""
-        return cls(id=project_id, name=project_name, labels={"madp.io/name": project_name})
+        return cls(id=f"project-{project_id}", name=project_name, labels={"madp.io/name": project_name})
 
     def with_label(self, key: str, value: str) -> "Namespace":
         """새로운 레이블이 추가된 Namespace 반환 (불변성 유지)"""
