@@ -21,7 +21,7 @@ class ProjectDnsDeleteUseCase(BaseUseCase):
         """Project DNS 삭제"""
         
         deleted = await self.dns_provider.delete_subdomain_record(
-            project_name=project_name,
+            project_name=f"project-{project_name}",
             subdomain=subdomain
         )
 

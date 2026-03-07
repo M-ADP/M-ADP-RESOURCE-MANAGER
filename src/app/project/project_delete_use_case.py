@@ -22,23 +22,24 @@ class ProjectDeleteUseCase(BaseUseCase):
     ) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
         project_id = id
+        namespace_id = f"project-{project_id}"
 
         # 1. Project 존재 여부 확인
-        if not await self.project_repo.exists_namespace(project_id):
+        if not await self.project_repo.exists_namespace(namespace_id):
             raise ProjectNotFoundException()
 
         quota_id = f"{id}-quota"
 
         # 2. ResourceQuota 삭제 (존재하는 경우)
         resource_quota_deleted = False
-        if await self.project_repo.exists_resource_quota(quota_id, project_id):
-            await self.project_repo.delete_resource_quota(quota_id, project_id)
+        if await self.project_repo.exists_resource_quota(quota_id, namespace_id):
+            await self.project_repo.delete_resource_quota(quota_id, namespace_id)
             resource_quota_deleted = True
 
         # 3. Namespace 삭제
-        await self.project_repo.delete_namespace(project_id)
+        await self.project_repo.delete_namespace(namespace_id)
 
         return ProjectDeleteResponse(
-            namespace_id=project_id,
+            namespace_id=namespace_id,
             resource_quota_deleted=resource_quota_deleted,
         )

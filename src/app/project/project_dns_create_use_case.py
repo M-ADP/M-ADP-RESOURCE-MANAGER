@@ -22,7 +22,7 @@ class ProjectDnsCreateUseCase(BaseUseCase):
         """Project DNS 생성"""
         
         dns_record = await self.dns_provider.create_subdomain_record(
-            project_name=project_name,
+            project_name=f"project-{project_name}",
             subdomain=payload.subdomain
         )
 

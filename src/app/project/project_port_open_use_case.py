@@ -23,7 +23,8 @@ class ProjectPortOpenUseCase(BaseUseCase):
         """Project 포트 개방 (Service 생성)"""
 
         # 1. 서비스 이름 중복 확인
-        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=project_name)
+        namespace = f"project-{project_name}"
+        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=namespace)
         if existing_service:
             raise ServiceAlreadyExistsException()
 
@@ -42,7 +43,7 @@ class ProjectPortOpenUseCase(BaseUseCase):
         service = Service(
             id=payload.service_id,
             name=payload.service_name,
-            namespace=project_name,
+            namespace=namespace,
             ports=[service_port],
             selector={"app_deployment": payload.target_deployment_name},
             service_type=service_type_value,

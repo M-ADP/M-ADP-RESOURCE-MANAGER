@@ -24,7 +24,7 @@ class ProjectDnsPortBindUseCase(BaseUseCase):
         """Project DNS와 Service를 바인딩합니다."""
         
         updated_service = await self.dns_provider.bind_dns_to_service(
-            project_name=project_name,
+            project_name=f"project-{project_name}",
             subdomain=subdomain,
             target_service_name=payload.target_service_name
         )

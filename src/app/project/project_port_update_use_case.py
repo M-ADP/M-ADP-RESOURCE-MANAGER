@@ -24,7 +24,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
         """Project 포트 수정 (Service 업데이트)"""
 
         # 1. 기존 Service 조회
-        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=project_name)
+        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=f"project-{project_name}")
         if not existing_service:
             raise ServiceNotFoundException()
 

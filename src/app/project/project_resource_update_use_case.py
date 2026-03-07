@@ -27,7 +27,7 @@ class ProjectResourceUpdateUseCase(BaseUseCase):
 
     async def _update_resource_quota(self, project_name: str, payload: ProjectResourceUpdateRequest) -> ResourceQuota:
         quotas = await self.project_repo.find_all_resource_quotas(
-            namespace=project_name,
+            namespace=f"project-{project_name}",
             label_selector="managed-by=madp",
         )
         if not quotas:

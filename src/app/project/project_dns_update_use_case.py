@@ -23,7 +23,7 @@ class ProjectDnsUpdateUseCase(BaseUseCase):
         """Project DNS 수정"""
         
         dns_record = await self.dns_provider.update_subdomain_record(
-            project_name=project_name,
+            project_name=f"project-{project_name}",
             old_subdomain=old_subdomain,
             new_subdomain=payload.new_subdomain
         )

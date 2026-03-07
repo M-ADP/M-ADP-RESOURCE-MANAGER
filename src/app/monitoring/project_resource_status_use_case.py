@@ -31,7 +31,7 @@ class ProjectResourceStatusUseCase(BaseUseCase):
         
         # 안전하게 list_resource_quotas 사용
         try:
-            quotas = await self.resource_quota_manager.list_resource_quotas(namespace=project_id)
+            quotas = await self.resource_quota_manager.list_resource_quotas(namespace=f"project-{project_id}")
         except Exception:
             # 네임스페이스가 없거나 권한 문제 등
             raise ProjectNotFoundException()
