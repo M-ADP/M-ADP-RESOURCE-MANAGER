@@ -16,14 +16,14 @@ class ProjectDnsUpdateUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             old_subdomain: str,
             payload: ProjectDnsUpdateRequest
     ) -> DnsRecord:
         """Project DNS 수정"""
-        
+
         dns_record = await self.dns_provider.update_subdomain_record(
-            project_name=f"project-{project_name}",
+            project_name=f"project-{project_id}",
             old_subdomain=old_subdomain,
             new_subdomain=payload.new_subdomain
         )

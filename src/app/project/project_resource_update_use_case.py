@@ -19,15 +19,15 @@ class ProjectResourceUpdateUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             payload: ProjectResourceUpdateRequest
     ) -> ResourceQuota:
         """Project의 리소스 할당량 (ResourceQuota)을 수정합니다."""
-        return await self._update_resource_quota(project_name, payload)
+        return await self._update_resource_quota(project_id, payload)
 
-    async def _update_resource_quota(self, project_name: str, payload: ProjectResourceUpdateRequest) -> ResourceQuota:
+    async def _update_resource_quota(self, project_id: str, payload: ProjectResourceUpdateRequest) -> ResourceQuota:
         quotas = await self.project_repo.find_all_resource_quotas(
-            namespace=f"project-{project_name}",
+            namespace=f"project-{project_id}",
             label_selector="managed-by=madp",
         )
         if not quotas:

@@ -47,6 +47,7 @@ class ProjectCreateUseCase(BaseUseCase):
             project_name=payload.name,
             namespace=saved_namespace.id,
             limits=limits,
+            labels={**DefaultLabel.MANAGED_BY_LABEL},
         )
         saved_quota = await self.project_repo.save_resource_quota(resource_quota)
 

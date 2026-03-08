@@ -17,14 +17,14 @@ class ProjectDnsPortBindUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             subdomain: str, # dns-id in path
             payload: ProjectDnsPortBindRequest
     ) -> Service:
         """Project DNS와 Service를 바인딩합니다."""
-        
+
         updated_service = await self.dns_provider.bind_dns_to_service(
-            project_name=f"project-{project_name}",
+            project_name=f"project-{project_id}",
             subdomain=subdomain,
             target_service_name=payload.target_service_name
         )

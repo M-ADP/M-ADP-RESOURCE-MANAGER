@@ -17,13 +17,13 @@ class ProjectPortOpenUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             payload: ProjectPortOpenRequest
     ) -> Service:
         """Project 포트 개방 (Service 생성)"""
 
         # 1. 서비스 이름 중복 확인
-        namespace = f"project-{project_name}"
+        namespace = f"project-{project_id}"
         existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=namespace)
         if existing_service:
             raise ServiceAlreadyExistsException()
@@ -49,11 +49,11 @@ class ProjectPortOpenUseCase(BaseUseCase):
             service_type=service_type_value,
             labels={
                 "madp.io/name": payload.service_name,
-                "x-project-id": project_name,
+                "x-project-id": project_id,
                 "x-app-deployment-id": payload.target_deployment_name,
             },
             annotations={
-                "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.mdeveloper.platform"
+                "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_id}.mdeveloper.platform"
             } if service_type_value == "LoadBalancer" else {},
         )
 

@@ -85,7 +85,7 @@ async def open_project_port(
     project_port_open_usecase: ProjectPortOpenUseCase = Depends(ProjectPortOpenUseCase)
 ):
     service = await project_port_open_usecase(
-        project_name=name,
+        project_id=name,
         payload=payload
     )
 
@@ -125,7 +125,7 @@ async def update_project_port(
 ):
     # service_id로 Service를 찾아 업데이트 (port_id는 사용하지 않음)
     service = await project_port_update_usecase(
-        project_name=name,
+        project_id=name,
         payload=payload
     )
 
@@ -158,13 +158,13 @@ async def update_project_port(
 @project_router.delete("/{name}/ports/{port_id}", response_model=SuccessResponse[ProjectPortCloseResponse])
 async def close_project_port(
     name: str,
-    port_id: str, # port_id를 service_name으로 사용
+    port_id: str,
     user: User = Depends(get_user),
     project_port_close_usecase: ProjectPortCloseUseCase = Depends(ProjectPortCloseUseCase)
 ):
     closed = await project_port_close_usecase(
-        project_name=name,
-        service_name=port_id, # service_name으로 전달
+        project_id=name,
+        service_id=port_id,
     )
     return SuccessResponse(
         message="Port closed successfully",
@@ -180,7 +180,7 @@ async def create_project_dns(
     project_dns_create_usecase: ProjectDnsCreateUseCase = Depends(ProjectDnsCreateUseCase)
 ):
     dns_record = await project_dns_create_usecase(
-        project_name=name,
+        project_id=name,
         payload=payload
     )
 
@@ -202,7 +202,7 @@ async def delete_project_dns(
     project_dns_delete_usecase: ProjectDnsDeleteUseCase = Depends(ProjectDnsDeleteUseCase)
 ):
     deleted = await project_dns_delete_usecase(
-        project_name=name,
+        project_id=name,
         subdomain=dns_id
     )
 
@@ -221,7 +221,7 @@ async def update_project_dns(
     project_dns_update_usecase: ProjectDnsUpdateUseCase = Depends(ProjectDnsUpdateUseCase)
 ):
     dns_record = await project_dns_update_usecase(
-        project_name=name,
+        project_id=name,
         old_subdomain=dns_id,
         payload=payload
     )
@@ -245,7 +245,7 @@ async def bind_project_dns_port(
     project_dns_port_bind_usecase: ProjectDnsPortBindUseCase = Depends(ProjectDnsPortBindUseCase)
 ):
     updated_service = await project_dns_port_bind_usecase(
-        project_name=name,
+        project_id=name,
         subdomain=dns_id,
         payload=payload
     )
@@ -283,7 +283,7 @@ async def update_project_resources(
     project_resource_update_usecase: ProjectResourceUpdateUseCase = Depends(ProjectResourceUpdateUseCase)
 ):
     updated_quota = await project_resource_update_usecase(
-        project_name=name,
+        project_id=name,
         payload=payload
     )
 

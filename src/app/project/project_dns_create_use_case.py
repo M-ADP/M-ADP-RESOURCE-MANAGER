@@ -16,13 +16,13 @@ class ProjectDnsCreateUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             payload: ProjectDnsCreateRequest
     ) -> DnsRecord:
         """Project DNS 생성"""
-        
+
         dns_record = await self.dns_provider.create_subdomain_record(
-            project_name=f"project-{project_name}",
+            project_name=f"project-{project_id}",
             subdomain=payload.subdomain
         )
 

@@ -28,7 +28,7 @@ class ProjectDeleteUseCase(BaseUseCase):
         if not await self.project_repo.exists_namespace(namespace_id):
             raise ProjectNotFoundException()
 
-        quota_id = f"{id}-quota"
+        quota_id = f"{namespace_id}-quota"
 
         # 2. ResourceQuota 삭제 (존재하는 경우)
         resource_quota_deleted = False
