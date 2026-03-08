@@ -2,6 +2,7 @@ import asyncio
 from typing import List
 from fastapi import Depends
 
+from src.core.project import ProjectId
 from src.app.base_use_case import BaseUseCase
 from src.common.util.unit_converter import UnitConverter
 from src.dependencies.kubernetes import get_deployment_manager
@@ -32,9 +33,10 @@ class AppResourceStatusUseCase(BaseUseCase):
     async def _get_single(self, project_id: str, app_id: str) -> AppResourceStatusResponse:
         from src.app.app_deployment.exceptions import DeploymentNotFoundException
 
-        deployment = await self.deployment_manager.get_deployment(name=app_id, namespace=project_id)
+        namespace = ProjectId(project_id).namespace
+        deployment = await self.deployment_manager.get_deployment(name=app_id, namespace=namespace)
         if not deployment:
-            raise DeploymentNotFoundException(name=app_id, namespace=project_id)
+            raise DeploymentNotFoundException(name=app_id, namespace=namespace)
 
         replicas_limit = deployment.spec.replicas or 1
         replicas_used = deployment.status.ready_replicas or 0 if deployment.status else 0

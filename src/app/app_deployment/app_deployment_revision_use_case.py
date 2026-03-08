@@ -3,6 +3,7 @@
 from typing import Optional, Dict
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import AppRevisionRequest
 from src.api.v1.app.schemas.response import (
@@ -35,11 +36,13 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
     async def __call__(
             self,
             app_name: str,
-            namespace: str,
+            project_id: str,
             payload: AppRevisionRequest,
             user_id: str
     ) -> AppRevisionResponse:
         """App(Deployment) 리소스 수정"""
+
+        namespace = ProjectId(project_id).namespace
 
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:

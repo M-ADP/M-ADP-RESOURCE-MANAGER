@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.response import ProjectDeleteResponse
 from src.app.base_use_case import BaseUseCase
@@ -22,7 +23,7 @@ class ProjectDeleteUseCase(BaseUseCase):
     ) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
         project_id = id
-        namespace_id = f"project-{project_id}"
+        namespace_id = ProjectId(project_id).namespace
 
         # 1. Project 존재 여부 확인
         if not await self.project_repo.exists_namespace(namespace_id):

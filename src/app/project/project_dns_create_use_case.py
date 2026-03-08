@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.request import ProjectDnsCreateRequest
 from src.app.base_use_case import BaseUseCase
@@ -22,7 +23,7 @@ class ProjectDnsCreateUseCase(BaseUseCase):
         """Project DNS 생성"""
 
         dns_record = await self.dns_provider.create_subdomain_record(
-            project_name=f"project-{project_id}",
+            project_name=ProjectId(project_id).namespace,
             subdomain=payload.subdomain
         )
 

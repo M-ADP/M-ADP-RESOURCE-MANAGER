@@ -33,7 +33,7 @@ from src.infra.kubernetes.managers.deployment import DeploymentManager
 from src.infra.kubernetes.managers.hpa import HpaManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
 from src.infra.kubernetes.managers.pod import PodManager
-from src.infra.kubernetes.managers.serviceaccount import ServiceAccountManager
+from src.infra.kubernetes.managers.service_account import ServiceAccountManager
 from src.infra.vault.client import VaultClient
 
 

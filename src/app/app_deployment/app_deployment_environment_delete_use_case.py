@@ -1,6 +1,7 @@
 """App Deployment Environment 삭제 Use Case (ConfigMap 삭제)"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.response import EnvironmentDeleteResponse
 from src.app.base_use_case import BaseUseCase
@@ -20,11 +21,13 @@ class AppDeploymentEnvironmentDeleteUseCase(BaseUseCase):
 
     async def __call__(
         self,
-        namespace: str,
+        project_id: str,
         app_name: str,
         user_id: str
     ) -> EnvironmentDeleteResponse:
         """App Environment 삭제"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

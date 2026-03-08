@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.app.base_use_case import BaseUseCase
 from src.dependencies.dns import get_dns_provider
@@ -21,7 +22,7 @@ class ProjectDnsDeleteUseCase(BaseUseCase):
         """Project DNS 삭제"""
 
         deleted = await self.dns_provider.delete_subdomain_record(
-            project_name=f"project-{project_id}",
+            project_name=ProjectId(project_id).namespace,
             subdomain=subdomain
         )
 

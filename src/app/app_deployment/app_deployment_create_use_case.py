@@ -3,6 +3,7 @@
 from typing import List
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import AppCreateRequest, ContainerSpec
 from src.api.v1.app.schemas.response import (
@@ -33,15 +34,20 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            namespace: str,
+            project_id: str,
             payload: AppCreateRequest,
             user_id: str
     ) -> AppCreateResponse:
         """App(Deployment) 생성"""
 
+        namespace = ProjectId(project_id).namespace
+
+        # K8s 이름 규칙(RFC 1123): 언더스코어 불가 → 하이픈으로 변환
+        k8s_name = payload.name.replace("_", "-")
+
         # naming convention은 Deployment 도메인 객체에서 결정되므로
         # 임시 객체로 이름을 도출한다
-        _name_ref = Deployment(name=payload.name, namespace=namespace)
+        _name_ref = Deployment(name=k8s_name, namespace=namespace)
 
         # 1. ID(ServiceAccount) 바인딩
         sa = ServiceAccount(
@@ -64,7 +70,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
         for spec in payload.containers:
             if spec.disk:
-                pvc_name = f"{payload.name}-{spec.name}-pvc"
+                pvc_name = f"{k8s_name}-{spec.name}-pvc"
                 access_modes = ["ReadWriteOnce"]
 
                 pvc = PersistentVolumeClaim(
@@ -105,7 +111,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             labels.update(payload.labels)
 
         deployment = Deployment(
-            name=payload.name,
+            name=k8s_name,
             namespace=namespace,
             replicas=payload.replicas,
             containers=self._build_containers(payload.containers),

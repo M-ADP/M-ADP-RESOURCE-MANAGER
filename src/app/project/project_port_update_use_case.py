@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.core.kubernetes.service import ServiceNotFoundException, PortNotFoundException
 from src.api.v1.project.schmas.request import ProjectPortUpdateRequest
@@ -24,7 +25,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
         """Project 포트 수정 (Service 업데이트)"""
 
         # 1. 기존 Service 조회
-        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=f"project-{project_id}")
+        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=ProjectId(project_id).namespace)
         if not existing_service:
             raise ServiceNotFoundException()
 

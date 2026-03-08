@@ -1,6 +1,7 @@
 """App Deployment Environment 수정 Use Case (ConfigMap 수정)"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import EnvironmentUpdateRequest
 from src.api.v1.app.schemas.response import EnvironmentUpdateResponse
@@ -21,12 +22,14 @@ class AppDeploymentEnvironmentUpdateUseCase(BaseUseCase):
 
     async def __call__(
         self,
-        namespace: str,
+        project_id: str,
         app_name: str,
         payload: EnvironmentUpdateRequest,
         user_id: str
     ) -> EnvironmentUpdateResponse:
         """App Environment 완전 교체"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

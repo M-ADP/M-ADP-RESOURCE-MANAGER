@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.request import ProjectDnsPortBindRequest
 from src.app.base_use_case import BaseUseCase
@@ -24,7 +25,7 @@ class ProjectDnsPortBindUseCase(BaseUseCase):
         """Project DNS와 Service를 바인딩합니다."""
 
         updated_service = await self.dns_provider.bind_dns_to_service(
-            project_name=f"project-{project_id}",
+            project_name=ProjectId(project_id).namespace,
             subdomain=subdomain,
             target_service_name=payload.target_service_name
         )

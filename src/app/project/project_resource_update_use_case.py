@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.request import ProjectResourceUpdateRequest
 from src.app.base_use_case import BaseUseCase
@@ -27,7 +28,7 @@ class ProjectResourceUpdateUseCase(BaseUseCase):
 
     async def _update_resource_quota(self, project_id: str, payload: ProjectResourceUpdateRequest) -> ResourceQuota:
         quotas = await self.project_repo.find_all_resource_quotas(
-            namespace=f"project-{project_id}",
+            namespace=ProjectId(project_id).namespace,
             label_selector="managed-by=madp",
         )
         if not quotas:

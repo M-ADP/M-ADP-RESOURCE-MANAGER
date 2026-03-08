@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.request import ProjectPortOpenRequest
 from src.app.base_use_case import BaseUseCase
@@ -23,7 +24,7 @@ class ProjectPortOpenUseCase(BaseUseCase):
         """Project 포트 개방 (Service 생성)"""
 
         # 1. 서비스 이름 중복 확인
-        namespace = f"project-{project_id}"
+        namespace = ProjectId(project_id).namespace
         existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=namespace)
         if existing_service:
             raise ServiceAlreadyExistsException()

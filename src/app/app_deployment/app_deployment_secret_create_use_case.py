@@ -1,6 +1,7 @@
 """App Deployment Secret 생성 Use Case"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import SecretCreateRequest
 from src.api.v1.app.schemas.response import SecretCreateResponse
@@ -21,12 +22,14 @@ class AppDeploymentSecretCreateUseCase(BaseUseCase):
 
     async def __call__(
         self,
-        namespace: str,
+        project_id: str,
         app_name: str,
         payload: SecretCreateRequest,
         user_id: str
     ) -> SecretCreateResponse:
         """App Secret 저장 및 Vault 접근 구조 설정"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

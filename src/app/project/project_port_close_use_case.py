@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.app.base_use_case import BaseUseCase
 from src.core.project import ProjectRepository
@@ -19,4 +20,4 @@ class ProjectPortCloseUseCase(BaseUseCase):
             service_id: str
     ) -> bool:
         """Project 포트 정리 (Service 삭제)"""
-        return await self.project_repo.delete_service(id=service_id, namespace=f"project-{project_id}")
+        return await self.project_repo.delete_service(id=service_id, namespace=ProjectId(project_id).namespace)
