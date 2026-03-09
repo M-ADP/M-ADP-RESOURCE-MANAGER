@@ -180,13 +180,10 @@ async def get_app_deployment_repository() -> AppDeploymentRepository:
 
 async def get_project_repository() -> ProjectRepository:
     """ProjectRepository 인스턴스 반환"""
-    from src.dependencies.vault import get_vault_client
-
     k8s_client = await get_kubernetes_client()
     return K8sProjectRepository(
         namespace_manager=NamespaceManager(k8s_client),
         resource_quota_manager=ResourceQuotaManager(k8s_client),
         service_manager=ServiceManager(k8s_client),
         service_account_manager=ServiceAccountManager(k8s_client),
-        vault_client=get_vault_client(),
     )

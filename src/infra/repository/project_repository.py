@@ -15,8 +15,6 @@ from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.service import ServiceManager
 from src.infra.kubernetes.managers.service_account import ServiceAccountManager
-from src.infra.vault.client import VaultClient
-from src.infra.vault.exceptions import VaultSecretException
 
 
 class K8sProjectRepository(ProjectRepository):
@@ -28,14 +26,12 @@ class K8sProjectRepository(ProjectRepository):
         resource_quota_manager: ResourceQuotaManager,
         service_manager: ServiceManager,
         service_account_manager: ServiceAccountManager,
-        vault_client: VaultClient,
         harbor_config: Optional[HarborConfig] = None,
     ):
         self._namespace_manager = namespace_manager
         self._resource_quota_manager = resource_quota_manager
         self._service_manager = service_manager
         self._service_account_manager = service_account_manager
-        self._vault_client = vault_client
         self._harbor = harbor_config or HarborConfig()
 
     # ── Project (Bundle) ─────────────────────────────────────────────────────
@@ -184,20 +180,12 @@ class K8sProjectRepository(ProjectRepository):
     # ── 내부 전용 (Project 번들 내부에서만 사용) ─────────────────────────────
 
     async def _save_docker_registry_secret(self, name: str, namespace: str) -> None:
-        """Vault에서 Harbor 자격증명을 읽어 K8s docker-registry Secret 생성"""
-        creds = await self._vault_client.get_secret(self._harbor.vault_secret_path)
-        if not creds or "username" not in creds or "password" not in creds:
-            raise VaultSecretException(
-                secret_path=self._harbor.vault_secret_path,
-                operation="조회",
-                reason="Harbor 자격증명(username/password)이 Vault에 없습니다",
-            )
         await self._service_account_manager.create_docker_registry_secret(
             name=name,
             namespace=namespace,
             registry=self._harbor.url,
-            username=creds["username"],
-            password=creds["password"],
+            username=self._harbor.username,
+            password=self._harbor.password,
         )
 
     # ── 변환 헬퍼 ────────────────────────────────────────────────────────────
