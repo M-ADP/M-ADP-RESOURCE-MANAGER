@@ -14,6 +14,7 @@ from src.api.v1.app.schemas.response import (
 )
 from src.app.base_use_case import BaseUseCase
 from src.app.project.exceptions import ProjectNotFoundException
+from src.common.config.harbor import HarborConfig
 from src.common.const import DefaultLabel
 from src.core.app_deployment import AppDeploymentRepository
 from src.core.kubernetes.deployment import Deployment, Container, Volume
@@ -31,6 +32,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
     ):
         self.app_deployment_repo = app_deployment_repo
+        self._harbor = HarborConfig()
 
     async def __call__(
             self,
@@ -57,7 +59,8 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 "app_deployment": payload.name,
                 "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
-            }
+            },
+            image_pull_secrets=[self._harbor.pull_secret_name],
         )
         try:
             await self.app_deployment_repo.bind_identity(sa)

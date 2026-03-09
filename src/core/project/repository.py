@@ -6,6 +6,7 @@ from typing import List, Optional
 from src.core.kubernetes.namespace import Namespace
 from src.core.kubernetes.resource_quota import ResourceQuota
 from src.core.kubernetes.service import Service
+from src.core.project.model import Project
 
 
 class ProjectRepository(ABC):
@@ -15,6 +16,12 @@ class ProjectRepository(ABC):
     Namespace, ResourceQuota, Service 등
     Project 생명주기에 필요한 모든 인프라 연산을 추상화한다.
     """
+
+    # ── Project (Bundle) ─────────────────────────────────────────────────────
+
+    @abstractmethod
+    async def save(self, project: Project) -> Project:
+        """Project 전체 프로비저닝 (Namespace + ResourceQuota + Harbor Secret + SA, 멱등성 보장)"""
 
     # ── Namespace ────────────────────────────────────────────────────────────
 
