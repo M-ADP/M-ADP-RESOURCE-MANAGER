@@ -9,7 +9,7 @@ class ContainerResourceRequest(BaseModel):
     """컨테이너 리소스 요청 모델"""
 
     cpu: str = Field(default="100m", description="CPU 리소스 (예: 100m, 500m, 1)")
-    memory: str = Field(default="128Mi", description="메모리 리소스 (예: 128Mi, 512Mi, 1Gi)")
+    memory: str = Field(default="128Mi", description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
 
 
 class ContainerResources(BaseModel):
@@ -22,7 +22,7 @@ class ContainerResources(BaseModel):
 class DiskSpec(BaseModel):
     """디스크(PVC) 스펙 모델"""
 
-    size: str = Field(..., description="디스크 크기 (예: 1Gi, 500Mi)", examples=["1Gi"])
+    size: str = Field(..., description="디스크 크기 (예: 500Mi, 1024Mi)", examples=["1024Mi"])
     mount_path: str = Field(default="/data", description="마운트 경로", examples=["/data"])
     storage_class: str = Field(default="linstor-pv-fast", description="StorageClass 이름")
 
@@ -61,13 +61,13 @@ class AppRevisionResourceRequest(BaseModel):
     """App 리소스 수정 요청 모델"""
 
     cpu: Optional[str] = Field(default=None, description="CPU 리소스 (예: 100m, 500m, 1)")
-    memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1Gi)")
+    memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
 
 
 class AppRevisionDiskRequest(BaseModel):
     """App 디스크 수정 요청 모델 (증가만 가능)"""
 
-    size: str = Field(..., description="새로운 디스크 크기 (증가만 가능, 예: 2Gi)")
+    size: str = Field(..., description="새로운 디스크 크기 (증가만 가능, 예: 2048Mi)")
 
 
 class AppRevisionRequest(BaseModel):
