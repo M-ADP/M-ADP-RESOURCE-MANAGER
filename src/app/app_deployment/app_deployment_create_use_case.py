@@ -16,6 +16,7 @@ from src.app.base_use_case import BaseUseCase
 from src.app.project.exceptions import ProjectNotFoundException
 from src.common.config.harbor import HarborConfig
 from src.common.const import DefaultLabel
+from src.common.util import NameConverter
 from src.core.app_deployment import AppDeploymentRepository
 from src.core.kubernetes.deployment import Deployment, Container, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
@@ -43,8 +44,8 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
         namespace = ProjectId(project_id).namespace
 
-        # K8s 이름 규칙(RFC 1123): 언더스코어 불가 → 하이픈으로 변환
-        k8s_name = payload.name.replace("_", "-")
+        # K8s 이름 규칙(RFC 1123): 한글 로마자 변환 + 소문자 + 유효하지 않은 문자 제거
+        k8s_name = NameConverter.to_k8s_name(payload.name)
 
         # naming convention은 Deployment 도메인 객체에서 결정되므로
         # 임시 객체로 이름을 도출한다
@@ -100,9 +101,9 @@ class AppDeploymentCreateUseCase(BaseUseCase):
 
         # 3. Deployment 배포
         labels = {
-            "app_deployment": payload.name,
+            "app_deployment": k8s_name,
             "x-project-id": namespace,
-            "x-app-deployment-id": payload.name,
+            "x-app-deployment-id": k8s_name,
             **DefaultLabel.MANAGED_BY_LABEL,
         }
 

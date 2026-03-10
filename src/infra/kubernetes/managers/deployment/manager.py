@@ -138,7 +138,7 @@ class DeploymentManager:
                     return existing
 
             self.logger.logger.error(
-                f"Deployment 생성 실패: {name} - {e.reason}"
+                f"Deployment 생성 실패: {name} - {e.reason} | body: {e.body}"
             )
             raise DeploymentCreationException(
                 deployment_name=name,

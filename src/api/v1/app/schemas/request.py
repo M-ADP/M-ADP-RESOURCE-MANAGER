@@ -30,7 +30,7 @@ class DiskSpec(BaseModel):
 class ContainerSpec(BaseModel):
     """컨테이너 스펙 모델"""
 
-    name: str = Field(..., min_length=1, description="컨테이너 이름", examples=["main"])
+    name: str = Field(..., min_length=1, pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", description="컨테이너 이름 (RFC 1123: 소문자, 숫자, 하이픈만 허용)", examples=["main"])
     image: str = Field(..., min_length=1, description="컨테이너 이미지", examples=["nginx:latest"])
     ports: Optional[List[Annotated[int, Field(ge=1, le=65535)]]] = Field(
         default=None,
