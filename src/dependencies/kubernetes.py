@@ -20,6 +20,7 @@ from src.infra.kubernetes.managers.statefulset import StatefulSetManager
 from src.infra.kubernetes.managers.job import JobManager
 from src.infra.kubernetes.managers.cronjob import CronJobManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
+from src.infra.kubernetes.managers.rolebinding import RoleBindingManager
 from src.infra.kubernetes.managers.node import NodeManager
 from src.infra.kubernetes.managers.storage_class import StorageClassManager
 from src.infra.repository import K8sAppDeploymentRepository, K8sProjectRepository
@@ -186,4 +187,5 @@ async def get_project_repository() -> ProjectRepository:
         resource_quota_manager=ResourceQuotaManager(k8s_client),
         service_manager=ServiceManager(k8s_client),
         service_account_manager=ServiceAccountManager(k8s_client),
+        rolebinding_manager=RoleBindingManager(k8s_client),
     )

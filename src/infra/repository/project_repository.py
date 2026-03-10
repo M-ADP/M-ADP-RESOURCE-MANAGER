@@ -5,6 +5,7 @@ from typing import List, Optional
 from kubernetes_asyncio.client import V1Namespace, V1ResourceQuota, V1Service
 
 from src.common.config.harbor import HarborConfig
+from src.common.config.kubernetes import KubernetesConfig
 from src.common.const import DefaultLabel
 from src.core.project import ProjectRepository
 from src.core.project.model import Project
@@ -13,6 +14,7 @@ from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimit
 from src.core.kubernetes.service import Service, ServicePort
 from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
+from src.infra.kubernetes.managers.rolebinding import RoleBindingManager
 from src.infra.kubernetes.managers.service import ServiceManager
 from src.infra.kubernetes.managers.service_account import ServiceAccountManager
 
@@ -26,13 +28,17 @@ class K8sProjectRepository(ProjectRepository):
         resource_quota_manager: ResourceQuotaManager,
         service_manager: ServiceManager,
         service_account_manager: ServiceAccountManager,
+        rolebinding_manager: RoleBindingManager,
         harbor_config: Optional[HarborConfig] = None,
+        k8s_config: Optional[KubernetesConfig] = None,
     ):
         self._namespace_manager = namespace_manager
         self._resource_quota_manager = resource_quota_manager
         self._service_manager = service_manager
         self._service_account_manager = service_account_manager
+        self._rolebinding_manager = rolebinding_manager
         self._harbor = harbor_config or HarborConfig()
+        self._k8s_config = k8s_config or KubernetesConfig()
 
     # ── Project (Bundle) ─────────────────────────────────────────────────────
 
@@ -73,6 +79,20 @@ class K8sProjectRepository(ProjectRepository):
         await self._save_docker_registry_secret(
             name=self._harbor.pull_secret_name,
             namespace=ns_id,
+        )
+
+        # 4. RMS SA → PVC ClusterRole RoleBinding (새 namespace에 PVC 권한 부여)
+        await self._rolebinding_manager.create_rolebinding(
+            name="resource-manager-pvc-binding",
+            namespace=ns_id,
+            role_name=self._k8s_config.pvc_cluster_role_name,
+            role_kind="ClusterRole",
+            subjects=[{
+                "kind": "ServiceAccount",
+                "name": self._k8s_config.service_account_name,
+                "namespace": self._k8s_config.service_account_namespace,
+            }],
+            labels={**DefaultLabel.MANAGED_BY_LABEL},
         )
 
         return project.with_result(

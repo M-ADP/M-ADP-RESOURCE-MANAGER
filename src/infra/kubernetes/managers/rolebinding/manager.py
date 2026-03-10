@@ -42,6 +42,7 @@ class RoleBindingManager:
         namespace: str,
         role_name: str,
         subjects: List[Dict[str, str]],
+        role_kind: str = "Role",
         labels: Optional[Dict[str, str]] = None,
         annotations: Optional[Dict[str, str]] = None,
     ) -> V1RoleBinding:
@@ -72,7 +73,7 @@ class RoleBindingManager:
         # RoleRef 생성
         role_ref = V1RoleRef(
             api_group="rbac.authorization.k8s.io",
-            kind="Role",
+            kind=role_kind,
             name=role_name,
         )
 

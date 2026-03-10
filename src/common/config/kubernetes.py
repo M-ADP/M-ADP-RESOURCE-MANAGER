@@ -29,3 +29,10 @@ class KubernetesConfig(BaseSettings):
 
     # 재시도 횟수
     max_retries: int = 3
+
+    # RMS 파드의 ServiceAccount 이름 (project namespace에 RoleBinding 생성 시 사용)
+    service_account_name: str = "resource-manager"
+    service_account_namespace: str = "madp"
+
+    # project namespace에 부여할 ClusterRole 이름
+    pvc_cluster_role_name: str = "resource-manager-pvc-manager"
