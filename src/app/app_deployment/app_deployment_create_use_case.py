@@ -5,7 +5,7 @@ from typing import List
 from fastapi import Depends
 from src.core.project import ProjectId
 
-from src.api.v1.app.schemas.request import AppCreateRequest, ContainerSpec
+from src.api.v1.app.schemas.request import AppCreateRequest
 from src.api.v1.app.schemas.response import (
     AppCreateResponse,
     ContainerInfo,
@@ -17,8 +17,8 @@ from src.app.project.exceptions import ProjectNotFoundException
 from src.common.config.harbor import HarborConfig
 from src.common.const import DefaultLabel
 from src.common.util import NameConverter
-from src.core.app_deployment import AppDeploymentRepository
-from src.core.kubernetes.deployment import Deployment, Container, Volume
+from src.core.app_deployment import AppContainer, AppContainerDisk, AppDeployment, AppDeploymentRepository
+from src.core.kubernetes.deployment import Container, Deployment, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
 from src.core.kubernetes.service_account import ServiceAccount
 from src.dependencies.kubernetes import get_app_deployment_repository
@@ -66,58 +66,64 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         except NamespaceNotFoundException as exc:
             raise ProjectNotFoundException() from exc
 
-        # 2. 스토리지 프로비저닝
-        pvc_infos: List[PvcInfo] = []
-        volumes: List[Volume] = []
-
-        for spec in payload.containers:
-            if spec.disk:
-                pvc_name = f"{k8s_name}-{spec.name}-pvc"
-                access_modes = ["ReadWriteOnce"]
-
-                pvc = PersistentVolumeClaim(
-                    name=pvc_name,
-                    namespace=namespace,
-                    storage=spec.disk.size,
-                    storage_class_name=spec.disk.storage_class,
-                    access_modes=access_modes,
-                    labels={
-                        "app_deployment": payload.name,
-                        "container": spec.name,
-                        **DefaultLabel.MANAGED_BY_LABEL,
-                    },
-                )
-
-                saved_pvc = await self.app_deployment_repo.provision_storage(pvc)
-
-                volumes.append(Volume(name=f"{spec.name}-volume", pvc_name=pvc_name))
-                pvc_infos.append(PvcInfo(
-                    name=pvc_name,
-                    size=spec.disk.size,
-                    mount_path=spec.disk.mount_path,
-                    storage_class=spec.disk.storage_class,
-                    phase=saved_pvc.phase,
-                ))
-
-        # 3. Deployment 배포
+        # 2. AppDeployment 도메인 객체 생성 (Harbor URL 포함)
         labels = {
             "app_deployment": k8s_name,
             "x-project-id": namespace,
             "x-app-deployment-id": k8s_name,
             **DefaultLabel.MANAGED_BY_LABEL,
         }
-
         if payload.labels:
             labels.update(payload.labels)
 
-        deployment = Deployment(
+        app_deployment = self._build_app_deployment(
             name=k8s_name,
             namespace=namespace,
-            replicas=payload.replicas,
-            containers=self._build_containers(payload.containers),
-            volumes=volumes,
+            payload=payload,
             labels=labels,
-            annotations=payload.annotations or {},
+        )
+
+        # 3. 스토리지 프로비저닝
+        pvc_infos: List[PvcInfo] = []
+        volumes: List[Volume] = []
+
+        for container in app_deployment.containers:
+            if container.disk:
+                pvc_name = f"{k8s_name}-{container.name}-pvc"
+
+                pvc = PersistentVolumeClaim(
+                    name=pvc_name,
+                    namespace=namespace,
+                    storage=container.disk.size,
+                    storage_class_name=container.disk.storage_class,
+                    access_modes=["ReadWriteOnce"],
+                    labels={
+                        "app_deployment": payload.name,
+                        "container": container.name,
+                        **DefaultLabel.MANAGED_BY_LABEL,
+                    },
+                )
+
+                saved_pvc = await self.app_deployment_repo.provision_storage(pvc)
+
+                volumes.append(Volume(name=f"{container.name}-volume", pvc_name=pvc_name))
+                pvc_infos.append(PvcInfo(
+                    name=pvc_name,
+                    size=container.disk.size,
+                    mount_path=container.disk.mount_path,
+                    storage_class=container.disk.storage_class,
+                    phase=saved_pvc.phase,
+                ))
+
+        # 4. Deployment 배포
+        deployment = Deployment(
+            name=app_deployment.name,
+            namespace=app_deployment.namespace,
+            replicas=app_deployment.replicas,
+            containers=self._build_k8s_containers(app_deployment.containers),
+            volumes=volumes,
+            labels=app_deployment.labels,
+            annotations=app_deployment.annotations,
             service_account_name=_name_ref.sa_name,
             image_pull_secrets=[self._harbor.pull_secret_name],
         )
@@ -148,40 +154,73 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             status=status_info,
         )
 
-    def _build_containers(self, container_specs: List[ContainerSpec]) -> List[Container]:
+    def _build_app_deployment(
+            self,
+            name: str,
+            namespace: str,
+            payload: AppCreateRequest,
+            labels: dict,
+    ) -> AppDeployment:
+        """API 요청을 AppDeployment 도메인 객체로 변환.
+
+        Harbor URL을 이미지 경로 앞에 붙인다.
+        """
         containers = []
-        for spec in container_specs:
-            ports = []
-            if spec.ports:
-                ports = [{"container_port": port} for port in spec.ports]
-
-            resources = {
-                "requests": {
-                    "cpu": spec.resources.requests.cpu,
-                    "memory": spec.resources.requests.memory,
-                },
-                "limits": {
-                    "cpu": spec.resources.limits.cpu,
-                    "memory": spec.resources.limits.memory,
-                },
-            }
-
-            env = []
-            if spec.env:
-                env = [{"name": key, "value": value} for key, value in spec.env.items()]
-
-            volume_mounts = []
+        for spec in payload.containers:
+            disk = None
             if spec.disk:
-                volume_mounts = [{"name": f"{spec.name}-volume", "mount_path": spec.disk.mount_path}]
-
-            containers.append(Container(
+                disk = AppContainerDisk(
+                    size=spec.disk.size,
+                    mount_path=spec.disk.mount_path,
+                    storage_class=spec.disk.storage_class,
+                )
+            containers.append(AppContainer(
                 name=spec.name,
                 image=spec.image,
-                ports=ports,
-                resources=resources,
-                env=env,
+                harbor_url=self._harbor.url,
+                ports=spec.ports or [],
+                resources={
+                    "requests": {
+                        "cpu": spec.resources.requests.cpu,
+                        "memory": spec.resources.requests.memory,
+                    },
+                    "limits": {
+                        "cpu": spec.resources.limits.cpu,
+                        "memory": spec.resources.limits.memory,
+                    },
+                },
+                env=spec.env or {},
                 command=spec.command,
                 args=spec.args,
+                disk=disk,
+            ))
+        return AppDeployment(
+            name=name,
+            namespace=namespace,
+            containers=containers,
+            replicas=payload.replicas,
+            labels=labels,
+            annotations=payload.annotations or {},
+        )
+
+    def _build_k8s_containers(self, containers: List[AppContainer]) -> List[Container]:
+        """AppContainer 목록을 K8s Container 도메인 객체로 변환"""
+        k8s_containers = []
+        for c in containers:
+            ports = [{"container_port": port} for port in c.ports]
+            env = [{"name": key, "value": value} for key, value in c.env.items()]
+            volume_mounts = []
+            if c.disk:
+                volume_mounts = [{"name": f"{c.name}-volume", "mount_path": c.disk.mount_path}]
+
+            k8s_containers.append(Container(
+                name=c.name,
+                image=c.full_image,
+                ports=ports,
+                resources=c.resources,
+                env=env,
+                command=c.command,
+                args=c.args,
                 volume_mounts=volume_mounts,
             ))
-        return containers
+        return k8s_containers
