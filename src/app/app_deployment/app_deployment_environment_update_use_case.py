@@ -25,7 +25,6 @@ class AppDeploymentEnvironmentUpdateUseCase(BaseUseCase):
         project_id: str,
         app_name: str,
         payload: EnvironmentUpdateRequest,
-        user_id: str
     ) -> EnvironmentUpdateResponse:
         """App Environment 완전 교체"""
 

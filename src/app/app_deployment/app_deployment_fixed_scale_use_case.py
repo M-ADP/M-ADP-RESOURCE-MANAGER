@@ -25,7 +25,6 @@ class AppDeploymentFixedScaleUseCase(BaseUseCase):
         app_name: str,
         project_id: str,
         payload: FixedScaleRequest,
-        user_id: str,
     ) -> FixedScaleResponse:
         """App에 고정 레플리카 설정 (HPA 비활성화)"""
 

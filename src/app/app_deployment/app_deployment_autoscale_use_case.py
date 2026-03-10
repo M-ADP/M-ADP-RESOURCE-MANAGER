@@ -26,7 +26,6 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
         app_name: str,
         project_id: str,
         payload: AutoScaleRequest,
-        user_id: str,
     ) -> AutoScaleResponse:
         """App에 HPA 설정"""
 
@@ -45,7 +44,6 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
             target_memory_utilization=payload.target_memory_utilization,
             labels={
                 "app_deployment": deployment.name,
-                "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             },
         )

@@ -9,7 +9,6 @@ from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.app.monitoring.dto import AppResourceStatusResponse
-from src.api.v1.deps.user import get_user
 from src.app.app_deployment.app_deployment_create_use_case import AppDeploymentCreateUseCase
 from src.app.app_deployment.app_deployment_delete_use_case import AppDeploymentDeleteUseCase
 from src.app.app_deployment.app_deployment_revision_use_case import AppDeploymentRevisionUseCase
@@ -24,7 +23,6 @@ from src.app.app_deployment.app_deployment_environment_create_use_case import Ap
 from src.app.app_deployment.app_deployment_environment_update_use_case import AppDeploymentEnvironmentUpdateUseCase
 from src.app.app_deployment.app_deployment_environment_delete_use_case import AppDeploymentEnvironmentDeleteUseCase
 from src.core.response import SuccessResponse
-from src.core.user.model import User
 
 app_router = APIRouter(prefix="/apps", tags=["apps"])
 
@@ -33,7 +31,6 @@ app_router = APIRouter(prefix="/apps", tags=["apps"])
 async def create_app_deployment(
     payload: AppCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
-    user: User = Depends(get_user),
     app_deployment_create_usecase: AppDeploymentCreateUseCase = Depends(AppDeploymentCreateUseCase)
 ):
     """App Deployment 생성
@@ -45,7 +42,6 @@ async def create_app_deployment(
     app_deployment_create_result = await app_deployment_create_usecase(
         project_id=project_id,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment created successfully",
@@ -57,7 +53,6 @@ async def create_app_deployment(
 async def delete_app_deployment(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_delete_usecase: AppDeploymentDeleteUseCase = Depends(AppDeploymentDeleteUseCase)
 ):
     """App Deployment 삭제
@@ -67,7 +62,6 @@ async def delete_app_deployment(
     app_deployment_delete_result = await app_deployment_delete_usecase(
         app_name=name,
         project_id=project_id,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment deleted successfully",
@@ -80,7 +74,6 @@ async def revise_app_deployment(
     payload: AppRevisionRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_revision_usecase: AppDeploymentRevisionUseCase = Depends(AppDeploymentRevisionUseCase)
 ):
     """App Deployment 리소스 수정
@@ -93,7 +86,6 @@ async def revise_app_deployment(
         app_name=name,
         project_id=project_id,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment revised successfully",
@@ -108,7 +100,6 @@ async def get_app_deployment_logs(
     tail_lines: Optional[int] = Query(default=100, description="마지막 N줄만 조회"),
     since_seconds: Optional[int] = Query(default=None, description="최근 N초 동안의 로그만 조회"),
     timestamps: bool = Query(default=False, description="타임스탬프 포함 여부"),
-    user: User = Depends(get_user),
     app_deployment_logs_usecase: AppDeploymentLogsUseCase = Depends(AppDeploymentLogsUseCase),
 ):
     """App Deployment 로그 조회
@@ -132,7 +123,6 @@ async def get_app_deployment_logs(
 async def get_app_deployment_events(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_events_usecase: AppDeploymentEventsUseCase = Depends(AppDeploymentEventsUseCase),
 ):
     """App Deployment 이벤트 조회
@@ -153,7 +143,6 @@ async def get_app_deployment_events(
 async def get_app_deployment_resource(
     project_id: str = Path(..., description="프로젝트 ID"),
     names: List[str] = Query(..., description="App 이름 목록 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_resource_status_usecase: AppResourceStatusUseCase = Depends(AppResourceStatusUseCase),
 ):
     """App Deployment 리소스 상태 조회
@@ -176,7 +165,6 @@ async def set_app_deployment_auto_scale(
     payload: AutoScaleRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_autoscale_usecase: AppDeploymentAutoScaleUseCase = Depends(AppDeploymentAutoScaleUseCase),
 ):
     """App Deployment Auto Scale 설정 (HPA 생성/수정)
@@ -189,7 +177,6 @@ async def set_app_deployment_auto_scale(
         app_name=name,
         project_id=project_id,
         payload=payload,
-        user_id=user.id,
     )
     return SuccessResponse(
         message="App deployment auto scale configured successfully",
@@ -202,7 +189,6 @@ async def set_app_deployment_fixed_scale(
     payload: FixedScaleRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_fixed_scale_usecase: AppDeploymentFixedScaleUseCase = Depends(AppDeploymentFixedScaleUseCase),
 ):
     """App Deployment Fixed Scale 설정 (고정 레플리카)
@@ -215,7 +201,6 @@ async def set_app_deployment_fixed_scale(
         app_name=name,
         project_id=project_id,
         payload=payload,
-        user_id=user.id,
     )
     return SuccessResponse(
         message="App deployment fixed scale configured successfully",
@@ -228,7 +213,6 @@ async def create_app_deployment_secret(
     payload: SecretCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_secret_create_usecase: AppDeploymentSecretCreateUseCase = Depends(AppDeploymentSecretCreateUseCase)
 ):
     """App Deployment Secret 생성 및 Vault 설정
@@ -239,7 +223,6 @@ async def create_app_deployment_secret(
         project_id=project_id,
         app_name=name,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment secret created and configured successfully",
@@ -252,7 +235,6 @@ async def delete_app_deployment_secret(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
     secret_name: str = Path(..., description="삭제할 Secret 이름"),
-    user: User = Depends(get_user),
     app_deployment_secret_delete_usecase: AppDeploymentSecretDeleteUseCase = Depends(AppDeploymentSecretDeleteUseCase)
 ):
     """App Deployment Secret 삭제
@@ -264,7 +246,6 @@ async def delete_app_deployment_secret(
         project_id=project_id,
         app_name=name,
         secret_name=secret_name,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment secret deleted successfully",
@@ -277,7 +258,6 @@ async def create_app_deployment_environment(
     payload: EnvironmentCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_environment_create_usecase: AppDeploymentEnvironmentCreateUseCase = Depends(AppDeploymentEnvironmentCreateUseCase)
 ):
     """App Deployment 환경 변수 추가 (ConfigMap 생성)
@@ -290,7 +270,6 @@ async def create_app_deployment_environment(
         project_id=project_id,
         app_name=name,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment environment variables created successfully",
@@ -303,7 +282,6 @@ async def update_app_deployment_environment(
     payload: EnvironmentUpdateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_environment_update_usecase: AppDeploymentEnvironmentUpdateUseCase = Depends(AppDeploymentEnvironmentUpdateUseCase)
 ):
     """App Deployment 환경 변수 수정 (ConfigMap 데이터 교체)
@@ -316,7 +294,6 @@ async def update_app_deployment_environment(
         project_id=project_id,
         app_name=name,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment environment variables updated successfully",
@@ -328,7 +305,6 @@ async def update_app_deployment_environment(
 async def delete_app_deployment_environment(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_environment_delete_usecase: AppDeploymentEnvironmentDeleteUseCase = Depends(AppDeploymentEnvironmentDeleteUseCase)
 ):
     """App Deployment 환경 변수 삭제 (ConfigMap 삭제)
@@ -339,7 +315,6 @@ async def delete_app_deployment_environment(
     app_deployment_environment_delete_result = await app_deployment_environment_delete_usecase(
         project_id=project_id,
         app_name=name,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment environment variables deleted successfully",

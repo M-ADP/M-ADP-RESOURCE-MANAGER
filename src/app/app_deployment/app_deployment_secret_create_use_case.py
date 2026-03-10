@@ -25,7 +25,6 @@ class AppDeploymentSecretCreateUseCase(BaseUseCase):
         project_id: str,
         app_name: str,
         payload: SecretCreateRequest,
-        user_id: str
     ) -> SecretCreateResponse:
         """App Secret 저장 및 Vault 접근 구조 설정"""
 

@@ -38,7 +38,6 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
             app_name: str,
             project_id: str,
             payload: AppRevisionRequest,
-            user_id: str
     ) -> AppRevisionResponse:
         """App(Deployment) 리소스 수정"""
 

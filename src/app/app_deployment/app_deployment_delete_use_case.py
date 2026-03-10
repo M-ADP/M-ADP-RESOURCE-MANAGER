@@ -23,7 +23,6 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
             self,
             app_name: str,
             project_id: str,
-            user_id: str
     ) -> AppDeleteResponse:
         """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 정리"""
 

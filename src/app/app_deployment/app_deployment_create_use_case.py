@@ -38,7 +38,6 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             self,
             project_id: str,
             payload: AppCreateRequest,
-            user_id: str
     ) -> AppCreateResponse:
         """App(Deployment) 생성"""
 
@@ -57,7 +56,6 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             namespace=namespace,
             labels={
                 "app_deployment": payload.name,
-                "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             },
             image_pull_secrets=[self._harbor.pull_secret_name],
@@ -85,7 +83,6 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                     labels={
                         "app_deployment": payload.name,
                         "container": spec.name,
-                        "owner": user_id,
                         **DefaultLabel.MANAGED_BY_LABEL,
                     },
                 )
@@ -104,7 +101,6 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         # 3. Deployment 배포
         labels = {
             "app_deployment": payload.name,
-            "owner": user_id,
             "x-project-id": namespace,
             "x-app-deployment-id": payload.name,
             **DefaultLabel.MANAGED_BY_LABEL,

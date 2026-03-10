@@ -23,7 +23,6 @@ class AppDeploymentEnvironmentDeleteUseCase(BaseUseCase):
         self,
         project_id: str,
         app_name: str,
-        user_id: str
     ) -> EnvironmentDeleteResponse:
         """App Environment 삭제"""
 

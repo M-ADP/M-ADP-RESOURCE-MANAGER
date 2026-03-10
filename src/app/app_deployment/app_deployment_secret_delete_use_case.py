@@ -24,7 +24,6 @@ class AppDeploymentSecretDeleteUseCase(BaseUseCase):
         project_id: str,
         app_name: str,
         secret_name: str,
-        user_id: str
     ) -> SecretDeleteResponse:
         """App Secret 삭제 및 Vault 접근 구조 정리"""
 

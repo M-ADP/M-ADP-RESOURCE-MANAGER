@@ -26,7 +26,6 @@ class AppDeploymentEnvironmentCreateUseCase(BaseUseCase):
         project_id: str,
         app_name: str,
         payload: EnvironmentCreateRequest,
-        user_id: str
     ) -> EnvironmentCreateResponse:
         """App Environment 생성 (없으면 신규 생성, 있으면 병합)"""
 
