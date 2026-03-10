@@ -40,6 +40,6 @@ def register_exception_handlers(app: FastAPI):
 
     @app.exception_handler(KubernetesResourceException)
     async def k8s_resource_handler(request: Request, exc: KubernetesResourceException):
-        return JSONResponse(status_code=500, content={"detail": exc.detail})
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
