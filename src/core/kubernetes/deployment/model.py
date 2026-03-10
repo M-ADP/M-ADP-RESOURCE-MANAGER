@@ -50,6 +50,7 @@ class Deployment:
     annotations: Dict[str, str] = field(default_factory=dict)
     selector_labels: Dict[str, str] = field(default_factory=dict)
     service_account_name: Optional[str] = None
+    image_pull_secrets: List[str] = field(default_factory=list)
     status: Optional[DeploymentStatus] = None
 
     # ── Naming convention properties ─────────────────────────────────────────

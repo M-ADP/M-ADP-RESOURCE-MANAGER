@@ -119,6 +119,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             labels=labels,
             annotations=payload.annotations or {},
             service_account_name=_name_ref.sa_name,
+            image_pull_secrets=[self._harbor.pull_secret_name],
         )
 
         saved_deployment = await self.app_deployment_repo.deploy(deployment)

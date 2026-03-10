@@ -1,8 +1,29 @@
 """App 요청 스키마"""
 
+import re
 from typing import Optional, List, Dict, Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _parse_memory_bytes(memory: str) -> int:
+    """메모리 문자열을 바이트로 변환 (예: '512Mi' → 536870912)"""
+    units = {
+        "Ki": 1024,
+        "Mi": 1024 ** 2,
+        "Gi": 1024 ** 3,
+        "Ti": 1024 ** 4,
+        "K": 1000,
+        "M": 1000 ** 2,
+        "G": 1000 ** 3,
+        "T": 1000 ** 4,
+    }
+    m = re.match(r'^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|K|M|G|T)?$', memory)
+    if not m:
+        return 0
+    value = float(m.group(1))
+    unit = m.group(2) or ""
+    return int(value * units.get(unit, 1))
 
 
 class ContainerResourceRequest(BaseModel):

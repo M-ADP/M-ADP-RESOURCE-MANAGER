@@ -6,6 +6,7 @@ from kubernetes_asyncio.client import (
     V1ObjectMeta,
     V1DeploymentSpec,
     V1LabelSelector,
+    V1LocalObjectReference,
     V1PodTemplateSpec,
     V1PodSpec,
     V1Container,
@@ -49,6 +50,7 @@ class DeploymentManager:
         pod_annotations: Optional[Dict[str, str]] = None,
         volumes: Optional[List[V1Volume]] = None,
         service_account_name: Optional[str] = None,
+        image_pull_secrets: Optional[List[str]] = None,
     ) -> V1Deployment:
         """Deployment 비동기 생성
 
@@ -64,6 +66,7 @@ class DeploymentManager:
             pod_annotations: Pod 어노테이션
             volumes: 볼륨 리스트 (PVC 마운트용)
             service_account_name: ServiceAccount 이름
+            image_pull_secrets: 이미지 풀 시크릿 이름 리스트
 
         Returns:
             생성되거나 기존에 존재하는 V1Deployment 객체
@@ -112,6 +115,9 @@ class DeploymentManager:
                         containers=containers,
                         volumes=volumes,
                         service_account_name=service_account_name,
+                        image_pull_secrets=[
+                            V1LocalObjectReference(name=s) for s in image_pull_secrets
+                        ] if image_pull_secrets else None,
                     ),
                 ),
             ),

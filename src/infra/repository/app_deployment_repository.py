@@ -96,6 +96,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             selector_labels=deployment.selector_labels or None,
             volumes=volumes,
             service_account_name=deployment.service_account_name,
+            image_pull_secrets=deployment.image_pull_secrets or None,
         )
         return self._deployment_to_domain(v1_dep)
 
