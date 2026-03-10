@@ -11,6 +11,13 @@ class ContainerResourceRequest(BaseModel):
     cpu: str = Field(default="100m", description="CPU 리소스 (예: 100m, 500m, 1)")
     memory: str = Field(default="128Mi", description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
 
+    @field_validator('memory')
+    @classmethod
+    def ensure_memory_unit(cls, v: str) -> str:
+        if v and v.isdigit():
+            return v + "Mi"
+        return v
+
 
 class ContainerResources(BaseModel):
     """컨테이너 리소스 제한 모델"""
@@ -62,6 +69,13 @@ class AppRevisionResourceRequest(BaseModel):
 
     cpu: Optional[str] = Field(default=None, description="CPU 리소스 (예: 100m, 500m, 1)")
     memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
+
+    @field_validator('memory')
+    @classmethod
+    def ensure_memory_unit(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.isdigit():
+            return v + "Mi"
+        return v
 
 
 class AppRevisionDiskRequest(BaseModel):
