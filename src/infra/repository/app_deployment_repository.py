@@ -71,6 +71,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
                 name=deployment.name,
                 namespace=deployment.namespace,
                 containers=containers,
+                image_pull_secrets=deployment.image_pull_secrets or None,
             )
             return self._deployment_to_domain(v1_dep)
 

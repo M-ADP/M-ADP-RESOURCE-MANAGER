@@ -611,13 +611,15 @@ class DeploymentManager:
         name: str,
         namespace: str,
         containers: List[V1Container],
+        image_pull_secrets: Optional[List[str]] = None,
     ) -> V1Deployment:
-        """Deployment 컨테이너 이미지 업데이트
+        """Deployment 컨테이너 이미지 및 imagePullSecrets 업데이트
 
         Args:
             name: Deployment 이름
             namespace: 네임스페이스
             containers: 이미지를 업데이트할 컨테이너 리스트
+            image_pull_secrets: 이미지 풀 시크릿 이름 리스트
 
         Returns:
             업데이트된 V1Deployment 객체
@@ -629,18 +631,16 @@ class DeploymentManager:
             f"Deployment 컨테이너 이미지 업데이트: {name} (namespace: {namespace})"
         )
 
-        body = {
-            "spec": {
-                "template": {
-                    "spec": {
-                        "containers": [
-                            {"name": c.name, "image": c.image}
-                            for c in containers
-                        ]
-                    }
-                }
-            }
+        pod_spec: dict = {
+            "containers": [
+                {"name": c.name, "image": c.image}
+                for c in containers
+            ]
         }
+        if image_pull_secrets is not None:
+            pod_spec["imagePullSecrets"] = [{"name": s} for s in image_pull_secrets]
+
+        body = {"spec": {"template": {"spec": pod_spec}}}
 
         try:
             dep = await self.k8s_client.apps_v1.patch_namespaced_deployment(
