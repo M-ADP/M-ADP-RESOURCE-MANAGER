@@ -63,6 +63,17 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     async def deploy(self, deployment: Deployment) -> Deployment:
         containers = [self._build_v1_container(c) for c in deployment.containers]
 
+        existing = await self._deployment_manager.get_deployment(
+            deployment.name, deployment.namespace
+        )
+        if existing:
+            v1_dep = await self._deployment_manager.update_container_images(
+                name=deployment.name,
+                namespace=deployment.namespace,
+                containers=containers,
+            )
+            return self._deployment_to_domain(v1_dep)
+
         volumes = None
         if deployment.volumes:
             volumes = [

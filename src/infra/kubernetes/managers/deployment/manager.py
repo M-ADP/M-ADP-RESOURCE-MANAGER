@@ -600,6 +600,74 @@ class DeploymentManager:
                 reason=str(e),
             )
 
+    async def update_container_images(
+        self,
+        name: str,
+        namespace: str,
+        containers: List[V1Container],
+    ) -> V1Deployment:
+        """Deployment 컨테이너 이미지 업데이트
+
+        Args:
+            name: Deployment 이름
+            namespace: 네임스페이스
+            containers: 이미지를 업데이트할 컨테이너 리스트
+
+        Returns:
+            업데이트된 V1Deployment 객체
+
+        Raises:
+            DeploymentUpdateException: 업데이트 실패 시
+        """
+        self.logger.info(
+            f"Deployment 컨테이너 이미지 업데이트: {name} (namespace: {namespace})"
+        )
+
+        body = {
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {"name": c.name, "image": c.image}
+                            for c in containers
+                        ]
+                    }
+                }
+            }
+        }
+
+        try:
+            dep = await self.k8s_client.apps_v1.patch_namespaced_deployment(
+                name=name,
+                namespace=namespace,
+                body=body,
+            )
+            self.logger.info(
+                f"Deployment 컨테이너 이미지 업데이트 완료: {name} (namespace: {namespace})"
+            )
+            return dep
+
+        except ApiException as e:
+            self.logger.logger.error(
+                f"Deployment 컨테이너 이미지 업데이트 실패: {name} - {e.reason}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.logger.error(
+                f"Deployment 컨테이너 이미지 업데이트 중 예외 발생: {name} - {str(e)}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
+
     async def get_deployment_status(
         self,
         name: str,
