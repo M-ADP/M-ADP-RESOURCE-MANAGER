@@ -18,3 +18,17 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+
+  call-dev-serve:
+    needs: call-dev
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+    uses: M-ADP/M-ADP-GITHUB-ACTIONS/.github/workflows/dev-serve.yaml@master
+    with:
+      deploy_repo: "M-ADP/M-ADP-ARGOCD"
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
