@@ -3,6 +3,7 @@
 from typing import Optional
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.log_response import AppLogsResponse, PodLogInfo
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
@@ -22,12 +23,14 @@ class AppDeploymentLogsUseCase:
     async def __call__(
         self,
         app_name: str,
-        namespace: str,
+        project_id: str,
         tail_lines: Optional[int] = 100,
         since_seconds: Optional[int] = None,
         timestamps: bool = False,
     ) -> AppLogsResponse:
         """App 로그 조회"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

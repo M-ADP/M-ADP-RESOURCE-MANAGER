@@ -21,6 +21,7 @@ dependencies = [
     "frozenlist==1.8.0",
     "google-auth==2.45.0",
     "h11==0.16.0",
+    "hangul-romanize>=0.1.0",
     "hvac==2.4.0",
     "idna==3.11",
     "iniconfig==2.3.0",

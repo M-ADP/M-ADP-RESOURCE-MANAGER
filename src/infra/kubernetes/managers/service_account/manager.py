@@ -1,7 +1,10 @@
 """ServiceAccount 리소스 관리 클래스"""
 
+import base64
+import json
 from typing import Optional, Dict, List
 from kubernetes_asyncio.client import (
+    V1Secret,
     V1ServiceAccount,
     V1ObjectMeta,
     V1LocalObjectReference,
@@ -11,6 +14,7 @@ from kubernetes_asyncio.client.exceptions import ApiException
 from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core.logger import Logger, get_logger
 from src.infra.kubernetes.managers.namespace import NamespaceNotFoundException
+from .exceptions import ServiceAccountCreationException
 
 
 class ServiceAccountManager:
@@ -70,7 +74,12 @@ class ServiceAccountManager:
                 raise NamespaceNotFoundException(namespace_name=namespace)
 
             self.logger.error(f"ServiceAccount 생성 실패: {name} - {e.reason}")
-            raise e
+            raise ServiceAccountCreationException(
+                service_account_name=name,
+                namespace=namespace,
+                reason=e.reason or str(e),
+                detail={"status": e.status, "body": e.body},
+            )
 
     async def get_service_account(
         self,
@@ -130,3 +139,61 @@ class ServiceAccountManager:
         """ServiceAccount 존재 여부 확인"""
         sa = await self.get_service_account(name, namespace)
         return sa is not None
+
+    async def create_docker_registry_secret(
+        self,
+        name: str,
+        namespace: str,
+        registry: str,
+        username: str,
+        password: str,
+        labels: Optional[Dict[str, str]] = None,
+    ) -> V1Secret:
+        """Namespace에 docker-registry 타입 Secret 생성 (imagePullSecret 용도)"""
+        self.logger.info(f"docker-registry Secret 생성 시도: {name} (namespace: {namespace})")
+
+        try:
+            existing = await self.k8s_client.core_v1.read_namespaced_secret(
+                name=name, namespace=namespace
+            )
+            self.logger.info(f"docker-registry Secret 이미 존재: {name} (namespace: {namespace})")
+            return existing
+        except ApiException as e:
+            if e.status != 404:
+                raise
+
+        auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+        docker_config = {
+            "auths": {
+                registry: {
+                    "username": username,
+                    "password": password,
+                    "auth": auth,
+                }
+            }
+        }
+        encoded = base64.b64encode(json.dumps(docker_config).encode()).decode()
+
+        secret = V1Secret(
+            metadata=V1ObjectMeta(name=name, namespace=namespace, labels=labels),
+            type="kubernetes.io/dockerconfigjson",
+            data={".dockerconfigjson": encoded},
+        )
+
+        created = await self.k8s_client.core_v1.create_namespaced_secret(
+            namespace=namespace, body=secret
+        )
+        self.logger.info(f"docker-registry Secret 생성 완료: {name} (namespace: {namespace})")
+        return created
+
+    async def delete_docker_registry_secret(self, name: str, namespace: str) -> bool:
+        """docker-registry Secret 삭제"""
+        try:
+            await self.k8s_client.core_v1.delete_namespaced_secret(
+                name=name, namespace=namespace
+            )
+            return True
+        except ApiException as e:
+            if e.status == 404:
+                return True
+            raise

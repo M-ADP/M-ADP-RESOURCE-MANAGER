@@ -6,6 +6,7 @@ from kubernetes_asyncio.client import (
     V1ObjectMeta,
     V1DeploymentSpec,
     V1LabelSelector,
+    V1LocalObjectReference,
     V1PodTemplateSpec,
     V1PodSpec,
     V1Container,
@@ -49,6 +50,7 @@ class DeploymentManager:
         pod_annotations: Optional[Dict[str, str]] = None,
         volumes: Optional[List[V1Volume]] = None,
         service_account_name: Optional[str] = None,
+        image_pull_secrets: Optional[List[str]] = None,
     ) -> V1Deployment:
         """Deployment 비동기 생성
 
@@ -64,6 +66,7 @@ class DeploymentManager:
             pod_annotations: Pod 어노테이션
             volumes: 볼륨 리스트 (PVC 마운트용)
             service_account_name: ServiceAccount 이름
+            image_pull_secrets: 이미지 풀 시크릿 이름 리스트
 
         Returns:
             생성되거나 기존에 존재하는 V1Deployment 객체
@@ -112,6 +115,9 @@ class DeploymentManager:
                         containers=containers,
                         volumes=volumes,
                         service_account_name=service_account_name,
+                        image_pull_secrets=[
+                            V1LocalObjectReference(name=s) for s in image_pull_secrets
+                        ] if image_pull_secrets else None,
                     ),
                 ),
             ),
@@ -138,7 +144,7 @@ class DeploymentManager:
                     return existing
 
             self.logger.logger.error(
-                f"Deployment 생성 실패: {name} - {e.reason}"
+                f"Deployment 생성 실패: {name} - {e.reason} | body: {e.body}"
             )
             raise DeploymentCreationException(
                 deployment_name=name,
@@ -593,6 +599,74 @@ class DeploymentManager:
         except Exception as e:
             self.logger.error(
                 f"Deployment 컨테이너 리소스 업데이트 중 예외 발생: {name} - {str(e)}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
+
+    async def update_container_images(
+        self,
+        name: str,
+        namespace: str,
+        containers: List[V1Container],
+        image_pull_secrets: Optional[List[str]] = None,
+    ) -> V1Deployment:
+        """Deployment 컨테이너 이미지 및 imagePullSecrets 업데이트
+
+        Args:
+            name: Deployment 이름
+            namespace: 네임스페이스
+            containers: 이미지를 업데이트할 컨테이너 리스트
+            image_pull_secrets: 이미지 풀 시크릿 이름 리스트
+
+        Returns:
+            업데이트된 V1Deployment 객체
+
+        Raises:
+            DeploymentUpdateException: 업데이트 실패 시
+        """
+        self.logger.info(
+            f"Deployment 컨테이너 이미지 업데이트: {name} (namespace: {namespace})"
+        )
+
+        pod_spec: dict = {
+            "containers": [
+                {"name": c.name, "image": c.image}
+                for c in containers
+            ]
+        }
+        if image_pull_secrets is not None:
+            pod_spec["imagePullSecrets"] = [{"name": s} for s in image_pull_secrets]
+
+        body = {"spec": {"template": {"spec": pod_spec}}}
+
+        try:
+            dep = await self.k8s_client.apps_v1.patch_namespaced_deployment(
+                name=name,
+                namespace=namespace,
+                body=body,
+            )
+            self.logger.info(
+                f"Deployment 컨테이너 이미지 업데이트 완료: {name} (namespace: {namespace})"
+            )
+            return dep
+
+        except ApiException as e:
+            self.logger.logger.error(
+                f"Deployment 컨테이너 이미지 업데이트 실패: {name} - {e.reason}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.logger.error(
+                f"Deployment 컨테이너 이미지 업데이트 중 예외 발생: {name} - {str(e)}"
             )
             raise DeploymentUpdateException(
                 deployment_name=name,

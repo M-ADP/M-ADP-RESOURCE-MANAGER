@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.request import ProjectPortOpenRequest
 from src.app.base_use_case import BaseUseCase
@@ -17,13 +18,14 @@ class ProjectPortOpenUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             payload: ProjectPortOpenRequest
     ) -> Service:
         """Project 포트 개방 (Service 생성)"""
 
         # 1. 서비스 이름 중복 확인
-        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=project_name)
+        namespace = ProjectId(project_id).namespace
+        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=namespace)
         if existing_service:
             raise ServiceAlreadyExistsException()
 
@@ -42,17 +44,17 @@ class ProjectPortOpenUseCase(BaseUseCase):
         service = Service(
             id=payload.service_id,
             name=payload.service_name,
-            namespace=project_name,
+            namespace=namespace,
             ports=[service_port],
             selector={"app_deployment": payload.target_deployment_name},
             service_type=service_type_value,
             labels={
                 "madp.io/name": payload.service_name,
-                "x-project-id": project_name,
+                "x-project-id": project_id,
                 "x-app-deployment-id": payload.target_deployment_name,
             },
             annotations={
-                "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.mdeveloper.platform"
+                "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_id}.mdeveloper.platform"
             } if service_type_value == "LoadBalancer" else {},
         )
 

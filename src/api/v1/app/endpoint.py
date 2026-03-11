@@ -9,7 +9,6 @@ from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.app.monitoring.dto import AppResourceStatusResponse
-from src.api.v1.deps.user import get_user
 from src.app.app_deployment.app_deployment_create_use_case import AppDeploymentCreateUseCase
 from src.app.app_deployment.app_deployment_delete_use_case import AppDeploymentDeleteUseCase
 from src.app.app_deployment.app_deployment_revision_use_case import AppDeploymentRevisionUseCase
@@ -24,16 +23,14 @@ from src.app.app_deployment.app_deployment_environment_create_use_case import Ap
 from src.app.app_deployment.app_deployment_environment_update_use_case import AppDeploymentEnvironmentUpdateUseCase
 from src.app.app_deployment.app_deployment_environment_delete_use_case import AppDeploymentEnvironmentDeleteUseCase
 from src.core.response import SuccessResponse
-from src.core.user.model import User
 
 app_router = APIRouter(prefix="/apps", tags=["apps"])
 
 
-@app_router.post("/{namespace}", response_model=SuccessResponse[AppCreateResponse])
+@app_router.post("/{project_id}", response_model=SuccessResponse[AppCreateResponse])
 async def create_app_deployment(
     payload: AppCreateRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
-    user: User = Depends(get_user),
+    project_id: str = Path(..., description="프로젝트 ID"),
     app_deployment_create_usecase: AppDeploymentCreateUseCase = Depends(AppDeploymentCreateUseCase)
 ):
     """App Deployment 생성
@@ -43,9 +40,8 @@ async def create_app_deployment(
     - 최대 리소스 (CPU, Memory) 설정 가능
     """
     app_deployment_create_result = await app_deployment_create_usecase(
-        namespace=namespace,
+        project_id=project_id,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment created successfully",
@@ -53,11 +49,10 @@ async def create_app_deployment(
     )
 
 
-@app_router.delete("/{namespace}/{name}", response_model=SuccessResponse[AppDeleteResponse])
+@app_router.delete("/{project_id}/{name}", response_model=SuccessResponse[AppDeleteResponse])
 async def delete_app_deployment(
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_delete_usecase: AppDeploymentDeleteUseCase = Depends(AppDeploymentDeleteUseCase)
 ):
     """App Deployment 삭제
@@ -66,8 +61,7 @@ async def delete_app_deployment(
     """
     app_deployment_delete_result = await app_deployment_delete_usecase(
         app_name=name,
-        namespace=namespace,
-        user_id=user.id
+        project_id=project_id,
     )
     return SuccessResponse(
         message="App deployment deleted successfully",
@@ -75,12 +69,11 @@ async def delete_app_deployment(
     )
 
 
-@app_router.patch("/{namespace}/{name}", response_model=SuccessResponse[AppRevisionResponse])
+@app_router.patch("/{project_id}/{name}", response_model=SuccessResponse[AppRevisionResponse])
 async def revise_app_deployment(
     payload: AppRevisionRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_revision_usecase: AppDeploymentRevisionUseCase = Depends(AppDeploymentRevisionUseCase)
 ):
     """App Deployment 리소스 수정
@@ -91,9 +84,8 @@ async def revise_app_deployment(
     """
     app_deployment_revision_result = await app_deployment_revision_usecase(
         app_name=name,
-        namespace=namespace,
+        project_id=project_id,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment revised successfully",
@@ -101,14 +93,13 @@ async def revise_app_deployment(
     )
 
 
-@app_router.get("/{namespace}/{name}/logs", response_model=SuccessResponse[AppLogsResponse])
+@app_router.get("/{project_id}/{name}/logs", response_model=SuccessResponse[AppLogsResponse])
 async def get_app_deployment_logs(
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
     tail_lines: Optional[int] = Query(default=100, description="마지막 N줄만 조회"),
     since_seconds: Optional[int] = Query(default=None, description="최근 N초 동안의 로그만 조회"),
     timestamps: bool = Query(default=False, description="타임스탬프 포함 여부"),
-    user: User = Depends(get_user),
     app_deployment_logs_usecase: AppDeploymentLogsUseCase = Depends(AppDeploymentLogsUseCase),
 ):
     """App Deployment 로그 조회
@@ -117,7 +108,7 @@ async def get_app_deployment_logs(
     """
     app_deployment_logs_result = await app_deployment_logs_usecase(
         app_name=name,
-        namespace=namespace,
+        project_id=project_id,
         tail_lines=tail_lines,
         since_seconds=since_seconds,
         timestamps=timestamps,
@@ -128,11 +119,10 @@ async def get_app_deployment_logs(
     )
 
 
-@app_router.get("/{namespace}/{name}/events", response_model=SuccessResponse[AppEventsResponse])
+@app_router.get("/{project_id}/{name}/events", response_model=SuccessResponse[AppEventsResponse])
 async def get_app_deployment_events(
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_events_usecase: AppDeploymentEventsUseCase = Depends(AppDeploymentEventsUseCase),
 ):
     """App Deployment 이벤트 조회
@@ -141,7 +131,7 @@ async def get_app_deployment_events(
     """
     app_deployment_events_result = await app_deployment_events_usecase(
         app_name=name,
-        namespace=namespace,
+        project_id=project_id,
     )
     return SuccessResponse(
         message="App deployment events retrieved successfully",
@@ -149,11 +139,10 @@ async def get_app_deployment_events(
     )
 
 
-@app_router.get("/{namespace}/resource", response_model=SuccessResponse[List[AppResourceStatusResponse]])
+@app_router.get("/{project_id}/resource", response_model=SuccessResponse[List[AppResourceStatusResponse]])
 async def get_app_deployment_resource(
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     names: List[str] = Query(..., description="App 이름 목록 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_resource_status_usecase: AppResourceStatusUseCase = Depends(AppResourceStatusUseCase),
 ):
     """App Deployment 리소스 상태 조회
@@ -162,7 +151,7 @@ async def get_app_deployment_resource(
     존재하지 않는 앱은 결과에서 제외됩니다.
     """
     app_resource_status_result = await app_resource_status_usecase(
-        project_id=namespace,
+        project_id=project_id,
         app_ids=names,
     )
     return SuccessResponse(
@@ -171,12 +160,11 @@ async def get_app_deployment_resource(
     )
 
 
-@app_router.patch("/{namespace}/{name}/auto-scale", response_model=SuccessResponse[AutoScaleResponse])
+@app_router.patch("/{project_id}/{name}/auto-scale", response_model=SuccessResponse[AutoScaleResponse])
 async def set_app_deployment_auto_scale(
     payload: AutoScaleRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_autoscale_usecase: AppDeploymentAutoScaleUseCase = Depends(AppDeploymentAutoScaleUseCase),
 ):
     """App Deployment Auto Scale 설정 (HPA 생성/수정)
@@ -187,9 +175,8 @@ async def set_app_deployment_auto_scale(
     """
     app_deployment_autoscale_result = await app_deployment_autoscale_usecase(
         app_name=name,
-        namespace=namespace,
+        project_id=project_id,
         payload=payload,
-        user_id=user.id,
     )
     return SuccessResponse(
         message="App deployment auto scale configured successfully",
@@ -197,12 +184,11 @@ async def set_app_deployment_auto_scale(
     )
 
 
-@app_router.patch("/{namespace}/{name}/fixed-scale", response_model=SuccessResponse[FixedScaleResponse])
+@app_router.patch("/{project_id}/{name}/fixed-scale", response_model=SuccessResponse[FixedScaleResponse])
 async def set_app_deployment_fixed_scale(
     payload: FixedScaleRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_fixed_scale_usecase: AppDeploymentFixedScaleUseCase = Depends(AppDeploymentFixedScaleUseCase),
 ):
     """App Deployment Fixed Scale 설정 (고정 레플리카)
@@ -213,9 +199,8 @@ async def set_app_deployment_fixed_scale(
     """
     app_deployment_fixed_scale_result = await app_deployment_fixed_scale_usecase(
         app_name=name,
-        namespace=namespace,
+        project_id=project_id,
         payload=payload,
-        user_id=user.id,
     )
     return SuccessResponse(
         message="App deployment fixed scale configured successfully",
@@ -223,12 +208,11 @@ async def set_app_deployment_fixed_scale(
     )
 
 
-@app_router.post("/{namespace}/{name}/secrets", response_model=SuccessResponse[SecretCreateResponse])
+@app_router.post("/{project_id}/{name}/secrets", response_model=SuccessResponse[SecretCreateResponse])
 async def create_app_deployment_secret(
     payload: SecretCreateRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_secret_create_usecase: AppDeploymentSecretCreateUseCase = Depends(AppDeploymentSecretCreateUseCase)
 ):
     """App Deployment Secret 생성 및 Vault 설정
@@ -236,10 +220,9 @@ async def create_app_deployment_secret(
     Vault에 Secret을 저장하고, Pod가 접근할 수 있도록 Policy와 Role을 자동 설정합니다.
     """
     app_deployment_secret_create_result = await app_deployment_secret_create_usecase(
-        namespace=namespace,
+        project_id=project_id,
         app_name=name,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment secret created and configured successfully",
@@ -247,12 +230,11 @@ async def create_app_deployment_secret(
     )
 
 
-@app_router.delete("/{namespace}/{name}/secrets/{secret_name}", response_model=SuccessResponse[SecretDeleteResponse])
+@app_router.delete("/{project_id}/{name}/secrets/{secret_name}", response_model=SuccessResponse[SecretDeleteResponse])
 async def delete_app_deployment_secret(
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
     secret_name: str = Path(..., description="삭제할 Secret 이름"),
-    user: User = Depends(get_user),
     app_deployment_secret_delete_usecase: AppDeploymentSecretDeleteUseCase = Depends(AppDeploymentSecretDeleteUseCase)
 ):
     """App Deployment Secret 삭제
@@ -261,10 +243,9 @@ async def delete_app_deployment_secret(
     만약 해당 App의 모든 Secret이 삭제되면, 관련된 Policy와 Role도 자동으로 정리됩니다.
     """
     app_deployment_secret_delete_result = await app_deployment_secret_delete_usecase(
-        namespace=namespace,
+        project_id=project_id,
         app_name=name,
         secret_name=secret_name,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment secret deleted successfully",
@@ -272,12 +253,11 @@ async def delete_app_deployment_secret(
     )
 
 
-@app_router.post("/{namespace}/{name}/environment", response_model=SuccessResponse[EnvironmentCreateResponse])
+@app_router.post("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentCreateResponse])
 async def create_app_deployment_environment(
     payload: EnvironmentCreateRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_environment_create_usecase: AppDeploymentEnvironmentCreateUseCase = Depends(AppDeploymentEnvironmentCreateUseCase)
 ):
     """App Deployment 환경 변수 추가 (ConfigMap 생성)
@@ -287,10 +267,9 @@ async def create_app_deployment_environment(
     - ConfigMap 이름은 {app_deployment-name}-env 형식으로 생성됩니다.
     """
     app_deployment_environment_create_result = await app_deployment_environment_create_usecase(
-        namespace=namespace,
+        project_id=project_id,
         app_name=name,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment environment variables created successfully",
@@ -298,12 +277,11 @@ async def create_app_deployment_environment(
     )
 
 
-@app_router.put("/{namespace}/{name}/environment", response_model=SuccessResponse[EnvironmentUpdateResponse])
+@app_router.put("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentUpdateResponse])
 async def update_app_deployment_environment(
     payload: EnvironmentUpdateRequest,
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_environment_update_usecase: AppDeploymentEnvironmentUpdateUseCase = Depends(AppDeploymentEnvironmentUpdateUseCase)
 ):
     """App Deployment 환경 변수 수정 (ConfigMap 데이터 교체)
@@ -313,10 +291,9 @@ async def update_app_deployment_environment(
     - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
     """
     app_deployment_environment_update_result = await app_deployment_environment_update_usecase(
-        namespace=namespace,
+        project_id=project_id,
         app_name=name,
         payload=payload,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment environment variables updated successfully",
@@ -324,11 +301,10 @@ async def update_app_deployment_environment(
     )
 
 
-@app_router.delete("/{namespace}/{name}/environment", response_model=SuccessResponse[EnvironmentDeleteResponse])
+@app_router.delete("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentDeleteResponse])
 async def delete_app_deployment_environment(
-    namespace: str = Path(..., description="네임스페이스 (프로젝트)"),
+    project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    user: User = Depends(get_user),
     app_deployment_environment_delete_usecase: AppDeploymentEnvironmentDeleteUseCase = Depends(AppDeploymentEnvironmentDeleteUseCase)
 ):
     """App Deployment 환경 변수 삭제 (ConfigMap 삭제)
@@ -337,9 +313,8 @@ async def delete_app_deployment_environment(
     - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
     """
     app_deployment_environment_delete_result = await app_deployment_environment_delete_usecase(
-        namespace=namespace,
+        project_id=project_id,
         app_name=name,
-        user_id=user.id
     )
     return SuccessResponse(
         message="App deployment environment variables deleted successfully",

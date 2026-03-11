@@ -33,7 +33,7 @@ from src.infra.kubernetes.managers.deployment import DeploymentManager
 from src.infra.kubernetes.managers.hpa import HpaManager
 from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
 from src.infra.kubernetes.managers.pod import PodManager
-from src.infra.kubernetes.managers.serviceaccount import ServiceAccountManager
+from src.infra.kubernetes.managers.service_account import ServiceAccountManager
 from src.infra.vault.client import VaultClient
 
 
@@ -63,6 +63,18 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     async def deploy(self, deployment: Deployment) -> Deployment:
         containers = [self._build_v1_container(c) for c in deployment.containers]
 
+        existing = await self._deployment_manager.get_deployment(
+            deployment.name, deployment.namespace
+        )
+        if existing:
+            v1_dep = await self._deployment_manager.update_container_images(
+                name=deployment.name,
+                namespace=deployment.namespace,
+                containers=containers,
+                image_pull_secrets=deployment.image_pull_secrets or None,
+            )
+            return self._deployment_to_domain(v1_dep)
+
         volumes = None
         if deployment.volumes:
             volumes = [
@@ -85,6 +97,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             selector_labels=deployment.selector_labels or None,
             volumes=volumes,
             service_account_name=deployment.service_account_name,
+            image_pull_secrets=deployment.image_pull_secrets or None,
         )
         return self._deployment_to_domain(v1_dep)
 

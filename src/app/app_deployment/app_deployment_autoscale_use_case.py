@@ -1,6 +1,7 @@
 """App Deployment Auto Scale Use Case"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import AutoScaleRequest
 from src.api.v1.app.schemas.response import AutoScaleResponse
@@ -23,11 +24,12 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
     async def __call__(
         self,
         app_name: str,
-        namespace: str,
+        project_id: str,
         payload: AutoScaleRequest,
-        user_id: str,
     ) -> AutoScaleResponse:
         """App에 HPA 설정"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
@@ -42,7 +44,6 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
             target_memory_utilization=payload.target_memory_utilization,
             labels={
                 "app_deployment": deployment.name,
-                "owner": user_id,
                 **DefaultLabel.MANAGED_BY_LABEL,
             },
         )

@@ -1,6 +1,7 @@
 """App Deployment Fixed Scale Use Case"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import FixedScaleRequest
 from src.api.v1.app.schemas.response import FixedScaleResponse
@@ -22,11 +23,12 @@ class AppDeploymentFixedScaleUseCase(BaseUseCase):
     async def __call__(
         self,
         app_name: str,
-        namespace: str,
+        project_id: str,
         payload: FixedScaleRequest,
-        user_id: str,
     ) -> FixedScaleResponse:
         """App에 고정 레플리카 설정 (HPA 비활성화)"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

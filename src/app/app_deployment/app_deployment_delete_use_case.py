@@ -1,6 +1,7 @@
 """App Deployment 삭제 Use Case"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.response import AppDeleteResponse
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
@@ -21,10 +22,11 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
     async def __call__(
             self,
             app_name: str,
-            namespace: str,
-            user_id: str
+            project_id: str,
     ) -> AppDeleteResponse:
         """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 정리"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회하여 연관 PVC 목록 확인
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

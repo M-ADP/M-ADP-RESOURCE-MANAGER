@@ -1,6 +1,7 @@
 """App Deployment Environment 생성 Use Case (ConfigMap 생성)"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.request import EnvironmentCreateRequest
 from src.api.v1.app.schemas.response import EnvironmentCreateResponse
@@ -22,12 +23,13 @@ class AppDeploymentEnvironmentCreateUseCase(BaseUseCase):
 
     async def __call__(
         self,
-        namespace: str,
+        project_id: str,
         app_name: str,
         payload: EnvironmentCreateRequest,
-        user_id: str
     ) -> EnvironmentCreateResponse:
         """App Environment 생성 (없으면 신규 생성, 있으면 병합)"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

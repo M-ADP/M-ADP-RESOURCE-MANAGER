@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.core.kubernetes.service import ServiceNotFoundException, PortNotFoundException
 from src.api.v1.project.schmas.request import ProjectPortUpdateRequest
@@ -18,13 +19,13 @@ class ProjectPortUpdateUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             payload: ProjectPortUpdateRequest
     ) -> Service:
         """Project 포트 수정 (Service 업데이트)"""
 
         # 1. 기존 Service 조회
-        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=project_name)
+        existing_service = await self.project_repo.find_service(id=payload.service_id, namespace=ProjectId(project_id).namespace)
         if not existing_service:
             raise ServiceNotFoundException()
 
@@ -42,7 +43,7 @@ class ProjectPortUpdateUseCase(BaseUseCase):
             updated_service = updated_service.with_service_type(payload.service_type)
             if payload.service_type == "LoadBalancer":
                 updated_service = updated_service.with_annotations({
-                    "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_name}.example.com"
+                    "external-dns.alpha.kubernetes.io/hostname": f"{payload.service_id}.{project_id}.example.com"
                 })
 
         # 4. Port 정보 업데이트

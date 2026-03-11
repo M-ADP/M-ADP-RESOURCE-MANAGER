@@ -1,15 +1,43 @@
 """App 요청 스키마"""
 
+import re
 from typing import Optional, List, Dict, Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _parse_memory_bytes(memory: str) -> int:
+    """메모리 문자열을 바이트로 변환 (예: '512Mi' → 536870912)"""
+    units = {
+        "Ki": 1024,
+        "Mi": 1024 ** 2,
+        "Gi": 1024 ** 3,
+        "Ti": 1024 ** 4,
+        "K": 1000,
+        "M": 1000 ** 2,
+        "G": 1000 ** 3,
+        "T": 1000 ** 4,
+    }
+    m = re.match(r'^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|K|M|G|T)?$', memory)
+    if not m:
+        return 0
+    value = float(m.group(1))
+    unit = m.group(2) or ""
+    return int(value * units.get(unit, 1))
 
 
 class ContainerResourceRequest(BaseModel):
     """컨테이너 리소스 요청 모델"""
 
     cpu: str = Field(default="100m", description="CPU 리소스 (예: 100m, 500m, 1)")
-    memory: str = Field(default="128Mi", description="메모리 리소스 (예: 128Mi, 512Mi, 1Gi)")
+    memory: str = Field(default="128Mi", description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
+
+    @field_validator('memory')
+    @classmethod
+    def ensure_memory_unit(cls, v: str) -> str:
+        if v and v.isdigit():
+            return v + "Mi"
+        return v
 
 
 class ContainerResources(BaseModel):
@@ -22,7 +50,7 @@ class ContainerResources(BaseModel):
 class DiskSpec(BaseModel):
     """디스크(PVC) 스펙 모델"""
 
-    size: str = Field(..., description="디스크 크기 (예: 1Gi, 500Mi)", examples=["1Gi"])
+    size: str = Field(..., description="디스크 크기 (예: 500Mi, 1024Mi)", examples=["1024Mi"])
     mount_path: str = Field(default="/data", description="마운트 경로", examples=["/data"])
     storage_class: str = Field(default="linstor-pv-fast", description="StorageClass 이름")
 
@@ -30,7 +58,7 @@ class DiskSpec(BaseModel):
 class ContainerSpec(BaseModel):
     """컨테이너 스펙 모델"""
 
-    name: str = Field(..., min_length=1, description="컨테이너 이름", examples=["main"])
+    name: str = Field(..., min_length=1, pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", description="컨테이너 이름 (RFC 1123: 소문자, 숫자, 하이픈만 허용)", examples=["main"])
     image: str = Field(..., min_length=1, description="컨테이너 이미지", examples=["nginx:latest"])
     ports: Optional[List[Annotated[int, Field(ge=1, le=65535)]]] = Field(
         default=None,
@@ -61,13 +89,20 @@ class AppRevisionResourceRequest(BaseModel):
     """App 리소스 수정 요청 모델"""
 
     cpu: Optional[str] = Field(default=None, description="CPU 리소스 (예: 100m, 500m, 1)")
-    memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1Gi)")
+    memory: Optional[str] = Field(default=None, description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
+
+    @field_validator('memory')
+    @classmethod
+    def ensure_memory_unit(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.isdigit():
+            return v + "Mi"
+        return v
 
 
 class AppRevisionDiskRequest(BaseModel):
     """App 디스크 수정 요청 모델 (증가만 가능)"""
 
-    size: str = Field(..., description="새로운 디스크 크기 (증가만 가능, 예: 2Gi)")
+    size: str = Field(..., description="새로운 디스크 크기 (증가만 가능, 예: 2048Mi)")
 
 
 class AppRevisionRequest(BaseModel):

@@ -1,6 +1,7 @@
 """App Deployment 이벤트 조회 UseCase"""
 
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.event_response import AppEventsResponse, EventInfo
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
@@ -20,9 +21,11 @@ class AppDeploymentEventsUseCase:
     async def __call__(
         self,
         app_name: str,
-        namespace: str,
+        project_id: str,
     ) -> AppEventsResponse:
         """App 이벤트 조회"""
+
+        namespace = ProjectId(project_id).namespace
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

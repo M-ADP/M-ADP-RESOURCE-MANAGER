@@ -1,4 +1,5 @@
 from fastapi import Depends
+from src.core.project import ProjectId
 
 from src.api.v1.project.schmas.request import ProjectDnsUpdateRequest
 from src.app.base_use_case import BaseUseCase
@@ -16,14 +17,14 @@ class ProjectDnsUpdateUseCase(BaseUseCase):
 
     async def __call__(
             self,
-            project_name: str,
+            project_id: str,
             old_subdomain: str,
             payload: ProjectDnsUpdateRequest
     ) -> DnsRecord:
         """Project DNS 수정"""
-        
+
         dns_record = await self.dns_provider.update_subdomain_record(
-            project_name=project_name,
+            project_name=ProjectId(project_id).namespace,
             old_subdomain=old_subdomain,
             new_subdomain=payload.new_subdomain
         )
