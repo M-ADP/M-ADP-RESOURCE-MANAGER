@@ -103,6 +103,7 @@ class DeploymentManager:
             ),
             spec=V1DeploymentSpec(
                 replicas=replicas,
+                revision_history_limit=0,
                 selector=V1LabelSelector(
                     match_labels=selector_match_labels,
                 ),
