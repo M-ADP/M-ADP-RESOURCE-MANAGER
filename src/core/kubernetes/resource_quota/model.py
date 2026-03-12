@@ -12,9 +12,9 @@ class ResourceQuotaLimits:
 
     def to_dict(self) -> Dict[str, str]:
         return {
-            "requests.cpu": self.cpu,
+            "requests.cpu": "100m",
             "limits.cpu": self.cpu,
-            "requests.memory": self.memory,
+            "requests.memory": "512Mi",
             "limits.memory": self.memory,
             "requests.storage": self.disk,
             "linstor-pv-fast.storageclass.storage.k8s.io/requests.storage": self.disk,
