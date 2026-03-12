@@ -125,13 +125,23 @@ class K8sProjectRepository(ProjectRepository):
     # ── ResourceQuota ────────────────────────────────────────────────────────
 
     async def save_resource_quota(self, resource_quota: ResourceQuota) -> ResourceQuota:
-        v1_rq = await self._resource_quota_manager.create_resource_quota(
-            name=resource_quota.id,
-            namespace=resource_quota.namespace,
-            hard_limits=resource_quota.hard_limits,
-            labels=resource_quota.labels or None,
-            annotations=resource_quota.annotations or None,
+        existing = await self._resource_quota_manager.get_resource_quota(
+            resource_quota.id, resource_quota.namespace
         )
+        if existing:
+            v1_rq = await self._resource_quota_manager.update_resource_quota(
+                name=resource_quota.id,
+                namespace=resource_quota.namespace,
+                hard_limits=resource_quota.hard_limits,
+            )
+        else:
+            v1_rq = await self._resource_quota_manager.create_resource_quota(
+                name=resource_quota.id,
+                namespace=resource_quota.namespace,
+                hard_limits=resource_quota.hard_limits,
+                labels=resource_quota.labels or None,
+                annotations=resource_quota.annotations or None,
+            )
         return self._resource_quota_to_domain(v1_rq)
 
     async def find_all_resource_quotas(

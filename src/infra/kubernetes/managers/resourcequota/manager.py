@@ -98,7 +98,7 @@ class ResourceQuotaManager:
                 body=resource_quota,
             )
             self.logger.info(
-                f"ResourceQuota 생성 완료: {name} (namespace: {namespace})"
+                f"ResourceQuota 생성 완료: {name} (namespace: {namespace}), limits: {hard_limits}"
             )
             return rq
 
