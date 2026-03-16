@@ -2,6 +2,7 @@ from typing import Optional
 
 from src.common.config.kubernetes import KubernetesConfig
 from src.core.app_deployment import AppDeploymentRepository
+from src.core.cloud_db import CloudDbRepository
 from src.core.project import ProjectRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
@@ -24,7 +25,7 @@ from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolume
 from src.infra.kubernetes.managers.rolebinding import RoleBindingManager
 from src.infra.kubernetes.managers.node import NodeManager
 from src.infra.kubernetes.managers.storage_class import StorageClassManager
-from src.infra.repository import K8sAppDeploymentRepository, K8sProjectRepository
+from src.infra.repository import K8sAppDeploymentRepository, K8sCloudDbRepository, K8sProjectRepository
 
 
 _k8s_client_instance: Optional[KubernetesClientImpl] = None
@@ -177,6 +178,23 @@ async def get_app_deployment_repository() -> AppDeploymentRepository:
     vault_client = get_vault_client()
     return K8sAppDeploymentRepository(
         deployment_manager=DeploymentManager(k8s_client),
+        pvc_manager=PersistentVolumeClaimManager(k8s_client),
+        service_account_manager=ServiceAccountManager(k8s_client),
+        hpa_manager=HpaManager(k8s_client),
+        pod_manager=PodManager(k8s_client),
+        configmap_manager=ConfigMapManager(k8s_client),
+        vault_client=vault_client,
+    )
+
+
+async def get_cloud_db_repository() -> CloudDbRepository:
+    """CloudDbRepository 인스턴스 반환"""
+    from src.dependencies.vault import get_vault_client
+
+    k8s_client = await get_kubernetes_client()
+    vault_client = get_vault_client()
+    return K8sCloudDbRepository(
+        statefulset_manager=StatefulSetManager(k8s_client),
         pvc_manager=PersistentVolumeClaimManager(k8s_client),
         service_account_manager=ServiceAccountManager(k8s_client),
         hpa_manager=HpaManager(k8s_client),

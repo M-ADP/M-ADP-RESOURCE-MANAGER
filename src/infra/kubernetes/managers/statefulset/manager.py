@@ -11,6 +11,8 @@ from kubernetes_asyncio.client import (
     V1Container,
     V1StatefulSetUpdateStrategy,
     V1PersistentVolumeClaim,
+    V1LocalObjectReference,
+    V1Volume,
 )
 from kubernetes_asyncio.client.exceptions import ApiException
 
@@ -47,6 +49,9 @@ class StatefulSetManager:
         labels: Optional[Dict[str, str]] = None,
         annotations: Optional[Dict[str, str]] = None,
         volume_claim_templates: Optional[List[V1PersistentVolumeClaim]] = None,
+        volumes: Optional[List[V1Volume]] = None,
+        service_account_name: Optional[str] = None,
+        image_pull_secrets: Optional[List[str]] = None,
         update_strategy: Optional[str] = "RollingUpdate",
         pod_management_policy: Optional[str] = "OrderedReady",
     ) -> V1StatefulSet:
@@ -103,6 +108,9 @@ class StatefulSetManager:
                     ),
                     spec=V1PodSpec(
                         containers=containers,
+                        volumes=volumes,
+                        service_account_name=service_account_name,
+                        image_pull_secrets=[V1LocalObjectReference(name=s) for s in image_pull_secrets] if image_pull_secrets else None,
                     ),
                 ),
                 volume_claim_templates=volume_claim_templates,
@@ -580,6 +588,172 @@ class StatefulSetManager:
             "current_revision": sts.status.current_revision,
             "update_revision": sts.status.update_revision,
         }
+
+    async def update_container_images(
+        self,
+        name: str,
+        namespace: str,
+        containers: List[V1Container],
+        image_pull_secrets: Optional[List[str]] = None,
+    ) -> V1StatefulSet:
+        """StatefulSet 컨테이너 이미지 업데이트
+
+        Args:
+            name: StatefulSet 이름
+            namespace: 네임스페이스
+            containers: 컨테이너 리스트 (name, image)
+            image_pull_secrets: 이미지 풀 시크릿 목록
+
+        Returns:
+            업데이트된 V1StatefulSet 객체
+
+        Raises:
+            StatefulSetUpdateException: 업데이트 실패 시
+        """
+        self.logger.info(
+            f"StatefulSet 컨테이너 이미지 업데이트: {name} (namespace: {namespace})"
+        )
+
+        patch_containers = [{"name": c.name, "image": c.image} for c in containers]
+        body: dict = {
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": patch_containers,
+                    }
+                }
+            }
+        }
+        if image_pull_secrets is not None:
+            body["spec"]["template"]["spec"]["imagePullSecrets"] = [
+                {"name": s} for s in image_pull_secrets
+            ]
+
+        try:
+            sts = await self.k8s_client.apps_v1.patch_namespaced_stateful_set(
+                name=name,
+                namespace=namespace,
+                body=body,
+            )
+            self.logger.info(
+                f"StatefulSet 컨테이너 이미지 업데이트 완료: {name} (namespace: {namespace})"
+            )
+            return sts
+
+        except ApiException as e:
+            self.logger.error(
+                f"StatefulSet 컨테이너 이미지 업데이트 실패: {name} - {e.reason}"
+            )
+            raise StatefulSetUpdateException(
+                statefulset_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"StatefulSet 컨테이너 이미지 업데이트 중 예외 발생: {name} - {str(e)}"
+            )
+            raise StatefulSetUpdateException(
+                statefulset_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
+
+    async def update_container_resources(
+        self,
+        name: str,
+        namespace: str,
+        container_name: str,
+        requests: Optional[Dict[str, str]] = None,
+        limits: Optional[Dict[str, str]] = None,
+    ) -> V1StatefulSet:
+        """StatefulSet 컨테이너 리소스 업데이트
+
+        Args:
+            name: StatefulSet 이름
+            namespace: 네임스페이스
+            container_name: 수정할 컨테이너 이름
+            requests: 새로운 리소스 요청량 (예: {"cpu": "200m", "memory": "256Mi"})
+            limits: 새로운 리소스 제한량 (예: {"cpu": "500m", "memory": "512Mi"})
+
+        Returns:
+            업데이트된 V1StatefulSet 객체
+
+        Raises:
+            StatefulSetUpdateException: 업데이트 실패 시
+        """
+        self.logger.info(
+            f"StatefulSet 컨테이너 리소스 업데이트: {name}/{container_name} (namespace: {namespace})"
+        )
+
+        existing = await self.get_statefulset(name, namespace)
+        if not existing or not existing.spec or not existing.spec.template or not existing.spec.template.spec:
+            raise StatefulSetUpdateException(
+                statefulset_name=name,
+                namespace=namespace,
+                reason="StatefulSet does not exist or spec is missing",
+            )
+
+        patch_containers = []
+        for c in existing.spec.template.spec.containers or []:
+            if c.name == container_name:
+                current_res = {}
+                if c.resources:
+                    if c.resources.requests:
+                        current_res["requests"] = dict(c.resources.requests)
+                    if c.resources.limits:
+                        current_res["limits"] = dict(c.resources.limits)
+                if requests is not None:
+                    current_res["requests"] = {**(current_res.get("requests") or {}), **requests}
+                if limits is not None:
+                    current_res["limits"] = {**(current_res.get("limits") or {}), **limits}
+                patch_containers.append({"name": c.name, "image": c.image, "resources": current_res})
+            else:
+                patch_containers.append({"name": c.name, "image": c.image})
+
+        body = {
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": patch_containers,
+                    }
+                }
+            }
+        }
+
+        try:
+            sts = await self.k8s_client.apps_v1.patch_namespaced_stateful_set(
+                name=name,
+                namespace=namespace,
+                body=body,
+            )
+            self.logger.info(
+                f"StatefulSet 컨테이너 리소스 업데이트 완료: {name}/{container_name}"
+            )
+            return sts
+
+        except ApiException as e:
+            self.logger.error(
+                f"StatefulSet 컨테이너 리소스 업데이트 실패: {name} - {e.reason}"
+            )
+            raise StatefulSetUpdateException(
+                statefulset_name=name,
+                namespace=namespace,
+                reason=e.reason,
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"StatefulSet 컨테이너 리소스 업데이트 중 예외 발생: {name} - {str(e)}"
+            )
+            raise StatefulSetUpdateException(
+                statefulset_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
 
     async def is_ready(
         self,
