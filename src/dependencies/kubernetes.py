@@ -6,6 +6,7 @@ from src.core.project import ProjectRepository
 from src.core.logger import Logger
 from src.infra.kubernetes import KubernetesClientImpl
 from src.infra.kubernetes.managers.gateway import IstioGatewayManager
+from src.infra.kubernetes.managers.virtualservice import IstioVirtualServiceManager
 from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.service import ServiceManager
@@ -73,6 +74,12 @@ async def get_gateway_manager() -> IstioGatewayManager:
     """IstioGatewayManager 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
     return IstioGatewayManager(k8s_client)
+
+
+async def get_virtualservice_manager() -> IstioVirtualServiceManager:
+    """IstioVirtualServiceManager 인스턴스 반환"""
+    k8s_client = await get_kubernetes_client()
+    return IstioVirtualServiceManager(k8s_client)
 
 
 async def get_service_manager() -> ServiceManager:

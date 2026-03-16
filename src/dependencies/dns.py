@@ -1,12 +1,8 @@
+from src.common.config.cloudflare import CloudflareConfig
 from src.core.dns import DnsProvider
-from src.infra.dns.external_dns_provider import ExternalDnsProvider
+from src.infra.dns.cloudflare_dns_provider import CloudflareDnsProvider
 
 
 def get_dns_provider() -> DnsProvider:
-    """
-    DnsProvider 의존성 주입
-
-    현재는 ExternalDnsProvider를 반환합니다.
-    향후 다른 DNS 제공자가 추가되면, 설정에 따라 다른 Provider를 반환하도록 수정할 수 있습니다.
-    """
-    return ExternalDnsProvider()
+    """DnsProvider 의존성 주입 — Cloudflare 직접 호출 방식"""
+    return CloudflareDnsProvider(CloudflareConfig())

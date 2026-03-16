@@ -7,7 +7,8 @@ from src.api.v1.app.schemas.response import AppDeleteResponse
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
 from src.app.base_use_case import BaseUseCase
 from src.core.app_deployment import AppDeploymentRepository
-from src.dependencies.kubernetes import get_app_deployment_repository
+from src.dependencies.kubernetes import get_app_deployment_repository, get_service_manager
+from src.infra.kubernetes.managers.service import ServiceManager
 
 
 class AppDeploymentDeleteUseCase(BaseUseCase):
@@ -16,8 +17,10 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
     def __init__(
             self,
             app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
+            service_manager: ServiceManager = Depends(get_service_manager),
     ):
         self.app_deployment_repo = app_deployment_repo
+        self.service_manager = service_manager
 
     async def __call__(
             self,
@@ -35,16 +38,22 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
 
         pvc_names = [v.pvc_name for v in deployment.volumes if v.pvc_name]
 
-        # 2. Deployment 제거
+        # 2. Service 삭제 (존재하지 않아도 무시)
+        try:
+            await self.service_manager.delete_service(f"{app_name}-svc", namespace)
+        except Exception:
+            pass
+
+        # 3. Deployment 제거
         deleted = await self.app_deployment_repo.undeploy(deployment)
 
-        # 3. ID(ServiceAccount) 바인딩 해제 (deployment.sa_name 자동 활용)
+        # 4. ID(ServiceAccount) 바인딩 해제 (deployment.sa_name 자동 활용)
         try:
             await self.app_deployment_repo.unbind_identity(deployment.sa_name, namespace)
         except Exception:
             pass
 
-        # 4. 스토리지 해제
+        # 5. 스토리지 해제
         for pvc_name in pvc_names:
             try:
                 await self.app_deployment_repo.deprovision_storage(pvc_name, namespace)

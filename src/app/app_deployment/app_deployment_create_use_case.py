@@ -2,6 +2,8 @@
 
 from typing import List
 
+from typing import List
+
 from fastapi import Depends
 from src.core.project import ProjectId
 
@@ -21,8 +23,9 @@ from src.core.app_deployment import AppContainer, AppContainerDisk, AppDeploymen
 from src.core.kubernetes.deployment import Container, Deployment, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
 from src.core.kubernetes.service_account import ServiceAccount
-from src.dependencies.kubernetes import get_app_deployment_repository
+from src.dependencies.kubernetes import get_app_deployment_repository, get_service_manager
 from src.infra.kubernetes.managers.namespace.exceptions import NamespaceNotFoundException
+from src.infra.kubernetes.managers.service import ServiceManager
 
 
 class AppDeploymentCreateUseCase(BaseUseCase):
@@ -31,8 +34,10 @@ class AppDeploymentCreateUseCase(BaseUseCase):
     def __init__(
             self,
             app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
+            service_manager: ServiceManager = Depends(get_service_manager),
     ):
         self.app_deployment_repo = app_deployment_repo
+        self.service_manager = service_manager
         self._harbor = HarborConfig()
 
     async def __call__(
@@ -129,6 +134,27 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         )
 
         saved_deployment = await self.app_deployment_repo.deploy(deployment)
+
+        # 5. Service(ClusterIP) 생성 — 포트 없으면 기본값 80 사용
+        all_ports = [
+            port
+            for spec in payload.containers
+            for port in (spec.ports or [])
+        ] or [80]
+        await self.service_manager.create_service(
+            name=f"{k8s_name}-svc",
+            namespace=namespace,
+            selector={"app_deployment": k8s_name},
+            ports=[
+                {"port": p, "target_port": p, "protocol": "TCP", "name": f"port-{p}"}
+                for p in all_ports
+            ],
+            service_type="ClusterIP",
+            labels={
+                "app_deployment": k8s_name,
+                **DefaultLabel.MANAGED_BY_LABEL,
+            },
+        )
 
         container_infos = [
             ContainerInfo(name=c.name, image=c.image)
