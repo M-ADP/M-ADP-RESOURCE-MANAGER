@@ -14,6 +14,8 @@ class CloudflareConfig(BaseSettings):
     api_token: str = ""
     zone_id: str = ""
     tunnel_id: str = ""
+    account_id: str = ""
+    gateway_url: str = ""
     base_domain: str = "example.com"
     proxied: bool = True
     ttl: int = 1  # 1 = Cloudflare automatic

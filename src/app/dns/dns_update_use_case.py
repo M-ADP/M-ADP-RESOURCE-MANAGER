@@ -17,8 +17,9 @@ from src.app.dns.exceptions import DnsRecordNotFoundException
 from src.common.config.cloudflare import CloudflareConfig
 from src.core.dns import DnsProvider
 from src.core.project import ProjectId
-from src.dependencies.dns import get_dns_provider
+from src.dependencies.dns import get_dns_provider, get_tunnel_client
 from src.dependencies.kubernetes import get_virtualservice_manager
+from src.infra.dns.cloudflare_tunnel_client import CloudflareTunnelClient
 from src.infra.kubernetes.managers.virtualservice import IstioVirtualServiceManager
 
 _DNS_ID_LABEL = "madp.io/dns-id"
@@ -32,9 +33,11 @@ class DnsUpdateUseCase(BaseUseCase):
         self,
         virtualservice_manager: IstioVirtualServiceManager = Depends(get_virtualservice_manager),
         dns_provider: DnsProvider = Depends(get_dns_provider),
+        tunnel_client: CloudflareTunnelClient = Depends(get_tunnel_client),
     ):
         self.virtualservice_manager = virtualservice_manager
         self.dns_provider = dns_provider
+        self.tunnel_client = tunnel_client
         self._cf = CloudflareConfig()
 
     async def __call__(self, dns_id: str, payload: DnsUpdateRequest) -> DnsUpdateResponse:
@@ -50,13 +53,18 @@ class DnsUpdateUseCase(BaseUseCase):
         new_subdomain = payload.subdomain
         new_full_domain = f"{new_subdomain}.{self._cf.base_domain}"
 
+        old_full_domain = f"{old_subdomain}.{self._cf.base_domain}"
+
         # 2. 기존 Cloudflare CNAME 삭제
         await self.dns_provider.delete_subdomain_record(
             project_name=namespace,
             subdomain=old_subdomain,
         )
 
-        # 3. VirtualService hosts + 레이블 patch
+        # 3. Tunnel Config ingress 규칙 변경 (단일 GET/PUT)
+        await self.tunnel_client.update_ingress_rule(old_full_domain, new_full_domain)
+
+        # 4. VirtualService hosts + 레이블 patch
         await self.virtualservice_manager.patch_virtualservice(
             name=vs_name,
             namespace=namespace,
@@ -64,7 +72,7 @@ class DnsUpdateUseCase(BaseUseCase):
             label_patch={_DNS_SUBDOMAIN_LABEL: new_subdomain},
         )
 
-        # 4. 새 Cloudflare CNAME 생성
+        # 5. 새 Cloudflare CNAME 생성
         await self.dns_provider.create_subdomain_record(
             project_name=namespace,
             subdomain=new_subdomain,

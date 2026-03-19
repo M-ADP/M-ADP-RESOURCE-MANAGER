@@ -16,8 +16,9 @@ from src.common.config.cloudflare import CloudflareConfig
 from src.common.const import DefaultLabel
 from src.core.dns import DnsProvider
 from src.core.project import ProjectId
-from src.dependencies.dns import get_dns_provider
+from src.dependencies.dns import get_dns_provider, get_tunnel_client
 from src.dependencies.kubernetes import get_deployment_manager, get_virtualservice_manager
+from src.infra.dns.cloudflare_tunnel_client import CloudflareTunnelClient
 from src.infra.kubernetes.managers.deployment import DeploymentManager
 from src.infra.kubernetes.managers.virtualservice import IstioVirtualServiceManager
 
@@ -33,10 +34,12 @@ class DnsCreateUseCase(BaseUseCase):
         deployment_manager: DeploymentManager = Depends(get_deployment_manager),
         virtualservice_manager: IstioVirtualServiceManager = Depends(get_virtualservice_manager),
         dns_provider: DnsProvider = Depends(get_dns_provider),
+        tunnel_client: CloudflareTunnelClient = Depends(get_tunnel_client),
     ):
         self.deployment_manager = deployment_manager
         self.virtualservice_manager = virtualservice_manager
         self.dns_provider = dns_provider
+        self.tunnel_client = tunnel_client
         self._cf = CloudflareConfig()
 
     async def __call__(self, payload: DnsCreateRequest) -> DnsCreateResponse:
@@ -84,7 +87,10 @@ class DnsCreateUseCase(BaseUseCase):
             labels=dns_labels,
         )
 
-        # 3. Cloudflare CNAME 생성
+        # 3. Tunnel Config ingress 규칙 upsert
+        await self.tunnel_client.add_ingress_rule(full_domain)
+
+        # 4. Cloudflare CNAME 생성
         await self.dns_provider.create_subdomain_record(
             project_name=namespace,
             subdomain=subdomain,
