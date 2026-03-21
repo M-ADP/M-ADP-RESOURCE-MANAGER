@@ -1,5 +1,6 @@
 """AppDeployment 도메인 Repository K8s + Vault 구현체"""
 
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from kubernetes_asyncio.client import (
@@ -247,8 +248,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             elif obj.kind == "Pod" and obj.name.startswith(f"{deployment.name}-"):
                 events.append(self._event_to_domain(event))
 
+        _epoch = datetime.min.replace(tzinfo=timezone.utc)
         events.sort(
-            key=lambda e: e.last_timestamp or e.first_timestamp or "",
+            key=lambda e: e.last_timestamp or e.first_timestamp or _epoch,
             reverse=True,
         )
         return events
