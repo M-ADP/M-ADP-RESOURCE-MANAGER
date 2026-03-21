@@ -21,7 +21,6 @@ project_router = APIRouter(prefix="/projects", tags=["projects"])
 @project_router.get("/{name}/resource", response_model=SuccessResponse[ProjectResourceStatusResponse])
 async def get_project_resources(
     name: str,
-    user: User = Depends(get_user),
     project_resource_status_usecase: ProjectResourceStatusUseCase = Depends(ProjectResourceStatusUseCase)
 ):
     resource_status = await project_resource_status_usecase(
@@ -69,7 +68,6 @@ async def delete_project(
 async def update_project_resources(
     name: str,
     payload: ProjectResourceUpdateRequest,
-    user: User = Depends(get_user),
     project_resource_update_usecase: ProjectResourceUpdateUseCase = Depends(ProjectResourceUpdateUseCase)
 ):
     updated_quota = await project_resource_update_usecase(
