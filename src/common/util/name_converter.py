@@ -31,4 +31,5 @@ class NameConverter:
         result = re.sub(r"[^a-z0-9-]", "-", result)
         result = re.sub(r"-+", "-", result)
         result = result.strip("-")
+        result = "app-" + result
         return result
