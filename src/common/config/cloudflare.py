@@ -16,6 +16,6 @@ class CloudflareConfig(BaseSettings):
     tunnel_id: str = ""
     account_id: str = ""
     gateway_url: str = ""
-    base_domain: str = "example.com"
+    base_domain: str = "madp.cloud"
     proxied: bool = True
     ttl: int = 1  # 1 = Cloudflare automatic

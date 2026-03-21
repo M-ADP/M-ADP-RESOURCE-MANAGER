@@ -139,6 +139,27 @@ async def get_app_deployment_events(
     )
 
 
+@app_router.get("/{project_id}/{name}/resource", response_model=SuccessResponse[AppResourceStatusResponse])
+async def get_app_deployment_resource_single(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    app_resource_status_usecase: AppResourceStatusUseCase = Depends(AppResourceStatusUseCase),
+):
+    """App Deployment 리소스 상태 단일 조회
+
+    단일 Deployment의 리소스 설정(Request/Limit)과 현재 상태(Replicas)를 조회합니다.
+    존재하지 않는 앱은 404를 반환합니다.
+    """
+    result = await app_resource_status_usecase._get_single(
+        project_id=project_id,
+        app_id=name,
+    )
+    return SuccessResponse(
+        message="App deployment resource status retrieved successfully",
+        data=result,
+    )
+
+
 @app_router.get("/{project_id}/resource", response_model=SuccessResponse[List[AppResourceStatusResponse]])
 async def get_app_deployment_resource(
     project_id: str = Path(..., description="프로젝트 ID"),
