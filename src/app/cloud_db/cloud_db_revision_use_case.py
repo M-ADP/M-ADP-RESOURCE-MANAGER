@@ -5,7 +5,7 @@ from typing import Optional, Dict
 from fastapi import Depends
 from src.core.project import ProjectId
 
-from src.api.v1.cloud_db.schemas.request import CloudDbRevisionRequest
+from src.api.v1.cloud_db.schemas.request import CloudDBRevisionRequest as CloudDbRevisionRequest
 from src.api.v1.cloud_db.schemas.response import (
     CloudDbRevisionResponse,
     ContainerResourceInfo,

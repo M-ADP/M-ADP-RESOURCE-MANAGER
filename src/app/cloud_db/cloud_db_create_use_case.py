@@ -5,7 +5,13 @@ from typing import List
 from fastapi import Depends
 from src.core.project import ProjectId
 
-from src.api.v1.cloud_db.schemas.request import CloudDbCreateRequest
+from src.api.v1.cloud_db.schemas.request import (
+    CloudDBCreateRequest,
+    CloudDBContainerSpec,
+    CLOUD_DB_IMAGES,
+    CLOUD_DB_DEFAULT_PORTS,
+    CLOUD_DB_MOUNT_PATHS,
+)
 from src.api.v1.cloud_db.schemas.response import (
     CloudDbCreateResponse,
     ContainerInfo,
@@ -41,12 +47,12 @@ class CloudDbCreateUseCase(BaseUseCase):
     async def __call__(
             self,
             project_id: str,
-            payload: CloudDbCreateRequest,
+            payload: CloudDBCreateRequest,
     ) -> CloudDbCreateResponse:
         """Cloud DB(StatefulSet) 생성"""
 
         namespace = ProjectId(project_id).namespace
-        k8s_name = NameConverter.to_k8s_name(payload.name)
+        k8s_name = NameConverter.to_k8s_name(payload.name, prefix="db-")
 
         _name_ref = Deployment(name=k8s_name, namespace=namespace)
 
@@ -132,11 +138,12 @@ class CloudDbCreateUseCase(BaseUseCase):
 
         # 5. Headless Service 생성 (StatefulSet governing service)
         headless_service_name = f"{k8s_name}-headless"
+        default_ports = CLOUD_DB_DEFAULT_PORTS[payload.type]
         all_ports = [
             port
             for spec in payload.containers
             for port in (spec.ports or [])
-        ] or [80]
+        ] or default_ports
         await self.service_manager.create_service(
             name=headless_service_name,
             namespace=namespace,
@@ -193,27 +200,40 @@ class CloudDbCreateUseCase(BaseUseCase):
             status=status_info,
         )
 
+    def _resolve_image(self, payload: CloudDBCreateRequest, spec_image: str | None) -> str:
+        """컨테이너 이미지 결정: 명시된 이미지 우선, 없으면 type에서 자동 결정"""
+        if spec_image:
+            return spec_image
+        return CLOUD_DB_IMAGES[payload.type]
+
     def _build_cloud_db(
             self,
             name: str,
             namespace: str,
-            payload: CloudDbCreateRequest,
+            payload: CloudDBCreateRequest,
             labels: dict,
     ) -> CloudDb:
+        default_ports = CLOUD_DB_DEFAULT_PORTS[payload.type]
+        container_specs = payload.containers or []
+
+        # containers가 비어 있으면 type 기본값으로 단일 컨테이너 구성
+        if not container_specs:
+            container_specs = [CloudDBContainerSpec(name="main")]
+
         containers = []
-        for spec in payload.containers:
+        for spec in container_specs:
             disk = None
             if spec.disk:
                 disk = CloudDbContainerDisk(
                     size=spec.disk.size,
-                    mount_path=spec.disk.mount_path,
+                    mount_path=CLOUD_DB_MOUNT_PATHS[payload.type],
                     storage_class=spec.disk.storage_class,
                 )
             containers.append(CloudDbContainer(
                 name=spec.name,
-                image=spec.image,
+                image=self._resolve_image(payload, spec.image),
                 harbor_url=self._harbor.url,
-                ports=spec.ports or [],
+                ports=spec.ports or default_ports,
                 resources={
                     "requests": {
                         "cpu": spec.resources.requests.cpu,

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Path
 
-from src.api.v1.cloud_db.schemas.request import CloudDbCreateRequest, CloudDbRevisionRequest
+from src.api.v1.cloud_db.schemas.request import CloudDBCreateRequest, CloudDBRevisionRequest
 from src.api.v1.cloud_db.schemas.response import CloudDbCreateResponse, CloudDbDeleteResponse, CloudDbRevisionResponse
 from src.app.cloud_db.cloud_db_create_use_case import CloudDbCreateUseCase
 from src.app.cloud_db.cloud_db_delete_use_case import CloudDbDeleteUseCase
@@ -14,7 +14,7 @@ cloud_db_router = APIRouter(prefix="/cloud-dbs", tags=["cloud-dbs"])
 
 @cloud_db_router.post("/{project_id}", response_model=SuccessResponse[CloudDbCreateResponse])
 async def create_cloud_db(
-    payload: CloudDbCreateRequest,
+    payload: CloudDBCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     cloud_db_create_usecase: CloudDbCreateUseCase = Depends(CloudDbCreateUseCase)
 ):
@@ -43,7 +43,7 @@ async def delete_cloud_db(
 
 @cloud_db_router.patch("/{project_id}/{name}", response_model=SuccessResponse[CloudDbRevisionResponse])
 async def revise_cloud_db(
-    payload: CloudDbRevisionRequest,
+    payload: CloudDBRevisionRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="Cloud DB 이름 (StatefulSet 이름)"),
     cloud_db_revision_usecase: CloudDbRevisionUseCase = Depends(CloudDbRevisionUseCase)

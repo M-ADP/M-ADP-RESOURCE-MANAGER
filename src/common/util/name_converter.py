@@ -10,7 +10,7 @@ class NameConverter:
     _transliter = Transliter(academic)
 
     @classmethod
-    def to_k8s_name(cls, name: str) -> str:
+    def to_k8s_name(cls, name: str, prefix: str = "app-") -> str:
         """임의 문자열을 Kubernetes RFC 1123 호환 이름으로 변환
 
         변환 순서:
@@ -22,6 +22,7 @@ class NameConverter:
 
         Args:
             name: 변환할 이름
+            prefix: 접두사 (기본값: "app-")
 
         Returns:
             RFC 1123 호환 이름 (소문자, 숫자, 하이픈만 포함)
@@ -31,5 +32,5 @@ class NameConverter:
         result = re.sub(r"[^a-z0-9-]", "-", result)
         result = re.sub(r"-+", "-", result)
         result = result.strip("-")
-        result = "app-" + result
+        result = prefix + result
         return result
