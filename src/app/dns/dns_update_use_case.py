@@ -67,7 +67,7 @@ class DnsUpdateUseCase(BaseUseCase):
         # 4. VirtualService hosts + 레이블 patch
         await self.virtualservice_manager.patch_virtualservice(
             name=vs_name,
-            namespace=namespace,
+            namespace="istio-system",
             hosts=[new_full_domain],
             label_patch={_DNS_SUBDOMAIN_LABEL: new_subdomain},
         )

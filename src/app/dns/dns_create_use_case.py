@@ -14,6 +14,7 @@ from src.app.base_use_case import BaseUseCase
 from src.app.dns.exceptions import DeploymentForDnsNotFoundException
 from src.common.config.cloudflare import CloudflareConfig
 from src.common.const import DefaultLabel
+from src.common.util import NameConverter
 from src.core.dns import DnsProvider
 from src.core.project import ProjectId
 from src.dependencies.dns import get_dns_provider, get_tunnel_client
@@ -44,7 +45,7 @@ class DnsCreateUseCase(BaseUseCase):
 
     async def __call__(self, payload: DnsCreateRequest) -> DnsCreateResponse:
         namespace = ProjectId(payload.project_id).namespace
-        deployment_id = payload.deployment_id
+        deployment_id = NameConverter.to_k8s_name(payload.deployment_id)
         subdomain = payload.subdomain
         dns_id = payload.id
 
@@ -60,9 +61,9 @@ class DnsCreateUseCase(BaseUseCase):
         k8s_name = deployment.metadata.labels.get("app_deployment", deployment.metadata.name)
 
         full_domain = f"{subdomain}.{self._cf.base_domain}"
-        service_name = f"{k8s_name}-svc"
+        service_host = f"{k8s_name}-svc.{namespace}.svc.cluster.local"
         vs_name = f"{k8s_name}-vs"
-        gateway_name = f"{namespace}-gateway"
+        gateway_ref = "istio-system/ingressgateway"
 
         dns_labels = {
             _DNS_ID_LABEL: str(dns_id),
@@ -71,16 +72,16 @@ class DnsCreateUseCase(BaseUseCase):
             **DefaultLabel.MANAGED_BY_LABEL,
         }
 
-        # 2. VirtualService 생성 → 기존 Service({k8s_name}-svc)로 라우팅
+        # 2. VirtualService 생성 (istio-system) → 기존 Service로 FQDN 라우팅
         await self.virtualservice_manager.create_virtualservice(
             name=vs_name,
-            namespace=namespace,
+            namespace="istio-system",
             hosts=[full_domain],
-            gateways=[gateway_name],
+            gateways=[gateway_ref],
             http_routes=[{
                 "route": [{
                     "destination": {
-                        "host": service_name,
+                        "host": service_host,
                     }
                 }]
             }],

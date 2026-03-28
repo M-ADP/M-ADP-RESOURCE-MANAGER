@@ -1,8 +1,9 @@
 """Pod 리소스 관리 클래스"""
 
-from typing import Optional, Dict, List
-from kubernetes_asyncio.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container
+from typing import Optional, Dict, List, Tuple
+from kubernetes_asyncio.client import V1Pod, V1ObjectMeta, V1PodSpec, V1Container, CoreV1Api
 from kubernetes_asyncio.client.exceptions import ApiException
+from kubernetes_asyncio.stream import WsApiClient
 
 from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core.logger import Logger, get_logger
@@ -449,6 +450,50 @@ class PodManager:
                 namespace=namespace,
                 reason=str(e),
             )
+
+    async def exec_command(
+        self,
+        pod_name: str,
+        namespace: str,
+        command: List[str],
+    ) -> Tuple[str, str]:
+        """Pod에서 명령 실행 후 (stdout, stderr) 반환.
+
+        Args:
+            pod_name: Pod 이름
+            namespace: 네임스페이스
+            command: 실행할 명령 리스트
+
+        Returns:
+            (stdout, stderr) 튜플
+
+        Raises:
+            PodReadException: exec 실패 시
+        """
+        try:
+            async with WsApiClient() as ws_client:
+                core_v1_ws = CoreV1Api(ws_client)
+                resp = await core_v1_ws.connect_get_namespaced_pod_exec(
+                    pod_name,
+                    namespace,
+                    command=command,
+                    stderr=True,
+                    stdin=False,
+                    stdout=True,
+                    tty=False,
+                )
+            return resp, ""
+        except ApiException as e:
+            self.logger.error(f"Pod exec 실패: {pod_name} - {e.reason}")
+            raise PodReadException(
+                pod_name=pod_name,
+                namespace=namespace,
+                reason=e.reason or str(e),
+                detail={"status": e.status, "body": e.body},
+            )
+        except Exception as e:
+            self.logger.error(f"Pod exec 예외: {pod_name} - {e}")
+            raise PodReadException(pod_name=pod_name, namespace=namespace, reason=str(e))
 
     async def list_pods_by_owner(
         self,
