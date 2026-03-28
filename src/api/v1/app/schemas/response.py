@@ -40,7 +40,9 @@ class AppCreateResponse(BaseModel):
     containers: List[ContainerInfo] = Field(..., description="컨테이너 목록")
     pvcs: List[PvcInfo] = Field(default_factory=list, description="PVC 목록")
     labels: Optional[Dict[str, str]] = Field(default=None, description="레이블")
-    status: Optional[DeploymentStatusInfo] = Field(default=None, description="Deployment 상태")
+    status: Optional[DeploymentStatusInfo] = Field(
+        default=None, description="Deployment 상태"
+    )
 
 
 class AppDeleteResponse(BaseModel):
@@ -93,10 +95,18 @@ class AutoScaleResponse(BaseModel):
     deployment_name: str = Field(..., description="대상 Deployment 이름")
     min_replicas: int = Field(..., description="최소 레플리카 수")
     max_replicas: int = Field(..., description="최대 레플리카 수")
-    target_cpu_utilization: Optional[int] = Field(default=None, description="CPU 사용률 기준 (%)")
-    target_memory_utilization: Optional[int] = Field(default=None, description="메모리 사용률 기준 (%)")
-    current_replicas: Optional[int] = Field(default=None, description="현재 레플리카 수")
-    desired_replicas: Optional[int] = Field(default=None, description="목표 레플리카 수")
+    target_cpu_utilization: Optional[int] = Field(
+        default=None, description="CPU 사용률 기준 (%)"
+    )
+    target_memory_utilization: Optional[int] = Field(
+        default=None, description="메모리 사용률 기준 (%)"
+    )
+    current_replicas: Optional[int] = Field(
+        default=None, description="현재 레플리카 수"
+    )
+    desired_replicas: Optional[int] = Field(
+        default=None, description="목표 레플리카 수"
+    )
 
 
 class SecretCreateResponse(BaseModel):
@@ -115,8 +125,9 @@ class SecretDeleteResponse(BaseModel):
 
     name: str = Field(..., description="삭제된 Secret 이름")
     path: str = Field(..., description="삭제된 Vault 경로")
-    all_secrets_deleted: bool = Field(..., description="해당 앱의 모든 Secret 삭제 및 권한 정리 여부")
-
+    all_secrets_deleted: bool = Field(
+        ..., description="해당 앱의 모든 Secret 삭제 및 권한 정리 여부"
+    )
 
 
 class EnvironmentUpdateResponse(BaseModel):
@@ -135,3 +146,11 @@ class EnvironmentDeleteResponse(BaseModel):
     namespace: str = Field(..., description="네임스페이스")
     app_name: str = Field(..., description="App 이름")
     deleted: bool = Field(..., description="삭제 성공 여부")
+
+
+class AppRestartResponse(BaseModel):
+    """App Restart 응답 모델"""
+
+    name: str = Field(..., description="재시작된 Deployment 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    restarted_at: str = Field(..., description="재시작 트리거 시각 (UTC ISO-8601)")

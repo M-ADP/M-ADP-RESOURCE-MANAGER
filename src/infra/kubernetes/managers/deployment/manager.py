@@ -1,5 +1,6 @@
 """Deployment 리소스 관리 클래스"""
 
+import datetime
 from typing import Optional, Dict, List
 from kubernetes_asyncio.client import (
     V1Deployment,
@@ -26,8 +27,7 @@ from .exceptions import (
 
 
 class DeploymentManager:
-    """Deployment 리소스를 관리하는 클래스
-    """
+    """Deployment 리소스를 관리하는 클래스"""
 
     def __init__(
         self,
@@ -74,16 +74,12 @@ class DeploymentManager:
         Raises:
             DeploymentCreationException: Deployment 생성 실패 시
         """
-        self.logger.info(
-            f"Deployment 생성 시도: {name} (namespace: {namespace})"
-        )
+        self.logger.info(f"Deployment 생성 시도: {name} (namespace: {namespace})")
 
         # 이미 존재하는지 확인 (멱등성)
         existing = await self.get_deployment(name, namespace)
         if existing:
-            self.logger.info(
-                f"Deployment 이미 존재함: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"Deployment 이미 존재함: {name} (namespace: {namespace})")
             return existing
 
         # 기본 레이블 설정
@@ -118,7 +114,9 @@ class DeploymentManager:
                         service_account_name=service_account_name,
                         image_pull_secrets=[
                             V1LocalObjectReference(name=s) for s in image_pull_secrets
-                        ] if image_pull_secrets else None,
+                        ]
+                        if image_pull_secrets
+                        else None,
                     ),
                 ),
             ),
@@ -129,17 +127,13 @@ class DeploymentManager:
                 namespace=namespace,
                 body=deployment,
             )
-            self.logger.info(
-                f"Deployment 생성 완료: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"Deployment 생성 완료: {name} (namespace: {namespace})")
             return dep
 
         except ApiException as e:
             # 409 Conflict: 동시 요청으로 이미 생성된 경우
             if e.status == 409:
-                self.logger.warning(
-                    f"Deployment 생성 충돌 (409), 재조회: {name}"
-                )
+                self.logger.warning(f"Deployment 생성 충돌 (409), 재조회: {name}")
                 existing = await self.get_deployment(name, namespace)
                 if existing:
                     return existing
@@ -155,9 +149,7 @@ class DeploymentManager:
             )
 
         except Exception as e:
-            self.logger.logger.error(
-                f"Deployment 생성 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.logger.error(f"Deployment 생성 중 예외 발생: {name} - {str(e)}")
             raise DeploymentCreationException(
                 deployment_name=name,
                 namespace=namespace,
@@ -203,9 +195,7 @@ class DeploymentManager:
             )
 
         except Exception as e:
-            self.logger.logger.error(
-                f"Deployment 조회 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.logger.error(f"Deployment 조회 중 예외 발생: {name} - {str(e)}")
             raise DeploymentReadException(
                 deployment_name=name,
                 namespace=namespace,
@@ -231,9 +221,7 @@ class DeploymentManager:
         Raises:
             DeploymentDeletionException: 삭제 실패 시
         """
-        self.logger.info(
-            f"Deployment 삭제 시도: {name} (namespace: {namespace})"
-        )
+        self.logger.info(f"Deployment 삭제 시도: {name} (namespace: {namespace})")
 
         # 존재 여부 확인
         existing = await self.get_deployment(name, namespace)
@@ -253,9 +241,7 @@ class DeploymentManager:
                 namespace=namespace,
                 grace_period_seconds=grace_period_seconds,
             )
-            self.logger.info(
-                f"Deployment 삭제 완료: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"Deployment 삭제 완료: {name} (namespace: {namespace})")
             return True
 
         except ApiException as e:
@@ -266,9 +252,7 @@ class DeploymentManager:
                 )
                 return True
 
-            self.logger.logger.error(
-                f"Deployment 삭제 실패: {name} - {e.reason}"
-            )
+            self.logger.logger.error(f"Deployment 삭제 실패: {name} - {e.reason}")
             raise DeploymentDeletionException(
                 deployment_name=name,
                 namespace=namespace,
@@ -277,9 +261,7 @@ class DeploymentManager:
             )
 
         except Exception as e:
-            self.logger.logger.error(
-                f"Deployment 삭제 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.logger.error(f"Deployment 삭제 중 예외 발생: {name} - {str(e)}")
             raise DeploymentDeletionException(
                 deployment_name=name,
                 namespace=namespace,
@@ -313,9 +295,11 @@ class DeploymentManager:
                     field_selector=field_selector,
                 )
             else:
-                result = await self.k8s_client.apps_v1.list_deployment_for_all_namespaces(
-                    label_selector=label_selector,
-                    field_selector=field_selector,
+                result = (
+                    await self.k8s_client.apps_v1.list_deployment_for_all_namespaces(
+                        label_selector=label_selector,
+                        field_selector=field_selector,
+                    )
                 )
 
             return result.items
@@ -331,9 +315,7 @@ class DeploymentManager:
             )
 
         except Exception as e:
-            self.logger.logger.error(
-                f"Deployment 목록 조회 중 예외 발생 - {str(e)}"
-            )
+            self.logger.logger.error(f"Deployment 목록 조회 중 예외 발생 - {str(e)}")
             raise DeploymentListException(
                 namespace=namespace,
                 reason=str(e),
@@ -373,9 +355,7 @@ class DeploymentManager:
         Raises:
             DeploymentUpdateException: 업데이트 실패 시
         """
-        self.logger.info(
-            f"Deployment 레이블 업데이트: {name} (namespace: {namespace})"
-        )
+        self.logger.info(f"Deployment 레이블 업데이트: {name} (namespace: {namespace})")
 
         # 존재 여부 확인
         existing = await self.get_deployment(name, namespace)
@@ -568,7 +548,10 @@ class DeploymentManager:
                 "template": {
                     "spec": {
                         "containers": [
-                            {"name": containers[target_container_idx].name, "resources": resources_patch}
+                            {
+                                "name": containers[target_container_idx].name,
+                                "resources": resources_patch,
+                            }
                         ]
                     }
                 }
@@ -633,10 +616,7 @@ class DeploymentManager:
         )
 
         pod_spec: dict = {
-            "containers": [
-                {"name": c.name, "image": c.image}
-                for c in containers
-            ]
+            "containers": [{"name": c.name, "image": c.image} for c in containers]
         }
         if image_pull_secrets is not None:
             pod_spec["imagePullSecrets"] = [{"name": s} for s in image_pull_secrets]
@@ -713,3 +693,79 @@ class DeploymentManager:
                 for condition in (status.conditions or [])
             ],
         }
+
+    async def rollout_restart(
+        self,
+        name: str,
+        namespace: str,
+    ) -> V1Deployment:
+        """Deployment Rollout Restart
+
+        kubectl rollout restart 와 동일하게,
+        Pod 템플릿의 어노테이션에 restartedAt 타임스탬프를 패치하여
+        롤링 업데이트를 트리거합니다.
+
+        Args:
+            name: Deployment 이름
+            namespace: 네임스페이스
+
+        Returns:
+            패치된 V1Deployment 객체
+
+        Raises:
+            DeploymentUpdateException: 패치 실패 시
+        """
+        self.logger.info(f"Deployment Rollout Restart: {name} (namespace: {namespace})")
+
+        existing = await self.get_deployment(name, namespace)
+        if not existing:
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason="Deployment does not exist",
+            )
+
+        restarted_at = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        body = {
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": restarted_at,
+                        }
+                    }
+                }
+            }
+        }
+
+        try:
+            dep = await self.k8s_client.apps_v1.patch_namespaced_deployment(
+                name=name,
+                namespace=namespace,
+                body=body,
+            )
+            self.logger.info(
+                f"Deployment Rollout Restart 완료: {name} (namespace: {namespace})"
+            )
+            return dep
+
+        except ApiException as e:
+            self.logger.logger.error(
+                f"Deployment Rollout Restart 실패: {name} - {e.reason}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=e.reason or str(e),
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.logger.error(
+                f"Deployment Rollout Restart 중 예외 발생: {name} - {str(e)}"
+            )
+            raise DeploymentUpdateException(
+                deployment_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )

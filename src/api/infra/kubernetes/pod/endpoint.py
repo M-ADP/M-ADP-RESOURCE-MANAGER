@@ -12,6 +12,7 @@ from src.api.infra.kubernetes.pod.schema import (
     PodListResponse,
     PodDetailResponse,
     PodLogsResponse,
+    PodDeleteResponse,
 )
 from src.infra.kubernetes.managers.pod import PodManager
 from src.core.response import SuccessResponse
@@ -27,8 +28,12 @@ def _convert_container_state(state_dict: dict) -> ContainerStateInfo:
     """Container 상태 변환"""
     return ContainerStateInfo(
         state=state_dict.get("state", "Unknown"),
-        started_at=str(state_dict.get("started_at")) if state_dict.get("started_at") else None,
-        finished_at=str(state_dict.get("finished_at")) if state_dict.get("finished_at") else None,
+        started_at=str(state_dict.get("started_at"))
+        if state_dict.get("started_at")
+        else None,
+        finished_at=str(state_dict.get("finished_at"))
+        if state_dict.get("finished_at")
+        else None,
         exit_code=state_dict.get("exit_code"),
         reason=state_dict.get("reason"),
         message=state_dict.get("message"),
@@ -62,7 +67,9 @@ def _convert_pod_status(status_dict: dict) -> PodStatusInfo:
         phase=status_dict.get("phase"),
         pod_ip=status_dict.get("pod_ip"),
         host_ip=status_dict.get("host_ip"),
-        start_time=str(status_dict.get("start_time")) if status_dict.get("start_time") else None,
+        start_time=str(status_dict.get("start_time"))
+        if status_dict.get("start_time")
+        else None,
         conditions=conditions,
         container_statuses=container_statuses,
     )
@@ -116,7 +123,9 @@ async def list_pods(
     )
 
 
-@pod_router.get("/{namespace}/{name}", response_model=SuccessResponse[PodDetailResponse])
+@pod_router.get(
+    "/{namespace}/{name}", response_model=SuccessResponse[PodDetailResponse]
+)
 async def get_pod(
     namespace: str,
     name: str,
@@ -150,7 +159,9 @@ async def get_pod(
     )
 
 
-@pod_router.get("/{namespace}/{name}/logs", response_model=SuccessResponse[PodLogsResponse])
+@pod_router.get(
+    "/{namespace}/{name}/logs", response_model=SuccessResponse[PodLogsResponse]
+)
 async def get_pod_logs(
     namespace: str,
     name: str,
@@ -197,5 +208,46 @@ async def get_pod_logs(
             namespace=namespace,
             container=container,
             logs=logs or "",
+        ),
+    )
+
+
+@pod_router.delete(
+    "/{namespace}/{name}", response_model=SuccessResponse[PodDeleteResponse]
+)
+async def delete_pod(
+    namespace: str,
+    name: str,
+    grace_period_seconds: Optional[int] = Query(
+        default=0,
+        description="유예 기간(초). 0이면 즉시 강제 삭제. Deployment/StatefulSet이 관리하는 Pod라면 자동 재시작됨.",
+    ),
+    pod_manager: PodManager = Depends(get_pod_manager),
+):
+    """Pod 강제 삭제 (재시작 트리거)
+
+    Pod를 즉시 강제 삭제합니다.
+    - Deployment/StatefulSet이 관리하는 Pod는 컨트롤러가 자동으로 새 Pod를 생성합니다.
+    - grace_period_seconds=0 이면 즉시 강제 종료(SIGKILL)됩니다.
+    """
+    pod = await pod_manager.get_pod(name, namespace)
+    if pod is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Pod '{name}' not found in namespace '{namespace}'",
+        )
+
+    deleted = await pod_manager.delete_pod(
+        name=name,
+        namespace=namespace,
+        grace_period_seconds=grace_period_seconds,
+    )
+
+    return SuccessResponse(
+        message="Pod deleted successfully",
+        data=PodDeleteResponse(
+            name=name,
+            namespace=namespace,
+            deleted=deleted,
         ),
     )

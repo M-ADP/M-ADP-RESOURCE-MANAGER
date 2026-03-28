@@ -4,23 +4,64 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentUpdateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentUpdateResponse, EnvironmentDeleteResponse
+from src.api.v1.app.schemas.request import (
+    AppCreateRequest,
+    AppRevisionRequest,
+    AutoScaleRequest,
+    FixedScaleRequest,
+    SecretCreateRequest,
+    EnvironmentUpdateRequest,
+)
+from src.api.v1.app.schemas.response import (
+    AppCreateResponse,
+    AppDeleteResponse,
+    AppRevisionResponse,
+    AutoScaleResponse,
+    FixedScaleResponse,
+    SecretCreateResponse,
+    SecretDeleteResponse,
+    EnvironmentUpdateResponse,
+    EnvironmentDeleteResponse,
+    AppRestartResponse,
+)
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.app.monitoring.dto import AppResourceStatusResponse
-from src.app.app_deployment.app_deployment_create_use_case import AppDeploymentCreateUseCase
-from src.app.app_deployment.app_deployment_delete_use_case import AppDeploymentDeleteUseCase
-from src.app.app_deployment.app_deployment_revision_use_case import AppDeploymentRevisionUseCase
+from src.app.app_deployment.app_deployment_create_use_case import (
+    AppDeploymentCreateUseCase,
+)
+from src.app.app_deployment.app_deployment_delete_use_case import (
+    AppDeploymentDeleteUseCase,
+)
+from src.app.app_deployment.app_deployment_revision_use_case import (
+    AppDeploymentRevisionUseCase,
+)
 from src.app.app_deployment.app_deployment_logs_use_case import AppDeploymentLogsUseCase
-from src.app.app_deployment.app_deployment_events_use_case import AppDeploymentEventsUseCase
+from src.app.app_deployment.app_deployment_events_use_case import (
+    AppDeploymentEventsUseCase,
+)
 from src.app.monitoring.app_resource_status_use_case import AppResourceStatusUseCase
-from src.app.app_deployment.app_deployment_autoscale_use_case import AppDeploymentAutoScaleUseCase
-from src.app.app_deployment.app_deployment_fixed_scale_use_case import AppDeploymentFixedScaleUseCase
-from src.app.app_deployment.app_deployment_secret_create_use_case import AppDeploymentSecretCreateUseCase
-from src.app.app_deployment.app_deployment_secret_delete_use_case import AppDeploymentSecretDeleteUseCase
-from src.app.app_deployment.app_deployment_environment_update_use_case import AppDeploymentEnvironmentUpdateUseCase
-from src.app.app_deployment.app_deployment_environment_delete_use_case import AppDeploymentEnvironmentDeleteUseCase
+from src.app.app_deployment.app_deployment_autoscale_use_case import (
+    AppDeploymentAutoScaleUseCase,
+)
+from src.app.app_deployment.app_deployment_fixed_scale_use_case import (
+    AppDeploymentFixedScaleUseCase,
+)
+from src.app.app_deployment.app_deployment_secret_create_use_case import (
+    AppDeploymentSecretCreateUseCase,
+)
+from src.app.app_deployment.app_deployment_secret_delete_use_case import (
+    AppDeploymentSecretDeleteUseCase,
+)
+from src.app.app_deployment.app_deployment_environment_update_use_case import (
+    AppDeploymentEnvironmentUpdateUseCase,
+)
+from src.app.app_deployment.app_deployment_environment_delete_use_case import (
+    AppDeploymentEnvironmentDeleteUseCase,
+)
+from src.app.app_deployment.app_deployment_restart_use_case import (
+    AppDeploymentRestartUseCase,
+)
 from src.core.response import SuccessResponse
 
 app_router = APIRouter(prefix="/apps", tags=["apps"])
@@ -30,7 +71,9 @@ app_router = APIRouter(prefix="/apps", tags=["apps"])
 async def create_app_deployment(
     payload: AppCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
-    app_deployment_create_usecase: AppDeploymentCreateUseCase = Depends(AppDeploymentCreateUseCase)
+    app_deployment_create_usecase: AppDeploymentCreateUseCase = Depends(
+        AppDeploymentCreateUseCase
+    ),
 ):
     """App Deployment 생성
 
@@ -43,16 +86,19 @@ async def create_app_deployment(
         payload=payload,
     )
     return SuccessResponse(
-        message="App deployment created successfully",
-        data=app_deployment_create_result
+        message="App deployment created successfully", data=app_deployment_create_result
     )
 
 
-@app_router.delete("/{project_id}/{name}", response_model=SuccessResponse[AppDeleteResponse])
+@app_router.delete(
+    "/{project_id}/{name}", response_model=SuccessResponse[AppDeleteResponse]
+)
 async def delete_app_deployment(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_delete_usecase: AppDeploymentDeleteUseCase = Depends(AppDeploymentDeleteUseCase)
+    app_deployment_delete_usecase: AppDeploymentDeleteUseCase = Depends(
+        AppDeploymentDeleteUseCase
+    ),
 ):
     """App Deployment 삭제
 
@@ -63,17 +109,20 @@ async def delete_app_deployment(
         project_id=project_id,
     )
     return SuccessResponse(
-        message="App deployment deleted successfully",
-        data=app_deployment_delete_result
+        message="App deployment deleted successfully", data=app_deployment_delete_result
     )
 
 
-@app_router.patch("/{project_id}/{name}", response_model=SuccessResponse[AppRevisionResponse])
+@app_router.patch(
+    "/{project_id}/{name}", response_model=SuccessResponse[AppRevisionResponse]
+)
 async def revise_app_deployment(
     payload: AppRevisionRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_revision_usecase: AppDeploymentRevisionUseCase = Depends(AppDeploymentRevisionUseCase)
+    app_deployment_revision_usecase: AppDeploymentRevisionUseCase = Depends(
+        AppDeploymentRevisionUseCase
+    ),
 ):
     """App Deployment 리소스 수정
 
@@ -88,18 +137,24 @@ async def revise_app_deployment(
     )
     return SuccessResponse(
         message="App deployment revised successfully",
-        data=app_deployment_revision_result
+        data=app_deployment_revision_result,
     )
 
 
-@app_router.get("/{project_id}/{name}/logs", response_model=SuccessResponse[AppLogsResponse])
+@app_router.get(
+    "/{project_id}/{name}/logs", response_model=SuccessResponse[AppLogsResponse]
+)
 async def get_app_deployment_logs(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
     tail_lines: Optional[int] = Query(default=100, description="마지막 N줄만 조회"),
-    since_seconds: Optional[int] = Query(default=None, description="최근 N초 동안의 로그만 조회"),
+    since_seconds: Optional[int] = Query(
+        default=None, description="최근 N초 동안의 로그만 조회"
+    ),
     timestamps: bool = Query(default=False, description="타임스탬프 포함 여부"),
-    app_deployment_logs_usecase: AppDeploymentLogsUseCase = Depends(AppDeploymentLogsUseCase),
+    app_deployment_logs_usecase: AppDeploymentLogsUseCase = Depends(
+        AppDeploymentLogsUseCase
+    ),
 ):
     """App Deployment 로그 조회
 
@@ -118,11 +173,15 @@ async def get_app_deployment_logs(
     )
 
 
-@app_router.get("/{project_id}/{name}/events", response_model=SuccessResponse[AppEventsResponse])
+@app_router.get(
+    "/{project_id}/{name}/events", response_model=SuccessResponse[AppEventsResponse]
+)
 async def get_app_deployment_events(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_events_usecase: AppDeploymentEventsUseCase = Depends(AppDeploymentEventsUseCase),
+    app_deployment_events_usecase: AppDeploymentEventsUseCase = Depends(
+        AppDeploymentEventsUseCase
+    ),
 ):
     """App Deployment 이벤트 조회
 
@@ -138,12 +197,16 @@ async def get_app_deployment_events(
     )
 
 
-
-@app_router.get("/{project_id}/resource", response_model=SuccessResponse[List[AppResourceStatusResponse]])
+@app_router.get(
+    "/{project_id}/resource",
+    response_model=SuccessResponse[List[AppResourceStatusResponse]],
+)
 async def get_app_deployment_resource(
     project_id: str = Path(..., description="프로젝트 ID"),
     names: List[str] = Query(..., description="App 이름 목록 (Deployment 이름)"),
-    app_resource_status_usecase: AppResourceStatusUseCase = Depends(AppResourceStatusUseCase),
+    app_resource_status_usecase: AppResourceStatusUseCase = Depends(
+        AppResourceStatusUseCase
+    ),
 ):
     """App Deployment 리소스 상태 조회
 
@@ -160,12 +223,16 @@ async def get_app_deployment_resource(
     )
 
 
-@app_router.patch("/{project_id}/{name}/auto-scale", response_model=SuccessResponse[AutoScaleResponse])
+@app_router.patch(
+    "/{project_id}/{name}/auto-scale", response_model=SuccessResponse[AutoScaleResponse]
+)
 async def set_app_deployment_auto_scale(
     payload: AutoScaleRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_autoscale_usecase: AppDeploymentAutoScaleUseCase = Depends(AppDeploymentAutoScaleUseCase),
+    app_deployment_autoscale_usecase: AppDeploymentAutoScaleUseCase = Depends(
+        AppDeploymentAutoScaleUseCase
+    ),
 ):
     """App Deployment Auto Scale 설정 (HPA 생성/수정)
 
@@ -184,12 +251,17 @@ async def set_app_deployment_auto_scale(
     )
 
 
-@app_router.patch("/{project_id}/{name}/fixed-scale", response_model=SuccessResponse[FixedScaleResponse])
+@app_router.patch(
+    "/{project_id}/{name}/fixed-scale",
+    response_model=SuccessResponse[FixedScaleResponse],
+)
 async def set_app_deployment_fixed_scale(
     payload: FixedScaleRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_fixed_scale_usecase: AppDeploymentFixedScaleUseCase = Depends(AppDeploymentFixedScaleUseCase),
+    app_deployment_fixed_scale_usecase: AppDeploymentFixedScaleUseCase = Depends(
+        AppDeploymentFixedScaleUseCase
+    ),
 ):
     """App Deployment Fixed Scale 설정 (고정 레플리카)
 
@@ -208,12 +280,16 @@ async def set_app_deployment_fixed_scale(
     )
 
 
-@app_router.post("/{project_id}/{name}/secrets", response_model=SuccessResponse[SecretCreateResponse])
+@app_router.post(
+    "/{project_id}/{name}/secrets", response_model=SuccessResponse[SecretCreateResponse]
+)
 async def create_app_deployment_secret(
     payload: SecretCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_secret_create_usecase: AppDeploymentSecretCreateUseCase = Depends(AppDeploymentSecretCreateUseCase)
+    app_deployment_secret_create_usecase: AppDeploymentSecretCreateUseCase = Depends(
+        AppDeploymentSecretCreateUseCase
+    ),
 ):
     """App Deployment Secret 생성 및 Vault 설정
 
@@ -226,16 +302,21 @@ async def create_app_deployment_secret(
     )
     return SuccessResponse(
         message="App deployment secret created and configured successfully",
-        data=app_deployment_secret_create_result
+        data=app_deployment_secret_create_result,
     )
 
 
-@app_router.delete("/{project_id}/{name}/secrets/{secret_name}", response_model=SuccessResponse[SecretDeleteResponse])
+@app_router.delete(
+    "/{project_id}/{name}/secrets/{secret_name}",
+    response_model=SuccessResponse[SecretDeleteResponse],
+)
 async def delete_app_deployment_secret(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
     secret_name: str = Path(..., description="삭제할 Secret 이름"),
-    app_deployment_secret_delete_usecase: AppDeploymentSecretDeleteUseCase = Depends(AppDeploymentSecretDeleteUseCase)
+    app_deployment_secret_delete_usecase: AppDeploymentSecretDeleteUseCase = Depends(
+        AppDeploymentSecretDeleteUseCase
+    ),
 ):
     """App Deployment Secret 삭제
 
@@ -249,16 +330,21 @@ async def delete_app_deployment_secret(
     )
     return SuccessResponse(
         message="App deployment secret deleted successfully",
-        data=app_deployment_secret_delete_result
+        data=app_deployment_secret_delete_result,
     )
 
 
-@app_router.put("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentUpdateResponse])
+@app_router.put(
+    "/{project_id}/{name}/environment",
+    response_model=SuccessResponse[EnvironmentUpdateResponse],
+)
 async def update_app_deployment_environment(
     payload: EnvironmentUpdateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_environment_update_usecase: AppDeploymentEnvironmentUpdateUseCase = Depends(AppDeploymentEnvironmentUpdateUseCase)
+    app_deployment_environment_update_usecase: AppDeploymentEnvironmentUpdateUseCase = Depends(
+        AppDeploymentEnvironmentUpdateUseCase
+    ),
 ):
     """App Deployment 환경 변수 설정 (ConfigMap upsert)
 
@@ -266,33 +352,73 @@ async def update_app_deployment_environment(
     - ConfigMap이 없으면 새로 생성합니다.
     - ConfigMap이 있으면 데이터를 완전히 교체합니다.
     """
-    app_deployment_environment_update_result = await app_deployment_environment_update_usecase(
-        project_id=project_id,
-        app_name=name,
-        payload=payload,
+    app_deployment_environment_update_result = (
+        await app_deployment_environment_update_usecase(
+            project_id=project_id,
+            app_name=name,
+            payload=payload,
+        )
     )
     return SuccessResponse(
         message="App deployment environment variables updated successfully",
-        data=app_deployment_environment_update_result
+        data=app_deployment_environment_update_result,
     )
 
 
-@app_router.delete("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentDeleteResponse])
+@app_router.delete(
+    "/{project_id}/{name}/environment",
+    response_model=SuccessResponse[EnvironmentDeleteResponse],
+)
 async def delete_app_deployment_environment(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_environment_delete_usecase: AppDeploymentEnvironmentDeleteUseCase = Depends(AppDeploymentEnvironmentDeleteUseCase)
+    app_deployment_environment_delete_usecase: AppDeploymentEnvironmentDeleteUseCase = Depends(
+        AppDeploymentEnvironmentDeleteUseCase
+    ),
 ):
     """App Deployment 환경 변수 삭제 (ConfigMap 삭제)
 
     App의 환경 변수 ConfigMap을 삭제합니다.
     - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
     """
-    app_deployment_environment_delete_result = await app_deployment_environment_delete_usecase(
-        project_id=project_id,
-        app_name=name,
+    app_deployment_environment_delete_result = (
+        await app_deployment_environment_delete_usecase(
+            project_id=project_id,
+            app_name=name,
+        )
     )
     return SuccessResponse(
         message="App deployment environment variables deleted successfully",
-        data=app_deployment_environment_delete_result
+        data=app_deployment_environment_delete_result,
+    )
+
+
+@app_router.post(
+    "/{project_id}/{name}/restart", response_model=SuccessResponse[AppRestartResponse]
+)
+async def restart_app_deployment(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    app_deployment_restart_usecase: AppDeploymentRestartUseCase = Depends(
+        AppDeploymentRestartUseCase
+    ),
+):
+    """App Deployment 재시작 (Rollout Restart)
+
+    Deployment를 롤링 재시작합니다.
+    - kubectl rollout restart 와 동일하게 동작합니다.
+    - Pod 템플릿 어노테이션에 restartedAt 타임스탬프를 패치하여 롤링 업데이트를 트리거합니다.
+    - 기존 Pod는 순서대로 교체되므로 서비스 중단 없이 재시작됩니다.
+    """
+    result = await app_deployment_restart_usecase(
+        app_name=name,
+        project_id=project_id,
+    )
+    return SuccessResponse(
+        message="App deployment restart triggered successfully",
+        data=AppRestartResponse(
+            name=result["name"],
+            namespace=result["namespace"],
+            restarted_at=result["restarted_at"],
+        ),
     )

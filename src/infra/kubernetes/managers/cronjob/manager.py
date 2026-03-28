@@ -1,8 +1,10 @@
 """CronJob 리소스 관리 클래스"""
 
+import datetime
 from typing import Optional, Dict, List
 from kubernetes_asyncio.client import (
     V1CronJob,
+    V1Job,
     V1ObjectMeta,
     V1CronJobSpec,
     V1JobTemplateSpec,
@@ -79,9 +81,7 @@ class CronJobManager:
         # 이미 존재하는지 확인 (멱등성)
         existing = await self.get_cronjob(name, namespace)
         if existing:
-            self.logger.info(
-                f"CronJob 이미 존재함: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"CronJob 이미 존재함: {name} (namespace: {namespace})")
             return existing
 
         # 기본 레이블 설정
@@ -128,24 +128,18 @@ class CronJobManager:
                 namespace=namespace,
                 body=cronjob,
             )
-            self.logger.info(
-                f"CronJob 생성 완료: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"CronJob 생성 완료: {name} (namespace: {namespace})")
             return cj
 
         except ApiException as e:
             # 409 Conflict: 동시 요청으로 이미 생성된 경우
             if e.status == 409:
-                self.logger.warning(
-                    f"CronJob 생성 충돌 (409), 재조회: {name}"
-                )
+                self.logger.warning(f"CronJob 생성 충돌 (409), 재조회: {name}")
                 existing = await self.get_cronjob(name, namespace)
                 if existing:
                     return existing
 
-            self.logger.error(
-                f"CronJob 생성 실패: {name} - {e.reason}"
-            )
+            self.logger.error(f"CronJob 생성 실패: {name} - {e.reason}")
             raise CronJobCreationException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -154,9 +148,7 @@ class CronJobManager:
             )
 
         except Exception as e:
-            self.logger.error(
-                f"CronJob 생성 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.error(f"CronJob 생성 중 예외 발생: {name} - {str(e)}")
             raise CronJobCreationException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -202,9 +194,7 @@ class CronJobManager:
             )
 
         except Exception as e:
-            self.logger.error(
-                f"CronJob 조회 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.error(f"CronJob 조회 중 예외 발생: {name} - {str(e)}")
             raise CronJobReadException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -230,9 +220,7 @@ class CronJobManager:
         Raises:
             CronJobDeletionException: 삭제 실패 시
         """
-        self.logger.info(
-            f"CronJob 삭제 시도: {name} (namespace: {namespace})"
-        )
+        self.logger.info(f"CronJob 삭제 시도: {name} (namespace: {namespace})")
 
         # 존재 여부 확인
         existing = await self.get_cronjob(name, namespace)
@@ -248,9 +236,7 @@ class CronJobManager:
                 namespace=namespace,
                 grace_period_seconds=grace_period_seconds,
             )
-            self.logger.info(
-                f"CronJob 삭제 완료: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"CronJob 삭제 완료: {name} (namespace: {namespace})")
             return True
 
         except ApiException as e:
@@ -261,9 +247,7 @@ class CronJobManager:
                 )
                 return True
 
-            self.logger.error(
-                f"CronJob 삭제 실패: {name} - {e.reason}"
-            )
+            self.logger.error(f"CronJob 삭제 실패: {name} - {e.reason}")
             raise CronJobDeletionException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -272,9 +256,7 @@ class CronJobManager:
             )
 
         except Exception as e:
-            self.logger.error(
-                f"CronJob 삭제 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.error(f"CronJob 삭제 중 예외 발생: {name} - {str(e)}")
             raise CronJobDeletionException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -308,9 +290,11 @@ class CronJobManager:
                     field_selector=field_selector,
                 )
             else:
-                result = await self.k8s_client.batch_v1.list_cron_job_for_all_namespaces(
-                    label_selector=label_selector,
-                    field_selector=field_selector,
+                result = (
+                    await self.k8s_client.batch_v1.list_cron_job_for_all_namespaces(
+                        label_selector=label_selector,
+                        field_selector=field_selector,
+                    )
                 )
 
             return result.items
@@ -326,9 +310,7 @@ class CronJobManager:
             )
 
         except Exception as e:
-            self.logger.error(
-                f"CronJob 목록 조회 중 예외 발생 - {str(e)}"
-            )
+            self.logger.error(f"CronJob 목록 조회 중 예외 발생 - {str(e)}")
             raise CronJobListException(
                 namespace=namespace,
                 reason=str(e),
@@ -368,9 +350,7 @@ class CronJobManager:
         Raises:
             CronJobUpdateException: 업데이트 실패 시
         """
-        self.logger.info(
-            f"CronJob 레이블 업데이트: {name} (namespace: {namespace})"
-        )
+        self.logger.info(f"CronJob 레이블 업데이트: {name} (namespace: {namespace})")
 
         # 존재 여부 확인
         existing = await self.get_cronjob(name, namespace)
@@ -402,9 +382,7 @@ class CronJobManager:
             return cj
 
         except ApiException as e:
-            self.logger.error(
-                f"CronJob 레이블 업데이트 실패: {name} - {e.reason}"
-            )
+            self.logger.error(f"CronJob 레이블 업데이트 실패: {name} - {e.reason}")
             raise CronJobUpdateException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -477,9 +455,7 @@ class CronJobManager:
             return cj
 
         except ApiException as e:
-            self.logger.error(
-                f"CronJob 어노테이션 업데이트 실패: {name} - {e.reason}"
-            )
+            self.logger.error(f"CronJob 어노테이션 업데이트 실패: {name} - {e.reason}")
             raise CronJobUpdateException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -517,9 +493,7 @@ class CronJobManager:
             CronJobUpdateException: 업데이트 실패 시
         """
         action = "일시 중지" if suspend else "재개"
-        self.logger.info(
-            f"CronJob {action}: {name} (namespace: {namespace})"
-        )
+        self.logger.info(f"CronJob {action}: {name} (namespace: {namespace})")
 
         # 존재 여부 확인
         existing = await self.get_cronjob(name, namespace)
@@ -539,15 +513,11 @@ class CronJobManager:
                 namespace=namespace,
                 body=body,
             )
-            self.logger.info(
-                f"CronJob {action} 완료: {name} (namespace: {namespace})"
-            )
+            self.logger.info(f"CronJob {action} 완료: {name} (namespace: {namespace})")
             return cj
 
         except ApiException as e:
-            self.logger.error(
-                f"CronJob {action} 실패: {name} - {e.reason}"
-            )
+            self.logger.error(f"CronJob {action} 실패: {name} - {e.reason}")
             raise CronJobUpdateException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -556,9 +526,7 @@ class CronJobManager:
             )
 
         except Exception as e:
-            self.logger.error(
-                f"CronJob {action} 중 예외 발생: {name} - {str(e)}"
-            )
+            self.logger.error(f"CronJob {action} 중 예외 발생: {name} - {str(e)}")
             raise CronJobUpdateException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -612,9 +580,7 @@ class CronJobManager:
             return cj
 
         except ApiException as e:
-            self.logger.error(
-                f"CronJob 스케줄 업데이트 실패: {name} - {e.reason}"
-            )
+            self.logger.error(f"CronJob 스케줄 업데이트 실패: {name} - {e.reason}")
             raise CronJobUpdateException(
                 cronjob_name=name,
                 namespace=namespace,
@@ -659,3 +625,98 @@ class CronJobManager:
             "last_schedule_time": status.last_schedule_time,
             "last_successful_time": status.last_successful_time,
         }
+
+    async def trigger_cronjob(
+        self,
+        name: str,
+        namespace: str,
+    ) -> V1Job:
+        """CronJob 즉시 실행 — jobTemplate으로 Job을 직접 생성
+
+        CronJob의 spec.jobTemplate을 복사하여 일회성 Job을 즉시 생성합니다.
+        배치 적체 해소, 수동 재실행 등에 사용합니다.
+
+        Args:
+            name: CronJob 이름
+            namespace: 네임스페이스
+
+        Returns:
+            생성된 V1Job 객체
+
+        Raises:
+            CronJobReadException: CronJob 조회 실패 시
+            CronJobCreationException: Job 생성 실패 시
+        """
+        self.logger.info(f"CronJob 즉시 실행 요청: {name} (namespace: {namespace})")
+
+        cj = await self.get_cronjob(name, namespace)
+        if cj is None:
+            raise CronJobReadException(
+                cronjob_name=name,
+                namespace=namespace,
+                reason="CronJob does not exist",
+            )
+
+        # 고유한 Job 이름 생성 (CronJob 이름 + 타임스탬프)
+        timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        job_name = f"{name}-manual-{timestamp}"
+
+        # jobTemplate에서 spec 복사 후 ttl 주입 (완료 즉시 자동 삭제)
+        job_template_spec = (
+            cj.spec.job_template.spec if cj.spec and cj.spec.job_template else None
+        )
+        if job_template_spec is not None:
+            job_template_spec.ttl_seconds_after_finished = 0
+
+        job = V1Job(
+            api_version="batch/v1",
+            kind="Job",
+            metadata=V1ObjectMeta(
+                name=job_name,
+                namespace=namespace,
+                labels={
+                    **(
+                        cj.spec.job_template.metadata.labels
+                        if cj.spec
+                        and cj.spec.job_template
+                        and cj.spec.job_template.metadata
+                        and cj.spec.job_template.metadata.labels
+                        else {}
+                    ),
+                    "cronjob-name": name,
+                    "triggered-manually": "true",
+                },
+                annotations={
+                    "cronjob-name": name,
+                    "triggered-at": datetime.datetime.utcnow().isoformat() + "Z",
+                },
+            ),
+            spec=job_template_spec,
+        )
+
+        try:
+            created_job = await self.k8s_client.batch_v1.create_namespaced_job(
+                namespace=namespace,
+                body=job,
+            )
+            self.logger.info(
+                f"CronJob 즉시 실행 Job 생성 완료: {job_name} (namespace: {namespace})"
+            )
+            return created_job
+
+        except ApiException as e:
+            self.logger.error(f"CronJob 즉시 실행 Job 생성 실패: {name} - {e.reason}")
+            raise CronJobCreationException(
+                cronjob_name=name,
+                namespace=namespace,
+                reason=e.reason or str(e),
+                detail={"status": e.status, "body": e.body},
+            )
+
+        except Exception as e:
+            self.logger.error(f"CronJob 즉시 실행 중 예외 발생: {name} - {str(e)}")
+            raise CronJobCreationException(
+                cronjob_name=name,
+                namespace=namespace,
+                reason=str(e),
+            )
