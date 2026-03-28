@@ -53,16 +53,8 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
 
         container_name = payload.container_name or deployment.containers[0].name
 
-        # 컨테이너 리소스 조정
-        requests_dict: Optional[Dict[str, str]] = None
+        # 컨테이너 리소스 조정 (limits만 업데이트, requests는 시스템 최솟값 고정)
         limits_dict: Optional[Dict[str, str]] = None
-
-        if payload.requests:
-            requests_dict = {}
-            if payload.requests.cpu:
-                requests_dict["cpu"] = payload.requests.cpu
-            if payload.requests.memory:
-                requests_dict["memory"] = payload.requests.memory
 
         if payload.limits:
             limits_dict = {}
@@ -71,11 +63,11 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
             if payload.limits.memory:
                 limits_dict["memory"] = payload.limits.memory
 
-        if requests_dict or limits_dict:
+        if limits_dict:
             deployment = await self.app_deployment_repo.resize_container(
                 deployment=deployment,
                 container_name=container_name,
-                requests=requests_dict,
+                requests=None,
                 limits=limits_dict,
             )
 

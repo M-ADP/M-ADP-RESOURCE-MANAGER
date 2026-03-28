@@ -26,11 +26,15 @@ def _parse_memory_bytes(memory: str) -> int:
     return int(value * units.get(unit, 1))
 
 
-class ContainerResourceRequest(BaseModel):
-    """컨테이너 리소스 요청 모델"""
+MIN_CPU_REQUEST = "100m"
+MIN_MEMORY_REQUEST = "128Mi"
 
-    cpu: str = Field(default="100m", description="CPU 리소스 (예: 100m, 500m, 1)")
-    memory: str = Field(default="128Mi", description="메모리 리소스 (예: 128Mi, 512Mi, 1024Mi)")
+
+class ContainerResourceRequest(BaseModel):
+    """컨테이너 리소스 제한 모델 (limits)"""
+
+    cpu: str = Field(default="500m", description="CPU 제한 (예: 500m, 1)")
+    memory: str = Field(default="256Mi", description="메모리 제한 (예: 256Mi, 512Mi, 1Gi)")
 
     @field_validator('memory')
     @classmethod
@@ -41,9 +45,8 @@ class ContainerResourceRequest(BaseModel):
 
 
 class ContainerResources(BaseModel):
-    """컨테이너 리소스 제한 모델"""
+    """컨테이너 리소스 모델 (limits만 지정, requests는 시스템 최솟값으로 고정)"""
 
-    requests: ContainerResourceRequest = Field(default_factory=ContainerResourceRequest)
     limits: ContainerResourceRequest = Field(default_factory=ContainerResourceRequest)
 
 
@@ -112,13 +115,9 @@ class AppRevisionRequest(BaseModel):
         default=None,
         description="수정할 컨테이너 이름 (미지정시 첫 번째 컨테이너)"
     )
-    requests: Optional[AppRevisionResourceRequest] = Field(
-        default=None,
-        description="리소스 요청량"
-    )
     limits: Optional[AppRevisionResourceRequest] = Field(
         default=None,
-        description="리소스 제한량"
+        description="리소스 제한량 (requests는 시스템 최솟값으로 자동 고정)"
     )
     disk: Optional[AppRevisionDiskRequest] = Field(
         default=None,

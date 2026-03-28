@@ -19,6 +19,7 @@ from src.app.project.exceptions import ProjectNotFoundException
 from src.common.config.harbor import HarborConfig
 from src.common.const import DefaultLabel
 from src.common.util import NameConverter
+from src.api.v1.app.schemas.request import MIN_CPU_REQUEST, MIN_MEMORY_REQUEST
 from src.core.app_deployment import AppContainer, AppContainerDisk, AppDeployment, AppDeploymentRepository
 from src.core.kubernetes.deployment import Container, Deployment, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
@@ -207,8 +208,8 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 ports=spec.ports or [],
                 resources={
                     "requests": {
-                        "cpu": spec.resources.requests.cpu,
-                        "memory": spec.resources.requests.memory,
+                        "cpu": MIN_CPU_REQUEST,
+                        "memory": MIN_MEMORY_REQUEST,
                     },
                     "limits": {
                         "cpu": spec.resources.limits.cpu,
