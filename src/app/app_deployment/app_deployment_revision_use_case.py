@@ -19,7 +19,7 @@ from src.app.app_deployment.exceptions import (
     PvcNotFoundException,
     DiskReductionNotAllowedException,
 )
-from src.common.util import UnitConverter
+from src.common.util import UnitConverter, NameConverter
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository
 
@@ -42,6 +42,7 @@ class AppDeploymentRevisionUseCase(BaseUseCase):
         """App(Deployment) 리소스 수정"""
 
         namespace = ProjectId(project_id).namespace
+        app_name = NameConverter.to_k8s_name(app_name)
 
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:

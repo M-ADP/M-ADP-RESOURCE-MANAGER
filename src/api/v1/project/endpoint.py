@@ -18,13 +18,13 @@ from src.core.user.model import User
 project_router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-@project_router.get("/{name}/resource", response_model=SuccessResponse[ProjectResourceStatusResponse])
+@project_router.get("/{project_id}/resource", response_model=SuccessResponse[ProjectResourceStatusResponse])
 async def get_project_resources(
-    name: str,
+    project_id: str,
     project_resource_status_usecase: ProjectResourceStatusUseCase = Depends(ProjectResourceStatusUseCase)
 ):
     resource_status = await project_resource_status_usecase(
-        project_id=name
+        project_id=project_id
     )
     return SuccessResponse(
         message="Project resource status retrieved successfully",
@@ -48,14 +48,14 @@ async def create_project(
     )
 
 
-@project_router.delete("/{name}", response_model=SuccessResponse[ProjectDeleteResponse])
+@project_router.delete("/{project_id}", response_model=SuccessResponse[ProjectDeleteResponse])
 async def delete_project(
-    name: str,
+    project_id: str,
     user: User = Depends(get_user),
     project_delete_usecase: ProjectDeleteUseCase = Depends(ProjectDeleteUseCase)
 ):
     project_delete_result = await project_delete_usecase(
-        name,
+        project_id,
         user.id
     )
     return SuccessResponse(
@@ -64,14 +64,14 @@ async def delete_project(
     )
 
 
-@project_router.patch("/{name}/resource", response_model=SuccessResponse[ProjectResourceUpdateResponse])
+@project_router.patch("/{project_id}/resource", response_model=SuccessResponse[ProjectResourceUpdateResponse])
 async def update_project_resources(
-    name: str,
+    project_id: str,
     payload: ProjectResourceUpdateRequest,
     project_resource_update_usecase: ProjectResourceUpdateUseCase = Depends(ProjectResourceUpdateUseCase)
 ):
     updated_quota = await project_resource_update_usecase(
-        project_id=name,
+        project_id=project_id,
         payload=payload
     )
 

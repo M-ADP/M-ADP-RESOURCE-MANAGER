@@ -6,7 +6,9 @@ from src.core.project import ProjectId
 from src.api.v1.app.schemas.request import EnvironmentUpdateRequest
 from src.api.v1.app.schemas.response import EnvironmentUpdateResponse
 from src.app.base_use_case import BaseUseCase
-from src.app.app_deployment.exceptions import DeploymentNotFoundException, ConfigMapNotFoundException
+from src.common.util import NameConverter
+from src.app.app_deployment.exceptions import DeploymentNotFoundException
+from src.common.const import DefaultLabel
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository
 
@@ -29,19 +31,23 @@ class AppDeploymentEnvironmentUpdateUseCase(BaseUseCase):
         """App Environment 완전 교체"""
 
         namespace = ProjectId(project_id).namespace
+        app_name = NameConverter.to_k8s_name(app_name)
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:
             raise DeploymentNotFoundException(app_name, namespace)
 
-        # 2. 환경변수 존재 확인 (env_configmap_name 자동 활용)
+        # 2. 환경변수 upsert (없으면 생성, 있으면 완전 교체)
         existing = await self.app_deployment_repo.get_env(deployment)
-        if not existing:
-            raise ConfigMapNotFoundException(deployment.env_configmap_name, namespace)
-
-        # 3. 환경변수 완전 교체
-        await self.app_deployment_repo.replace_env(deployment, payload.data)
+        if existing:
+            await self.app_deployment_repo.replace_env(deployment, payload.data)
+        else:
+            labels = {
+                "app_deployment": deployment.name,
+                **DefaultLabel.MANAGED_BY_LABEL,
+            }
+            await self.app_deployment_repo.set_env(deployment, payload.data, labels)
 
         return EnvironmentUpdateResponse(
             name=deployment.env_configmap_name,

@@ -6,6 +6,7 @@ from src.core.project import ProjectId
 from src.api.v1.app.schemas.request import AutoScaleRequest
 from src.api.v1.app.schemas.response import AutoScaleResponse
 from src.app.base_use_case import BaseUseCase
+from src.common.util import NameConverter
 from src.common.const import DefaultLabel
 from src.core.app_deployment import AppDeploymentRepository
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
@@ -30,6 +31,7 @@ class AppDeploymentAutoScaleUseCase(BaseUseCase):
         """App에 HPA 설정"""
 
         namespace = ProjectId(project_id).namespace
+        app_name = NameConverter.to_k8s_name(app_name)
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

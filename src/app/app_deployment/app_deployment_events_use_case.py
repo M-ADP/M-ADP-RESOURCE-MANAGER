@@ -5,6 +5,7 @@ from src.core.project import ProjectId
 
 from src.api.v1.app.schemas.event_response import AppEventsResponse, EventInfo
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
+from src.common.util import NameConverter
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository
 
@@ -26,6 +27,7 @@ class AppDeploymentEventsUseCase:
         """App 이벤트 조회"""
 
         namespace = ProjectId(project_id).namespace
+        app_name = NameConverter.to_k8s_name(app_name)
 
         # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

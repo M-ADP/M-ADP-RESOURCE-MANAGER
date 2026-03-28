@@ -6,6 +6,7 @@ from src.core.project import ProjectId
 from src.api.v1.app.schemas.response import AppDeleteResponse
 from src.app.app_deployment.exceptions import DeploymentNotFoundException
 from src.app.base_use_case import BaseUseCase
+from src.common.util import NameConverter
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository, get_service_manager
 from src.infra.kubernetes.managers.service import ServiceManager
@@ -30,6 +31,7 @@ class AppDeploymentDeleteUseCase(BaseUseCase):
         """App(Deployment) 삭제 및 연관 리소스(PVC, SA) 정리"""
 
         namespace = ProjectId(project_id).namespace
+        app_name = NameConverter.to_k8s_name(app_name)
 
         # 1. Deployment 조회하여 연관 PVC 목록 확인
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)

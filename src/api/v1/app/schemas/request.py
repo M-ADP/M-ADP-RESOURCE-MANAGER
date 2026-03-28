@@ -218,7 +218,7 @@ class AppCreateRequest(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "name": "my-app_deployment",
+                    "name": "my-app",
                     "containers": [
                         {
                             "name": "main",
@@ -244,24 +244,6 @@ class SecretCreateRequest(BaseModel):
     data: Dict[str, str] = Field(..., description="Secret 데이터")
 
 
-class EnvironmentCreateRequest(BaseModel):
-    """환경 변수 생성 요청 모델 (ConfigMap 생성)"""
-
-    data: Dict[str, str] = Field(..., description="환경 변수 데이터 (key-value)")
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "data": {
-                        "DATABASE_URL": "postgresql://localhost:5432/mydb",
-                        "REDIS_HOST": "redis.example.com",
-                        "LOG_LEVEL": "INFO"
-                    }
-                }
-            ]
-        }
-    }
 
 
 class EnvironmentUpdateRequest(BaseModel):

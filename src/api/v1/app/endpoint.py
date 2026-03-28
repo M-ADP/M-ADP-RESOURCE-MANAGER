@@ -4,8 +4,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentCreateRequest, EnvironmentUpdateRequest
-from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentCreateResponse, EnvironmentUpdateResponse, EnvironmentDeleteResponse
+from src.api.v1.app.schemas.request import AppCreateRequest, AppRevisionRequest, AutoScaleRequest, FixedScaleRequest, SecretCreateRequest, EnvironmentUpdateRequest
+from src.api.v1.app.schemas.response import AppCreateResponse, AppDeleteResponse, AppRevisionResponse, AutoScaleResponse, FixedScaleResponse, SecretCreateResponse, SecretDeleteResponse, EnvironmentUpdateResponse, EnvironmentDeleteResponse
 from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.app.monitoring.dto import AppResourceStatusResponse
@@ -19,7 +19,6 @@ from src.app.app_deployment.app_deployment_autoscale_use_case import AppDeployme
 from src.app.app_deployment.app_deployment_fixed_scale_use_case import AppDeploymentFixedScaleUseCase
 from src.app.app_deployment.app_deployment_secret_create_use_case import AppDeploymentSecretCreateUseCase
 from src.app.app_deployment.app_deployment_secret_delete_use_case import AppDeploymentSecretDeleteUseCase
-from src.app.app_deployment.app_deployment_environment_create_use_case import AppDeploymentEnvironmentCreateUseCase
 from src.app.app_deployment.app_deployment_environment_update_use_case import AppDeploymentEnvironmentUpdateUseCase
 from src.app.app_deployment.app_deployment_environment_delete_use_case import AppDeploymentEnvironmentDeleteUseCase
 from src.core.response import SuccessResponse
@@ -254,30 +253,6 @@ async def delete_app_deployment_secret(
     )
 
 
-@app_router.post("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentCreateResponse])
-async def create_app_deployment_environment(
-    payload: EnvironmentCreateRequest,
-    project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    app_deployment_environment_create_usecase: AppDeploymentEnvironmentCreateUseCase = Depends(AppDeploymentEnvironmentCreateUseCase)
-):
-    """App Deployment 환경 변수 추가 (ConfigMap 생성)
-
-    App의 환경 변수를 ConfigMap으로 생성합니다.
-    - 이미 존재하는 ConfigMap이 있으면 데이터를 병합합니다.
-    - ConfigMap 이름은 {app_deployment-name}-env 형식으로 생성됩니다.
-    """
-    app_deployment_environment_create_result = await app_deployment_environment_create_usecase(
-        project_id=project_id,
-        app_name=name,
-        payload=payload,
-    )
-    return SuccessResponse(
-        message="App deployment environment variables created successfully",
-        data=app_deployment_environment_create_result
-    )
-
-
 @app_router.put("/{project_id}/{name}/environment", response_model=SuccessResponse[EnvironmentUpdateResponse])
 async def update_app_deployment_environment(
     payload: EnvironmentUpdateRequest,
@@ -285,11 +260,11 @@ async def update_app_deployment_environment(
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
     app_deployment_environment_update_usecase: AppDeploymentEnvironmentUpdateUseCase = Depends(AppDeploymentEnvironmentUpdateUseCase)
 ):
-    """App Deployment 환경 변수 수정 (ConfigMap 데이터 교체)
+    """App Deployment 환경 변수 설정 (ConfigMap upsert)
 
-    App의 환경 변수 ConfigMap 데이터를 완전히 교체합니다.
-    - 기존 데이터는 모두 삭제되고 새로운 데이터로 교체됩니다.
-    - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
+    App의 환경 변수를 설정합니다.
+    - ConfigMap이 없으면 새로 생성합니다.
+    - ConfigMap이 있으면 데이터를 완전히 교체합니다.
     """
     app_deployment_environment_update_result = await app_deployment_environment_update_usecase(
         project_id=project_id,

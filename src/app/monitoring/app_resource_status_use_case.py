@@ -5,6 +5,7 @@ from fastapi import Depends
 from src.core.project import ProjectId
 from src.app.base_use_case import BaseUseCase
 from src.common.util.unit_converter import UnitConverter
+from src.common.util import NameConverter
 from src.dependencies.kubernetes import get_deployment_manager
 from src.infra.kubernetes.managers.deployment import DeploymentManager
 from src.app.monitoring.dto import AppResourceStatusResponse, ResourceMetric, InstanceMetric
@@ -34,6 +35,7 @@ class AppResourceStatusUseCase(BaseUseCase):
         from src.app.app_deployment.exceptions import DeploymentNotFoundException
 
         namespace = ProjectId(project_id).namespace
+        app_id = NameConverter.to_k8s_name(app_id)
         deployment = await self.deployment_manager.get_deployment(name=app_id, namespace=namespace)
         if not deployment:
             raise DeploymentNotFoundException(name=app_id, namespace=namespace)
