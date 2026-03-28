@@ -101,6 +101,22 @@ class CloudDBCreateRequest(BaseModel):
     }
 
 
+class CloudDBQueryRequest(BaseModel):
+    """Cloud DB 쿼리 실행 요청"""
+
+    sql: str = Field(..., min_length=1, description="실행할 SQL 쿼리")
+    container_name: Optional[str] = Field(
+        default=None,
+        description="실행할 컨테이너 이름 (미지정 시 첫 번째 컨테이너)",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"sql": "SELECT 1"}]
+        }
+    }
+
+
 __all__ = [
     "CloudDBType",
     "CloudDBDiskSpec",
@@ -110,4 +126,5 @@ __all__ = [
     "CLOUD_DB_MOUNT_PATHS",
     "CloudDBCreateRequest",
     "CloudDBRevisionRequest",
+    "CloudDBQueryRequest",
 ]
