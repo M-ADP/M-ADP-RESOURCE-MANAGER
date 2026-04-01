@@ -34,3 +34,18 @@ class NameConverter:
         result = result.strip("-")
         result = prefix + result
         return result
+
+    @classmethod
+    def from_k8s_name(cls, k8s_name: str, prefix: str = "app-") -> str:
+        """Kubernetes 리소스 이름을 원래 이름으로 역변환
+
+        Args:
+            k8s_name: Kubernetes 리소스 이름
+            prefix: 제거할 접두사 (기본값: "app-")
+
+        Returns:
+            원래 이름
+        """
+        if k8s_name.startswith(prefix):
+            return k8s_name[len(prefix) :]
+        return k8s_name
