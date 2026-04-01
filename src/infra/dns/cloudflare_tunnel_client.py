@@ -55,7 +55,9 @@ class CloudflareTunnelClient:
             ingress = [r for r in ingress if r != _CATCH_ALL] + [_CATCH_ALL]
 
         payload = {"config": {"ingress": ingress}}
-        async with session.put(self._config_url(), headers=self._headers(), json=payload) as resp:
+        async with session.put(
+            self._config_url(), headers=self._headers(), json=payload
+        ) as resp:
             data = await resp.json()
             if not data.get("success"):
                 raise RuntimeError(f"Tunnel Config 업데이트 실패: {data.get('errors')}")
@@ -67,6 +69,13 @@ class CloudflareTunnelClient:
 
         이미 존재하면 교체, 없으면 catch-all 직전에 삽입.
         """
+        # Skip if tunnel_id is not configured
+        if not self._cfg.tunnel_id:
+            self.logger.info(
+                f"Tunnel ID not configured, skipping ingress rule for: {hostname}"
+            )
+            return
+
         self.logger.info(f"Tunnel ingress 규칙 upsert: {hostname}")
         new_rule = {"hostname": hostname, "service": self._cfg.gateway_url}
 
@@ -86,6 +95,13 @@ class CloudflareTunnelClient:
 
     async def remove_ingress_rule(self, hostname: str) -> None:
         """hostname ingress 규칙 삭제. 없으면 성공으로 처리 (idempotent)."""
+        # Skip if tunnel_id is not configured
+        if not self._cfg.tunnel_id:
+            self.logger.info(
+                f"Tunnel ID not configured, skipping ingress rule removal for: {hostname}"
+            )
+            return
+
         self.logger.info(f"Tunnel ingress 규칙 삭제 시도: {hostname}")
 
         async with aiohttp.ClientSession() as session:
@@ -101,6 +117,13 @@ class CloudflareTunnelClient:
 
     async def update_ingress_rule(self, old_hostname: str, new_hostname: str) -> None:
         """hostname 변경. 단일 GET/PUT으로 처리."""
+        # Skip if tunnel_id is not configured
+        if not self._cfg.tunnel_id:
+            self.logger.info(
+                f"Tunnel ID not configured, skipping ingress rule update: {old_hostname} → {new_hostname}"
+            )
+            return
+
         self.logger.info(f"Tunnel ingress 규칙 변경: {old_hostname} → {new_hostname}")
         new_rule = {"hostname": new_hostname, "service": self._cfg.gateway_url}
 

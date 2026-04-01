@@ -38,9 +38,18 @@ class CloudflareDnsProvider(DnsProvider):
         return f"{subdomain}.{self._cfg.base_domain}"
 
     def _tunnel_target(self) -> str:
-        return f"{self._cfg.tunnel_id}.cfargotunnel.com"
+        # If tunnel_id is configured, use tunnel
+        if self._cfg.tunnel_id:
+            return f"{self._cfg.tunnel_id}.cfargotunnel.com"
+        # Otherwise, use gateway_url if configured
+        if self._cfg.gateway_url:
+            return self._cfg.gateway_url
+        # Fallback to base domain (for testing without tunnel/gateway)
+        return self._cfg.base_domain
 
-    async def _find_record_id(self, session: aiohttp.ClientSession, full_domain: str) -> Optional[str]:
+    async def _find_record_id(
+        self, session: aiohttp.ClientSession, full_domain: str
+    ) -> Optional[str]:
         """도메인명으로 기존 CNAME 레코드 ID 조회 (없으면 None)"""
         url = f"{_CF_API_BASE}/zones/{self._cfg.zone_id}/dns_records"
         params = {"type": "CNAME", "name": full_domain}
@@ -51,7 +60,9 @@ class CloudflareDnsProvider(DnsProvider):
 
     # ── DnsProvider 구현 ─────────────────────────────────────────────────────
 
-    async def create_subdomain_record(self, project_name: str, subdomain: str) -> DnsRecord:
+    async def create_subdomain_record(
+        self, project_name: str, subdomain: str
+    ) -> DnsRecord:
         """CNAME 레코드 생성.
 
         멱등성: 동일 이름 레코드가 이미 존재하면 생성 없이 반환.
@@ -63,7 +74,9 @@ class CloudflareDnsProvider(DnsProvider):
             existing_id = await self._find_record_id(session, full_domain)
             if existing_id:
                 self.logger.info(f"Cloudflare CNAME 이미 존재: {full_domain}")
-                return DnsRecord(name=full_domain, type="CNAME", value=self._tunnel_target())
+                return DnsRecord(
+                    name=full_domain, type="CNAME", value=self._tunnel_target()
+                )
 
             url = f"{_CF_API_BASE}/zones/{self._cfg.zone_id}/dns_records"
             payload = {
@@ -77,7 +90,9 @@ class CloudflareDnsProvider(DnsProvider):
                 data = await resp.json()
                 if not data.get("success"):
                     errors = data.get("errors", [])
-                    raise RuntimeError(f"Cloudflare CNAME 생성 실패: {full_domain} - {errors}")
+                    raise RuntimeError(
+                        f"Cloudflare CNAME 생성 실패: {full_domain} - {errors}"
+                    )
 
         self.logger.info(f"Cloudflare CNAME 생성 완료: {full_domain}")
         return DnsRecord(name=full_domain, type="CNAME", value=self._tunnel_target())
@@ -101,13 +116,16 @@ class CloudflareDnsProvider(DnsProvider):
                 data = await resp.json()
                 if not data.get("success"):
                     errors = data.get("errors", [])
-                    raise RuntimeError(f"Cloudflare CNAME 삭제 실패: {full_domain} - {errors}")
+                    raise RuntimeError(
+                        f"Cloudflare CNAME 삭제 실패: {full_domain} - {errors}"
+                    )
 
         self.logger.info(f"Cloudflare CNAME 삭제 완료: {full_domain}")
         return True
 
-    async def update_subdomain_record(self, project_name: str, old_subdomain: str, new_subdomain: str) -> DnsRecord:
+    async def update_subdomain_record(
+        self, project_name: str, old_subdomain: str, new_subdomain: str
+    ) -> DnsRecord:
         """CNAME 레코드 수정 (기존 삭제 후 재생성)."""
         await self.delete_subdomain_record(project_name, old_subdomain)
         return await self.create_subdomain_record(project_name, new_subdomain)
-

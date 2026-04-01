@@ -1,5 +1,13 @@
 from kubernetes_asyncio import client, config
-from kubernetes_asyncio.client import CoreV1Api, AppsV1Api, RbacAuthorizationV1Api, BatchV1Api, AutoscalingV2Api, StorageV1Api
+from kubernetes_asyncio.client import (
+    CoreV1Api,
+    AppsV1Api,
+    RbacAuthorizationV1Api,
+    BatchV1Api,
+    AutoscalingV2Api,
+    StorageV1Api,
+    CustomObjectsApi,
+)
 
 from src.core.kubernetes.kubernetes_client import KubernetesClient
 
@@ -20,7 +28,9 @@ class KubernetesClientImpl(KubernetesClient):
                 config.load_incluster_config()
             elif self.config.kubeconfig_path:
                 # 특정 kubeconfig 파일 사용
-                self.logger.info(f"Kubernetes 설정 파일 로드 중: {self.config.kubeconfig_path}")
+                self.logger.info(
+                    f"Kubernetes 설정 파일 로드 중: {self.config.kubeconfig_path}"
+                )
                 await config.load_kube_config(config_file=self.config.kubeconfig_path)
             else:
                 # in-cluster 자동 감지 후 기본 kubeconfig 폴백
@@ -52,6 +62,7 @@ class KubernetesClientImpl(KubernetesClient):
         self.batch_v1 = BatchV1Api(self.api_client)
         self.autoscaling_v2 = AutoscalingV2Api(self.api_client)
         self.storage_v1 = StorageV1Api(self.api_client)
+        self.custom_objects = CustomObjectsApi(self.api_client)
 
         self.logger.info("Kubernetes API 클라이언트 초기화 완료")
 

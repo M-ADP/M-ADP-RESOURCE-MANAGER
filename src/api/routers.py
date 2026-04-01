@@ -1,4 +1,5 @@
 """API 라우터 패키지"""
+
 from fastapi import APIRouter, FastAPI
 
 
@@ -9,10 +10,12 @@ def register_routers(app: FastAPI) -> None:
     from src.api.v1.app.dns.endpoint import dns_router
     from src.api.v1.cloud_db.endpoint import cloud_db_router
 
-    v1_router = APIRouter() # prefix="/v1")
+    v1_router = APIRouter()  # prefix="/v1")
     v1_router.include_router(project_router)
+    v1_router.include_router(
+        dns_router
+    )  # Register DNS router before app router to avoid path collision
     v1_router.include_router(app_router)
-    v1_router.include_router(dns_router)
     v1_router.include_router(cloud_db_router)
 
     root_router = APIRouter()
