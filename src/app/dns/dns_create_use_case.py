@@ -14,7 +14,6 @@ from src.app.base_use_case import BaseUseCase
 from src.app.dns.exceptions import DeploymentForDnsNotFoundException
 from src.common.config.cloudflare import CloudflareConfig
 from src.common.const import DefaultLabel
-from src.common.util import NameConverter
 from src.core.dns import DnsProvider
 from src.core.project import ProjectId
 from src.dependencies.dns import get_dns_provider, get_tunnel_client
@@ -45,7 +44,7 @@ class DnsCreateUseCase(BaseUseCase):
 
     async def __call__(self, payload: DnsCreateRequest) -> DnsCreateResponse:
         namespace = ProjectId(payload.project_id).namespace
-        deployment_id = NameConverter.to_k8s_name(payload.deployment_id)
+        deployment_id = payload.deployment_id
         subdomain = payload.subdomain
         dns_id = payload.id
 

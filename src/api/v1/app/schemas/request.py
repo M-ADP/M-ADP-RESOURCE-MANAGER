@@ -197,6 +197,16 @@ class AutoScaleRequest(BaseModel):
 class AppCreateRequest(BaseModel):
     """App 생성 요청 모델 (Deployment 자원 생성)"""
 
+    deployment_id: str = Field(
+        ...,
+        description="플랫폼 App Deployment ID (x-app-deployment-id 레이블에 사용)",
+        examples=["66182667372072960"]
+    )
+
+    @field_validator("deployment_id", mode="before")
+    @classmethod
+    def coerce_deployment_id(cls, v) -> str:
+        return str(v)
     name: str = Field(
         ...,
         min_length=1,

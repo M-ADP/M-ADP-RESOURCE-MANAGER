@@ -76,7 +76,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
         labels = {
             "app_deployment": k8s_name,
             "x-project-id": namespace,
-            "x-app-deployment-id": k8s_name,
+            "x-app-deployment-id": payload.deployment_id,
             **DefaultLabel.MANAGED_BY_LABEL,
         }
         if payload.labels:
