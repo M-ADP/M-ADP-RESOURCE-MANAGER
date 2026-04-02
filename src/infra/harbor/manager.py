@@ -37,13 +37,11 @@ class HarborManager:
         **kwargs,
     ) -> Dict[str, Any]:
         """Harbor API 요청"""
-        url = f"https://{self.base_url}/api/v2.0{path}"
+        url = f"http://{self.base_url}/api/v2.0{path}"
         auth = aiohttp.BasicAuth(self.username, self.password)
 
         async with aiohttp.ClientSession() as session:
-            async with session.request(
-                method, url, auth=auth, ssl=False, **kwargs
-            ) as resp:
+            async with session.request(method, url, auth=auth, **kwargs) as resp:
                 if resp.status == 204:
                     return {}
                 if resp.status >= 400:
