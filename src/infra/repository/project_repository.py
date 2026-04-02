@@ -12,6 +12,7 @@ from src.core.project.model import Project
 from src.core.kubernetes.namespace import Namespace
 from src.core.kubernetes.resource_quota import ResourceQuota, ResourceQuotaLimits
 from src.core.kubernetes.service import Service, ServicePort
+from src.infra.harbor.manager import HarborManager
 from src.infra.kubernetes.managers.namespace import NamespaceManager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
 from src.infra.kubernetes.managers.rolebinding import RoleBindingManager
@@ -31,6 +32,7 @@ class K8sProjectRepository(ProjectRepository):
         rolebinding_manager: RoleBindingManager,
         harbor_config: Optional[HarborConfig] = None,
         k8s_config: Optional[KubernetesConfig] = None,
+        harbor_manager: Optional[HarborManager] = None,
     ):
         self._namespace_manager = namespace_manager
         self._resource_quota_manager = resource_quota_manager
@@ -39,6 +41,9 @@ class K8sProjectRepository(ProjectRepository):
         self._rolebinding_manager = rolebinding_manager
         self._harbor = harbor_config or HarborConfig()
         self._k8s_config = k8s_config or KubernetesConfig()
+        self._harbor_manager = harbor_manager or HarborManager(
+            harbor_config=self._harbor
+        )
 
     # ── Project (Bundle) ─────────────────────────────────────────────────────
 
@@ -47,21 +52,22 @@ class K8sProjectRepository(ProjectRepository):
 
         # 1. Namespace
         ns_id = project.namespace  # ProjectId 기반 결정론적 도출: "project-{id}"
-        namespace = (
-            Namespace
-            .for_project(
-                user_id=project.user_id,
-                project_id=project.id,
-                project_name=project.name,
-            )
-            .with_labels({
+        namespace = Namespace.for_project(
+            user_id=project.user_id,
+            project_id=project.id,
+            project_name=project.name,
+        ).with_labels(
+            {
                 **DefaultLabel.MANAGED_BY_LABEL,
                 "x-project-id": project.id,
-            })
+            }
         )
         await self.save_namespace(namespace)
 
-        # 2. ResourceQuota
+        # 2. Harbor 프로젝트 생성
+        await self._harbor_manager.create_project(project.id)
+
+        # 3. ResourceQuota
         resource_quota = ResourceQuota.for_project(
             user_id=project.user_id,
             project_name=project.name,
@@ -75,23 +81,25 @@ class K8sProjectRepository(ProjectRepository):
         )
         saved_quota = await self.save_resource_quota(resource_quota)
 
-        # 3. Harbor docker-registry Secret (자격증명은 Vault에서 읽음)
+        # 4. Harbor docker-registry Secret (자격증명은 Vault에서 읽음)
         await self._save_docker_registry_secret(
             name=self._harbor.pull_secret_name,
             namespace=ns_id,
         )
 
-        # 4. RMS SA → PVC ClusterRole RoleBinding (새 namespace에 PVC 권한 부여)
+        # 5. RMS SA → PVC ClusterRole RoleBinding (새 namespace에 PVC 권한 부여)
         await self._rolebinding_manager.create_rolebinding(
             name="resource-manager-pvc-binding",
             namespace=ns_id,
             role_name=self._k8s_config.pvc_cluster_role_name,
             role_kind="ClusterRole",
-            subjects=[{
-                "kind": "ServiceAccount",
-                "name": self._k8s_config.service_account_name,
-                "namespace": self._k8s_config.service_account_namespace,
-            }],
+            subjects=[
+                {
+                    "kind": "ServiceAccount",
+                    "name": self._k8s_config.service_account_name,
+                    "namespace": self._k8s_config.service_account_namespace,
+                }
+            ],
             labels={**DefaultLabel.MANAGED_BY_LABEL},
         )
 
@@ -118,6 +126,11 @@ class K8sProjectRepository(ProjectRepository):
 
     async def delete_namespace(self, id: str) -> bool:
         return await self._namespace_manager.delete_namespace(id)
+
+    async def delete_project_from_harbor(self, project_id: str) -> bool:
+        """Harbor 프로젝트 삭제"""
+        await self._harbor_manager.delete_project(project_id)
+        return True
 
     async def exists_namespace(self, id: str) -> bool:
         return await self._namespace_manager.exists(id)
@@ -181,7 +194,9 @@ class K8sProjectRepository(ProjectRepository):
             for p in service.ports
         ]
 
-        existing = await self._service_manager.get_service(service.id, service.namespace)
+        existing = await self._service_manager.get_service(
+            service.id, service.namespace
+        )
         if existing:
             v1_svc = await self._service_manager.update_service(
                 name=service.id,
@@ -246,13 +261,17 @@ class K8sProjectRepository(ProjectRepository):
         ports = []
         if v1_svc.spec and v1_svc.spec.ports:
             for p in v1_svc.spec.ports:
-                ports.append(ServicePort(
-                    port=p.port,
-                    target_port=p.target_port if isinstance(p.target_port, int) else int(p.target_port),
-                    protocol=p.protocol or "TCP",
-                    name=p.name,
-                    node_port=p.node_port,
-                ))
+                ports.append(
+                    ServicePort(
+                        port=p.port,
+                        target_port=p.target_port
+                        if isinstance(p.target_port, int)
+                        else int(p.target_port),
+                        protocol=p.protocol or "TCP",
+                        name=p.name,
+                        node_port=p.node_port,
+                    )
+                )
 
         labels = v1_svc.metadata.labels or {}
         return Service(
@@ -265,5 +284,7 @@ class K8sProjectRepository(ProjectRepository):
             labels=labels,
             annotations=v1_svc.metadata.annotations or {},
             cluster_ip=v1_svc.spec.cluster_ip if v1_svc.spec else None,
-            external_ips=v1_svc.spec.external_ips if v1_svc.spec and v1_svc.spec.external_ips else [],
+            external_ips=v1_svc.spec.external_ips
+            if v1_svc.spec and v1_svc.spec.external_ips
+            else [],
         )

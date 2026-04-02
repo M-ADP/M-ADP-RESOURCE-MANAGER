@@ -21,19 +21,24 @@ from src.infra.kubernetes.managers.configmap import ConfigMapManager
 from src.infra.kubernetes.managers.statefulset import StatefulSetManager
 from src.infra.kubernetes.managers.job import JobManager
 from src.infra.kubernetes.managers.cronjob import CronJobManager
-from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
+from src.infra.kubernetes.managers.persistentvolumeclaim import (
+    PersistentVolumeClaimManager,
+)
 from src.infra.kubernetes.managers.rolebinding import RoleBindingManager
 from src.infra.kubernetes.managers.node import NodeManager
 from src.infra.kubernetes.managers.storage_class import StorageClassManager
-from src.infra.repository import K8sAppDeploymentRepository, K8sCloudDbRepository, K8sProjectRepository
+from src.infra.repository import (
+    K8sAppDeploymentRepository,
+    K8sCloudDbRepository,
+    K8sProjectRepository,
+)
 
 
 _k8s_client_instance: Optional[KubernetesClientImpl] = None
 
 
 async def get_kubernetes_client(
-        k8s_config: Optional[KubernetesConfig] = None,
-        logger: Optional[Logger] = None
+    k8s_config: Optional[KubernetesConfig] = None, logger: Optional[Logger] = None
 ) -> KubernetesClientImpl:
     """
     Kubernetes 클라이언트 인스턴스 반환 (비동기 의존성 주입용)
@@ -207,10 +212,13 @@ async def get_cloud_db_repository() -> CloudDbRepository:
 async def get_project_repository() -> ProjectRepository:
     """ProjectRepository 인스턴스 반환"""
     k8s_client = await get_kubernetes_client()
+    from src.infra.harbor.manager import HarborManager
+
     return K8sProjectRepository(
         namespace_manager=NamespaceManager(k8s_client),
         resource_quota_manager=ResourceQuotaManager(k8s_client),
         service_manager=ServiceManager(k8s_client),
         service_account_manager=ServiceAccountManager(k8s_client),
         rolebinding_manager=RoleBindingManager(k8s_client),
+        harbor_manager=HarborManager(),
     )

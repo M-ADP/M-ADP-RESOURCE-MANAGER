@@ -9,18 +9,13 @@ from src.dependencies.kubernetes import get_project_repository
 
 
 class ProjectDeleteUseCase(BaseUseCase):
-
     def __init__(
-            self,
-            project_repo: ProjectRepository = Depends(get_project_repository),
+        self,
+        project_repo: ProjectRepository = Depends(get_project_repository),
     ):
         self.project_repo = project_repo
 
-    async def __call__(
-            self,
-            id: str,
-            user_id: str
-    ) -> ProjectDeleteResponse:
+    async def __call__(self, id: str, user_id: str) -> ProjectDeleteResponse:
         """Project 삭제 (ResourceQuota + Namespace)"""
         project_id = id
         namespace_id = ProjectId(project_id).namespace
@@ -40,7 +35,16 @@ class ProjectDeleteUseCase(BaseUseCase):
         # 3. Namespace 삭제
         await self.project_repo.delete_namespace(namespace_id)
 
+        # 4. Harbor 프로젝트 삭제
+        harbor_deleted = False
+        try:
+            await self.project_repo.delete_project_from_harbor(project_id)
+            harbor_deleted = True
+        except Exception:
+            pass
+
         return ProjectDeleteResponse(
             namespace_id=namespace_id,
             resource_quota_deleted=resource_quota_deleted,
+            harbor_deleted=harbor_deleted,
         )

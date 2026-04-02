@@ -17,6 +17,7 @@ class ProjectDeleteResponse(BaseModel):
 
     namespace_id: str
     resource_quota_deleted: bool
+    harbor_deleted: bool
 
 
 class ProjectResourceUpdateResponse(BaseModel):
