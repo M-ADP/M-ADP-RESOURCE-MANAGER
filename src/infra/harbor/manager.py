@@ -42,7 +42,7 @@ class HarborManager:
 
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, auth=auth, **kwargs) as resp:
-                if resp.status == 204:
+                if resp.status in (204, 201):
                     return {}
                 if resp.status >= 400:
                     text = await resp.text()
