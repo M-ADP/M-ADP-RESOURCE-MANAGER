@@ -37,7 +37,7 @@ class CloudflareTunnelClient:
     def _config_url(self) -> str:
         return (
             f"{_CF_API_BASE}/accounts/{self._cfg.account_id}"
-            f"/tunnels/{self._cfg.tunnel_id}/configurations"
+            f"/cfd_tunnel/{self._cfg.tunnel_id}/configurations"
         )
 
     async def _get_ingress(self, session: aiohttp.ClientSession) -> list:
