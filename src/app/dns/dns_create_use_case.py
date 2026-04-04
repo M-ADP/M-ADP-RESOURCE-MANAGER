@@ -61,6 +61,16 @@ class DnsCreateUseCase(BaseUseCase):
         deployment = matches[0]
         k8s_name = deployment.metadata.labels.get("app_deployment", deployment.metadata.name)
 
+        # Deployment에서 실제 서비스 포트 추출 (기본값 80)
+        container_port = 80
+        try:
+            if deployment.spec.template.spec.containers:
+                ports = deployment.spec.template.spec.containers[0].ports
+                if ports:
+                    container_port = ports[0].container_port
+        except (AttributeError, IndexError):
+            pass
+
         full_domain = f"{subdomain}.{self._cf.base_domain}"
         service_host = f"{k8s_name}-svc.{namespace}.svc.cluster.local"
         
@@ -112,6 +122,7 @@ class DnsCreateUseCase(BaseUseCase):
                     "route": [{
                         "destination": {
                             "host": service_host,
+                            "port": {"number": int(container_port)}
                         }
                     }]
                 }],
