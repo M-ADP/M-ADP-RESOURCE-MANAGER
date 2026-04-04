@@ -46,7 +46,12 @@ class CloudflareTunnelClient:
             data = await resp.json()
             if not data.get("success"):
                 raise RuntimeError(f"Tunnel Config 조회 실패: {data.get('errors')}")
-            ingress = data.get("result", {}).get("config", {}).get("ingress", [])
+
+            # result 또는 config가 null(None)일 경우를 대비해 'or {}' 추가
+            result = data.get("result") or {}
+            config = result.get("config") or {}
+            ingress = config.get("ingress", [])
+
             return ingress if ingress else [_CATCH_ALL]
 
     async def _put_ingress(self, session: aiohttp.ClientSession, ingress: list) -> None:
