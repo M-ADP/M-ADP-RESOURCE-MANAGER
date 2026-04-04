@@ -1,5 +1,7 @@
 """DNS API 요청 스키마"""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -14,6 +16,9 @@ class DnsCreateRequest(BaseModel):
         pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
         description="서브도메인 슬러그 (예: my-app)",
     )
+    service_type: Literal["http", "ssh"] = Field(
+        default="http", description="서비스 유형 (http, ssh)"
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -22,6 +27,7 @@ class DnsCreateRequest(BaseModel):
                 "project_id": "456",
                 "deployment_id": "my-app",
                 "subdomain": "my-app",
+                "service_type": "http",
             }]
         }
     }
