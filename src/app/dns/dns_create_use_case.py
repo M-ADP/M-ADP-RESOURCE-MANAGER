@@ -24,6 +24,7 @@ from src.infra.kubernetes.managers.virtualservice import IstioVirtualServiceMana
 
 _DNS_ID_LABEL = "madp.io/dns-id"
 _DNS_SUBDOMAIN_LABEL = "madp.io/dns-subdomain"
+_PROJECT_ID_LABEL = "madp.io/project-id"
 
 
 class DnsCreateUseCase(BaseUseCase):
@@ -67,6 +68,7 @@ class DnsCreateUseCase(BaseUseCase):
         dns_labels = {
             _DNS_ID_LABEL: str(dns_id),
             _DNS_SUBDOMAIN_LABEL: subdomain,
+            _PROJECT_ID_LABEL: payload.project_id,
             "app_deployment": k8s_name,
             **DefaultLabel.MANAGED_BY_LABEL,
         }

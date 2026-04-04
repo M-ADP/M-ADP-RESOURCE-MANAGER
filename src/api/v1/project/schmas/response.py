@@ -18,6 +18,7 @@ class ProjectDeleteResponse(BaseModel):
     namespace_id: str
     resource_quota_deleted: bool
     harbor_deleted: bool
+    dns_deleted_count: int = 0
 
 
 class ProjectResourceUpdateResponse(BaseModel):
