@@ -69,8 +69,8 @@ class CloudflareTunnelClient:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    async def add_ingress_rule(self, hostname: str, service_url: Optional[str] = None) -> None:
-        """hostname → service_url ingress 규칙 upsert.
+    async def add_ingress_rule(self, hostname: str) -> None:
+        """hostname → gateway_url ingress 규칙 upsert.
 
         이미 존재하면 교체, 없으면 catch-all 직전에 삽입.
         """
@@ -82,9 +82,7 @@ class CloudflareTunnelClient:
             return
 
         self.logger.info(f"Tunnel ingress 규칙 upsert: {hostname}")
-        # service_url이 제공되지 않으면 기본 gateway_url 사용
-        target_service = service_url or self._cfg.gateway_url
-        new_rule = {"hostname": hostname, "service": target_service}
+        new_rule = {"hostname": hostname, "service": self._cfg.gateway_url}
 
         async with aiohttp.ClientSession() as session:
             ingress = await self._get_ingress(session)
