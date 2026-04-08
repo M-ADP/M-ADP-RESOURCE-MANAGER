@@ -121,7 +121,12 @@ class DnsCreateUseCase(BaseUseCase):
                                 "port": {"number": int(service_port)},
                             }
                         }
-                    ]
+                    ],
+                    "retries": {
+                        "attempts": 3,
+                        "perTryTimeout": "2s",
+                        "retryOn": "gateway-error,connect-failure,refused-stream",
+                    },
                 }
             ],
             labels=dns_labels,
