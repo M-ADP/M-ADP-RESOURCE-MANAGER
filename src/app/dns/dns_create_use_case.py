@@ -82,7 +82,7 @@ class DnsCreateUseCase(BaseUseCase):
         full_domain = f"{subdomain}.{self._cf.base_domain}"
         service_host = f"{k8s_name}-svc.{namespace}.svc.cluster.local"
         
-        # 3. VirtualService 생성 (istio-system) → 기존 Service로 FQDN 라우팅
+        # 3. VirtualService 생성 (istio-ingress) → 기존 Service로 FQDN 라우팅
         dns_labels = {
             _DNS_ID_LABEL: str(dns_id),
             _DNS_SUBDOMAIN_LABEL: subdomain,
@@ -91,11 +91,11 @@ class DnsCreateUseCase(BaseUseCase):
             **DefaultLabel.MANAGED_BY_LABEL,
         }
         vs_name = f"{k8s_name}-{subdomain}-vs"
-        gateway_ref = "istio-system/ingressgateway"
+        gateway_ref = "istio-ingress/ingressgateway"
 
         await self.virtualservice_manager.create_virtualservice(
             name=vs_name,
-            namespace="istio-system",
+            namespace="istio-ingress",
             hosts=[full_domain],
             gateways=[gateway_ref],
             http_routes=[{
