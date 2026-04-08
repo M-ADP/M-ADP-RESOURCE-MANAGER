@@ -6,6 +6,7 @@ from kubernetes_asyncio.client import (
     V1Deployment,
     V1ObjectMeta,
     V1DeploymentSpec,
+    V1DeploymentStrategy,
     V1LabelSelector,
     V1LocalObjectReference,
     V1PodTemplateSpec,
@@ -100,6 +101,7 @@ class DeploymentManager:
             spec=V1DeploymentSpec(
                 replicas=replicas,
                 revision_history_limit=0,
+                strategy=V1DeploymentStrategy(type="Recreate"),
                 selector=V1LabelSelector(
                     match_labels=selector_match_labels,
                 ),
