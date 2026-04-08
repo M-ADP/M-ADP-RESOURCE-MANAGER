@@ -101,7 +101,10 @@ class DeploymentManager:
             spec=V1DeploymentSpec(
                 replicas=replicas,
                 revision_history_limit=0,
-                strategy=V1DeploymentStrategy(type="Recreate"),
+                strategy=V1DeploymentStrategy(
+                    type="RollingUpdate",
+                    rolling_update={"max_surge": 0, "max_unavailable": 1},
+                ),
                 selector=V1LabelSelector(
                     match_labels=selector_match_labels,
                 ),
@@ -623,7 +626,15 @@ class DeploymentManager:
         if image_pull_secrets is not None:
             pod_spec["imagePullSecrets"] = [{"name": s} for s in image_pull_secrets]
 
-        body = {"spec": {"template": {"spec": pod_spec}}}
+        body = {
+            "spec": {
+                "strategy": {
+                    "type": "RollingUpdate",
+                    "rollingUpdate": {"maxSurge": 0, "maxUnavailable": 1},
+                },
+                "template": {"spec": pod_spec},
+            }
+        }
 
         try:
             dep = await self.k8s_client.apps_v1.patch_namespaced_deployment(
