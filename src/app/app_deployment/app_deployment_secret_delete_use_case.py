@@ -16,7 +16,9 @@ class AppDeploymentSecretDeleteUseCase(BaseUseCase):
 
     def __init__(
         self,
-        app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
+        app_deployment_repo: AppDeploymentRepository = Depends(
+            get_app_deployment_repository
+        ),
     ):
         self.app_deployment_repo = app_deployment_repo
 
@@ -24,26 +26,22 @@ class AppDeploymentSecretDeleteUseCase(BaseUseCase):
         self,
         project_id: str,
         app_name: str,
-        secret_name: str,
     ) -> SecretDeleteResponse:
-        """App Secret 삭제 및 Vault 접근 구조 정리"""
+        """App Secret 삭제 및 Vault 접근 구조 전체 정리"""
 
         namespace = ProjectId(project_id).namespace
         app_name = NameConverter.to_k8s_name(app_name)
 
-        # 1. Deployment 조회
         deployment = await self.app_deployment_repo.find_deployment(app_name, namespace)
         if not deployment:
             raise DeploymentNotFoundException(app_name, namespace)
 
-        # 2. Secret 삭제 + 마지막 secret이면 Policy/Role 자동 정리
-        # all_cleaned: 마지막 secret이어서 Policy/Role까지 정리된 경우 True
-        all_cleaned = await self.app_deployment_repo.revoke_secret(deployment, secret_name)
+        policy_cleaned = await self.app_deployment_repo.revoke_secret(deployment)
 
         mount_point = self.app_deployment_repo.secret_mount_point
+        secret_path = deployment.vault_secret_path()
 
         return SecretDeleteResponse(
-            name=secret_name,
-            path=f"{mount_point}/data/{deployment.vault_secret_path(secret_name)}",
-            all_secrets_deleted=all_cleaned,
+            path=f"{mount_point}/data/{secret_path}",
+            policy_cleaned=policy_cleaned,
         )

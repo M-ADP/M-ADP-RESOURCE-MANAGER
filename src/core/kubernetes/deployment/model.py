@@ -80,9 +80,14 @@ class Deployment:
         """이 Deployment와 연결된 Vault Kubernetes Auth Role 이름"""
         return f"{self.namespace}-{self.name}-role"
 
-    def vault_secret_path(self, secret_name: str) -> str:
+    @property
+    def vault_secret_name(self) -> str:
+        """이 Deployment의 고정 Vault Secret 이름"""
+        return "app-secret"
+
+    def vault_secret_path(self, secret_name: str | None = None) -> str:
         """이 Deployment의 Vault Secret 경로"""
-        return f"{self.namespace}/{self.name}/{secret_name}"
+        return f"{self.namespace}/{self.name}/{secret_name or self.vault_secret_name}"
 
     def vault_secrets_prefix(self) -> str:
         """이 Deployment의 Vault Secret 목록 조회용 prefix"""
@@ -132,19 +137,27 @@ class Deployment:
                 current = c.resources or {}
                 new_resources = {**current}
                 if requests is not None:
-                    new_resources["requests"] = {**(current.get("requests") or {}), **requests}
+                    new_resources["requests"] = {
+                        **(current.get("requests") or {}),
+                        **requests,
+                    }
                 if limits is not None:
-                    new_resources["limits"] = {**(current.get("limits") or {}), **limits}
-                new_containers.append(Container(
-                    name=c.name,
-                    image=c.image,
-                    ports=c.ports,
-                    env=c.env,
-                    resources=new_resources,
-                    volume_mounts=c.volume_mounts,
-                    command=c.command,
-                    args=c.args,
-                ))
+                    new_resources["limits"] = {
+                        **(current.get("limits") or {}),
+                        **limits,
+                    }
+                new_containers.append(
+                    Container(
+                        name=c.name,
+                        image=c.image,
+                        ports=c.ports,
+                        env=c.env,
+                        resources=new_resources,
+                        volume_mounts=c.volume_mounts,
+                        command=c.command,
+                        args=c.args,
+                    )
+                )
             else:
                 new_containers.append(c)
         return Deployment(
@@ -170,6 +183,7 @@ class Deployment:
     ) -> "HorizontalPodAutoscaler":
         """이 Deployment를 대상으로 하는 HPA 도메인 객체 생성"""
         from src.core.kubernetes.hpa.model import HorizontalPodAutoscaler
+
         return HorizontalPodAutoscaler.for_deployment(
             deployment=self,
             min_replicas=min_replicas,

@@ -27,6 +27,7 @@ from src.infra.kubernetes.managers.persistentvolumeclaim import (
 from src.infra.kubernetes.managers.rolebinding import RoleBindingManager
 from src.infra.kubernetes.managers.node import NodeManager
 from src.infra.kubernetes.managers.storage_class import StorageClassManager
+from src.infra.kubernetes.managers.secret import SecretManager
 from src.infra.repository import (
     K8sAppDeploymentRepository,
     K8sCloudDbRepository,
@@ -189,6 +190,7 @@ async def get_app_deployment_repository() -> AppDeploymentRepository:
         pod_manager=PodManager(k8s_client),
         configmap_manager=ConfigMapManager(k8s_client),
         vault_client=vault_client,
+        secret_manager=SecretManager(k8s_client, vault_client),
     )
 
 
@@ -206,6 +208,7 @@ async def get_cloud_db_repository() -> CloudDbRepository:
         pod_manager=PodManager(k8s_client),
         configmap_manager=ConfigMapManager(k8s_client),
         vault_client=vault_client,
+        secret_manager=SecretManager(k8s_client, vault_client),
     )
 
 

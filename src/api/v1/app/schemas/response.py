@@ -112,7 +112,6 @@ class AutoScaleResponse(BaseModel):
 class SecretCreateResponse(BaseModel):
     """Secret 생성 응답 모델"""
 
-    name: str = Field(..., description="Secret 이름")
     namespace: str = Field(..., description="네임스페이스")
     app_name: str = Field(..., description="App 이름")
     path: str = Field(..., description="Vault 경로")
@@ -123,11 +122,8 @@ class SecretCreateResponse(BaseModel):
 class SecretDeleteResponse(BaseModel):
     """Secret 삭제 응답 모델"""
 
-    name: str = Field(..., description="삭제된 Secret 이름")
     path: str = Field(..., description="삭제된 Vault 경로")
-    all_secrets_deleted: bool = Field(
-        ..., description="해당 앱의 모든 Secret 삭제 및 권한 정리 여부"
-    )
+    policy_cleaned: bool = Field(..., description="Policy 및 Role 정리 여부")
 
 
 class EnvironmentUpdateResponse(BaseModel):

@@ -307,26 +307,23 @@ async def create_app_deployment_secret(
 
 
 @app_router.delete(
-    "/{project_id}/{name}/secrets/{secret_name}",
+    "/{project_id}/{name}/secrets",
     response_model=SuccessResponse[SecretDeleteResponse],
 )
 async def delete_app_deployment_secret(
     project_id: str = Path(..., description="프로젝트 ID"),
     name: str = Path(..., description="App 이름 (Deployment 이름)"),
-    secret_name: str = Path(..., description="삭제할 Secret 이름"),
     app_deployment_secret_delete_usecase: AppDeploymentSecretDeleteUseCase = Depends(
         AppDeploymentSecretDeleteUseCase
     ),
 ):
     """App Deployment Secret 삭제
 
-    Vault에서 Secret을 삭제합니다.
-    만약 해당 App의 모든 Secret이 삭제되면, 관련된 Policy와 Role도 자동으로 정리됩니다.
+    Vault에서 Secret을 삭제하고, 관련된 Policy와 Role도 함께 정리합니다.
     """
     app_deployment_secret_delete_result = await app_deployment_secret_delete_usecase(
         project_id=project_id,
         app_name=name,
-        secret_name=secret_name,
     )
     return SuccessResponse(
         message="App deployment secret deleted successfully",

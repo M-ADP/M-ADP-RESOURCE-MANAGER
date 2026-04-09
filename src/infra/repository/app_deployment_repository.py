@@ -8,6 +8,8 @@ from kubernetes_asyncio.client import (
     V1ContainerPort,
     V1Deployment,
     V1EnvVar,
+    V1EnvFromSource,
+    V1ConfigMapEnvSource,
     V1PersistentVolumeClaim,
     V1PersistentVolumeClaimVolumeSource,
     V1ResourceRequirements,
@@ -19,7 +21,12 @@ from kubernetes_asyncio.client import (
 
 from src.core.app_deployment import AppDeploymentRepository
 from src.core.kubernetes.configmap import ConfigMap
-from src.core.kubernetes.deployment import Container, Deployment, DeploymentStatus, Volume
+from src.core.kubernetes.deployment import (
+    Container,
+    Deployment,
+    DeploymentStatus,
+    Volume,
+)
 from src.core.kubernetes.hpa import (
     HorizontalPodAutoscaler,
     HpaMetricSpec,
@@ -32,8 +39,11 @@ from src.core.kubernetes.service_account import ServiceAccount
 from src.infra.kubernetes.managers.configmap import ConfigMapManager
 from src.infra.kubernetes.managers.deployment import DeploymentManager
 from src.infra.kubernetes.managers.hpa import HpaManager
-from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
+from src.infra.kubernetes.managers.persistentvolumeclaim import (
+    PersistentVolumeClaimManager,
+)
 from src.infra.kubernetes.managers.pod import PodManager
+from src.infra.kubernetes.managers.secret import SecretManager
 from src.infra.kubernetes.managers.service_account import ServiceAccountManager
 from src.infra.vault.client import VaultClient
 
@@ -50,6 +60,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         pod_manager: PodManager,
         configmap_manager: ConfigMapManager,
         vault_client: VaultClient,
+        secret_manager: SecretManager,
     ):
         self._deployment_manager = deployment_manager
         self._pvc_manager = pvc_manager
@@ -58,6 +69,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         self._pod_manager = pod_manager
         self._configmap_manager = configmap_manager
         self._vault_client = vault_client
+        self._secret_manager = secret_manager
 
     # ── Deployment ──────────────────────────────────────────────────────────
 
@@ -83,7 +95,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
                     name=v.name,
                     persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
                         claim_name=v.pvc_name
-                    ) if v.pvc_name else None,
+                    )
+                    if v.pvc_name
+                    else None,
                 )
                 for v in deployment.volumes
             ]
@@ -137,7 +151,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
 
     # ── Storage (PVC) ────────────────────────────────────────────────────────
 
-    async def provision_storage(self, pvc: PersistentVolumeClaim) -> PersistentVolumeClaim:
+    async def provision_storage(
+        self, pvc: PersistentVolumeClaim
+    ) -> PersistentVolumeClaim:
         v1_pvc = await self._pvc_manager.create_pvc(
             name=pvc.name,
             namespace=pvc.namespace,
@@ -149,7 +165,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         )
         return self._pvc_to_domain(v1_pvc)
 
-    async def find_storage(self, name: str, namespace: str) -> Optional[PersistentVolumeClaim]:
+    async def find_storage(
+        self, name: str, namespace: str
+    ) -> Optional[PersistentVolumeClaim]:
         v1_pvc = await self._pvc_manager.get_pvc(name, namespace)
         if v1_pvc is None:
             return None
@@ -158,7 +176,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     async def deprovision_storage(self, name: str, namespace: str) -> bool:
         return await self._pvc_manager.delete_pvc(name, namespace)
 
-    async def expand_storage(self, pvc: PersistentVolumeClaim, new_size: str) -> PersistentVolumeClaim:
+    async def expand_storage(
+        self, pvc: PersistentVolumeClaim, new_size: str
+    ) -> PersistentVolumeClaim:
         v1_pvc = await self._pvc_manager.resize_pvc(pvc.name, pvc.namespace, new_size)
         return self._pvc_to_domain(v1_pvc)
 
@@ -175,11 +195,15 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         return self._service_account_to_domain(v1_sa)
 
     async def unbind_identity(self, name: str, namespace: str) -> bool:
-        return await self._service_account_manager.delete_service_account(name, namespace)
+        return await self._service_account_manager.delete_service_account(
+            name, namespace
+        )
 
     # ── Autoscale (HPA) ──────────────────────────────────────────────────────
 
-    async def enable_autoscale(self, hpa: HorizontalPodAutoscaler) -> HorizontalPodAutoscaler:
+    async def enable_autoscale(
+        self, hpa: HorizontalPodAutoscaler
+    ) -> HorizontalPodAutoscaler:
         metrics = [
             {
                 "type": m.type,
@@ -204,7 +228,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         return self._hpa_to_domain(raw_hpa)
 
     async def disable_autoscale(self, deployment: Deployment) -> bool:
-        return await self._hpa_manager.delete_hpa(deployment.hpa_name, deployment.namespace)
+        return await self._hpa_manager.delete_hpa(
+            deployment.hpa_name, deployment.namespace
+        )
 
     # ── Observation (Pod) ────────────────────────────────────────────────────
 
@@ -243,7 +269,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             obj = event.involved_object
             if obj.kind == "Deployment" and obj.name == deployment.name:
                 events.append(self._event_to_domain(event))
-            elif obj.kind == "ReplicaSet" and obj.name.startswith(f"{deployment.name}-"):
+            elif obj.kind == "ReplicaSet" and obj.name.startswith(
+                f"{deployment.name}-"
+            ):
                 events.append(self._event_to_domain(event))
             elif obj.kind == "Pod" and obj.name.startswith(f"{deployment.name}-"):
                 events.append(self._event_to_domain(event))
@@ -266,7 +294,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         name = deployment.env_configmap_name
         namespace = deployment.namespace
 
-        existing = await self._configmap_manager.get_configmap(name=name, namespace=namespace)
+        existing = await self._configmap_manager.get_configmap(
+            name=name, namespace=namespace
+        )
         if existing:
             v1_cm = await self._configmap_manager.update_data(
                 name=name,
@@ -281,9 +311,28 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
                 data=data,
                 labels=labels,
             )
+
+        await self._ensure_env_from(deployment)
+
         return self._configmap_to_domain(v1_cm)
 
-    async def replace_env(self, deployment: Deployment, data: Dict[str, str]) -> ConfigMap:
+    async def replace_env(
+        self, deployment: Deployment, data: Dict[str, str]
+    ) -> ConfigMap:
+        v1_cm = await self._configmap_manager.update_data(
+            name=deployment.env_configmap_name,
+            namespace=deployment.namespace,
+            data=data,
+            merge=False,
+        )
+
+        await self._ensure_env_from(deployment)
+
+        return self._configmap_to_domain(v1_cm)
+
+    async def replace_env(
+        self, deployment: Deployment, data: Dict[str, str]
+    ) -> ConfigMap:
         v1_cm = await self._configmap_manager.update_data(
             name=deployment.env_configmap_name,
             namespace=deployment.namespace,
@@ -307,6 +356,37 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             namespace=deployment.namespace,
         )
 
+    async def _ensure_env_from(self, deployment: Deployment) -> None:
+        existing = await self._deployment_manager.get_deployment(
+            deployment.name, deployment.namespace
+        )
+        if not existing:
+            return
+
+        configmap_name = deployment.env_configmap_name
+        containers = existing.spec.template.spec.containers or []
+
+        env_froms = [
+            V1EnvFromSource(config_map_ref=V1ConfigMapEnvSource(name=configmap_name))
+        ]
+
+        patch_containers = []
+        for c in containers:
+            patch_containers.append(
+                {
+                    "name": c.name,
+                    "envFrom": [{"configMapRef": {"name": configmap_name}}],
+                }
+            )
+
+        body = {"spec": {"template": {"spec": {"containers": patch_containers}}}}
+
+        await self._deployment_manager.k8s_client.apps_v1.patch_namespaced_deployment(
+            name=deployment.name,
+            namespace=deployment.namespace,
+            body=body,
+        )
+
     # ── Secret (Vault) ───────────────────────────────────────────────────────
 
     @property
@@ -316,9 +396,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     async def store_secret(
         self,
         deployment: Deployment,
-        secret_name: str,
         data: Dict,
     ) -> str:
+        secret_name = deployment.vault_secret_name
         secret_path = deployment.vault_secret_path(secret_name)
         await self._vault_client.create_secret(path=secret_path, secret=data)
 
@@ -334,28 +414,42 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             policies=[deployment.vault_policy_name],
         )
 
+        await self._secret_manager.inject_vault_agent_to_deployment(
+            deployment_name=deployment.name,
+            namespace=deployment.namespace,
+            vault_role=deployment.vault_role_name,
+            secret_configs=[
+                {
+                    "name": secret_name,
+                    "path": f"{mount_point}/data/{secret_path}",
+                }
+            ],
+        )
+
         return f"{mount_point}/data/{secret_path}"
 
     async def list_app_secrets(self, deployment: Deployment) -> List[str]:
         return await self._vault_client.list_secrets(deployment.vault_secrets_prefix())
 
-    async def revoke_secret(self, deployment: Deployment, secret_name: str) -> bool:
-        await self._vault_client.delete_secret(path=deployment.vault_secret_path(secret_name))
+    async def revoke_secret(self, deployment: Deployment) -> bool:
+        secret_name = deployment.vault_secret_name
+        await self._vault_client.delete_secret(
+            path=deployment.vault_secret_path(secret_name)
+        )
 
-        remaining = await self._vault_client.list_secrets(deployment.vault_secrets_prefix())
-        if not remaining:
-            await self._vault_client.delete_kubernetes_role(deployment.vault_role_name)
-            await self._vault_client.delete_policy(deployment.vault_policy_name)
-            return True
+        await self._vault_client.delete_kubernetes_role(deployment.vault_role_name)
+        await self._vault_client.delete_policy(deployment.vault_policy_name)
 
-        return False
+        return True
 
     # ── 변환 헬퍼 ────────────────────────────────────────────────────────────
 
     def _build_v1_container(self, c: Container) -> V1Container:
         ports = None
         if c.ports:
-            ports = [V1ContainerPort(container_port=p.get("container_port")) for p in c.ports]
+            ports = [
+                V1ContainerPort(container_port=p.get("container_port")) for p in c.ports
+            ]
 
         env = None
         if c.env:
@@ -402,17 +496,21 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
                 volume_mounts = []
                 if c.volume_mounts:
                     for vm in c.volume_mounts:
-                        volume_mounts.append({
-                            "name": vm.name,
-                            "mount_path": vm.mount_path,
-                        })
+                        volume_mounts.append(
+                            {
+                                "name": vm.name,
+                                "mount_path": vm.mount_path,
+                            }
+                        )
 
-                containers.append(Container(
-                    name=c.name,
-                    image=c.image,
-                    resources=resources,
-                    volume_mounts=volume_mounts,
-                ))
+                containers.append(
+                    Container(
+                        name=c.name,
+                        image=c.image,
+                        resources=resources,
+                        volume_mounts=volume_mounts,
+                    )
+                )
 
             for v in v1_dep.spec.template.spec.volumes or []:
                 pvc_name = None
@@ -441,7 +539,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             volumes=volumes,
             labels=v1_dep.metadata.labels or {},
             annotations=v1_dep.metadata.annotations or {},
-            selector_labels=v1_dep.spec.selector.match_labels if v1_dep.spec and v1_dep.spec.selector else {},
+            selector_labels=v1_dep.spec.selector.match_labels
+            if v1_dep.spec and v1_dep.spec.selector
+            else {},
             service_account_name=service_account_name,
             status=status,
         )
@@ -474,7 +574,9 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             image_pull_secrets=image_pull_secrets,
         )
 
-    def _hpa_to_domain(self, raw_hpa: V2HorizontalPodAutoscaler) -> HorizontalPodAutoscaler:
+    def _hpa_to_domain(
+        self, raw_hpa: V2HorizontalPodAutoscaler
+    ) -> HorizontalPodAutoscaler:
         spec = raw_hpa.spec
         status = raw_hpa.status
 
@@ -488,18 +590,22 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         if spec.metrics:
             for m in spec.metrics:
                 if m.type == "Resource" and m.resource:
-                    target_type = m.resource.target.type if m.resource.target else "Utilization"
+                    target_type = (
+                        m.resource.target.type if m.resource.target else "Utilization"
+                    )
                     target_value = (
                         m.resource.target.average_utilization
                         if target_type == "Utilization"
                         else m.resource.target.average_value
                     )
-                    metrics.append(HpaMetricSpec(
-                        type="Resource",
-                        resource_name=m.resource.name,
-                        target_type=target_type,
-                        target_value=int(target_value) if target_value else 0,
-                    ))
+                    metrics.append(
+                        HpaMetricSpec(
+                            type="Resource",
+                            resource_name=m.resource.name,
+                            target_type=target_type,
+                            target_value=int(target_value) if target_value else 0,
+                        )
+                    )
 
         hpa_status = None
         if status:

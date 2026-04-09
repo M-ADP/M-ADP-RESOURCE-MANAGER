@@ -16,13 +16,13 @@ from .exceptions import (
 class SecretManager:
     """
     Vault 기반 Secret 접근 구조 관리 클래스
-    
+
     이 클래스는 Kubernetes Secret 리소스를 직접 생성하지 않는다.
     대신 Vault와의 연동 구조를 관리한다:
     - Vault Role/Policy 생성
     - ServiceAccount ↔ Vault 바인딩
     - Workload에 Vault Agent/CSI 설정 주입
-    
+
     실제 Secret 값은 Vault에만 존재한다.
     """
 
@@ -30,6 +30,7 @@ class SecretManager:
     VAULT_ROLE_ANNOTATION = "vault.hashicorp.com/role"
     VAULT_AGENT_INJECT_ANNOTATION = "vault.hashicorp.com/agent-inject"
     VAULT_AGENT_INJECT_SECRET_PREFIX = "vault.hashicorp.com/agent-inject-secret-"
+    VAULT_AGENT_INJECT_TEMPLATE_PREFIX = "vault.hashicorp.com/agent-inject-template-"
 
     def __init__(
         self,
@@ -39,7 +40,7 @@ class SecretManager:
     ):
         """
         SecretManager 초기화
-        
+
         Args:
             k8s_client: Kubernetes API 클라이언트
             vault_client: Vault API 클라이언트
@@ -62,7 +63,7 @@ class SecretManager:
     ) -> Dict[str, Any]:
         """
         Vault Kubernetes Auth Role 생성
-        
+
         Args:
             role_name: Vault Role 이름
             bound_service_account_names: 바인딩할 ServiceAccount 이름 리스트
@@ -70,7 +71,7 @@ class SecretManager:
             policies: 적용할 Vault Policy 리스트
             ttl: Token 유효 시간
             max_ttl: Token 최대 유효 시간
-            
+
         Returns:
             생성된 Vault Role 정보
         """
@@ -105,13 +106,13 @@ class SecretManager:
     ) -> bool:
         """
         Vault Policy 생성
-        
+
         Args:
             policy_name: Policy 이름
             secret_paths: 접근 가능한 Secret 경로 리스트
                          예: ["secret/data/app_deployment/db-credentials"]
             capabilities: 권한 리스트 (read, create, update, delete 등)
-            
+
         Returns:
             생성 성공 여부
         """
@@ -120,7 +121,7 @@ class SecretManager:
             secret_paths=secret_paths,
             capabilities=capabilities,
         )
-        
+
         return await self.vault_client.create_policy(
             policy_name=policy_name,
             policy_hcl=policy_hcl,
@@ -150,19 +151,19 @@ class SecretManager:
     ) -> Dict[str, Any]:
         """
         ServiceAccount를 Vault Role에 바인딩
-        
+
         이 메서드는 내부적으로:
         1. Vault Policy 생성 (secret_paths 기반)
         2. Vault Role 생성 (ServiceAccount와 Policy 연결)
         3. ServiceAccount에 annotation 추가
-        
+
         Args:
             service_account_name: ServiceAccount 이름
             namespace: Namespace
             vault_role_name: 생성할 Vault Role 이름
             secret_paths: 접근 가능한 Secret 경로 리스트
             capabilities: 권한 리스트
-            
+
         Returns:
             바인딩 정보
             {
@@ -171,7 +172,7 @@ class SecretManager:
                 "service_account": "...",
                 "secret_paths": [...]
             }
-            
+
         Raises:
             SecretAccessBindingException: 바인딩 실패 시
         """
@@ -244,14 +245,14 @@ class SecretManager:
     ) -> bool:
         """
         ServiceAccount의 Vault 바인딩 해제
-        
+
         Args:
             service_account_name: ServiceAccount 이름
             namespace: Namespace
-            
+
         Returns:
             바인딩 해제 성공 여부
-            
+
         Raises:
             SecretAccessUnbindingException: 바인딩 해제 실패 시
         """
@@ -325,7 +326,7 @@ class SecretManager:
     ) -> V1Deployment:
         """
         Deployment에 Vault Agent Injector annotations 추가
-        
+
         Args:
             deployment_name: Deployment 이름
             namespace: Namespace
@@ -335,10 +336,10 @@ class SecretManager:
                     {"name": "db-creds", "path": "secret/data/app_deployment/db"},
                     {"name": "api-key", "path": "secret/data/app_deployment/api"},
                 ]
-            
+
         Returns:
             업데이트된 Deployment
-            
+
         Raises:
             VaultInjectionException: 주입 실패 시
         """
@@ -347,29 +348,27 @@ class SecretManager:
         )
 
         try:
-            # Annotations 생성
             annotations = {
                 self.VAULT_AGENT_INJECT_ANNOTATION: "true",
                 self.VAULT_ROLE_ANNOTATION: vault_role,
             }
 
-            # Secret별 annotation 추가
             for secret_config in secret_configs:
                 secret_name = secret_config["name"]
                 secret_path = secret_config["path"]
                 annotation_key = f"{self.VAULT_AGENT_INJECT_SECRET_PREFIX}{secret_name}"
                 annotations[annotation_key] = secret_path
 
-            # Deployment patch
-            patch = {
-                "spec": {
-                    "template": {
-                        "metadata": {
-                            "annotations": annotations
-                        }
-                    }
-                }
-            }
+                template_key = f"{self.VAULT_AGENT_INJECT_TEMPLATE_PREFIX}{secret_name}"
+                annotations[template_key] = (
+                    '{{- with secret "' + secret_path + '" -}}\n'
+                    "{{ range $k, $v := .Data.data }}"
+                    "{{ $k }}={{ $v }}\n"
+                    "{{ end }}"
+                    "{{- end }}"
+                )
+
+            patch = {"spec": {"template": {"metadata": {"annotations": annotations}}}}
 
             deployment = await self.k8s_client.apps_v1.patch_namespaced_deployment(
                 name=deployment_name,
@@ -403,13 +402,13 @@ class SecretManager:
     ) -> V1StatefulSet:
         """
         StatefulSet에 Vault Agent Injector annotations 추가
-        
+
         Args:
             statefulset_name: StatefulSet 이름
             namespace: Namespace
             vault_role: 사용할 Vault Role
             secret_configs: Secret 설정 리스트
-            
+
         Returns:
             업데이트된 StatefulSet
         """
@@ -418,29 +417,27 @@ class SecretManager:
         )
 
         try:
-            # Annotations 생성
             annotations = {
                 self.VAULT_AGENT_INJECT_ANNOTATION: "true",
                 self.VAULT_ROLE_ANNOTATION: vault_role,
             }
 
-            # Secret별 annotation 추가
             for secret_config in secret_configs:
                 secret_name = secret_config["name"]
                 secret_path = secret_config["path"]
                 annotation_key = f"{self.VAULT_AGENT_INJECT_SECRET_PREFIX}{secret_name}"
                 annotations[annotation_key] = secret_path
 
-            # StatefulSet patch
-            patch = {
-                "spec": {
-                    "template": {
-                        "metadata": {
-                            "annotations": annotations
-                        }
-                    }
-                }
-            }
+                template_key = f"{self.VAULT_AGENT_INJECT_TEMPLATE_PREFIX}{secret_name}"
+                annotations[template_key] = (
+                    '{{- with secret "' + secret_path + '" -}}\n'
+                    "{{ range $k, $v := .Data.data }}"
+                    "{{ $k }}={{ $v }}\n"
+                    "{{ end }}"
+                    "{{- end }}"
+                )
+
+            patch = {"spec": {"template": {"metadata": {"annotations": annotations}}}}
 
             statefulset = await self.k8s_client.apps_v1.patch_namespaced_stateful_set(
                 name=statefulset_name,
@@ -478,13 +475,13 @@ class SecretManager:
     ) -> Dict[str, Any]:
         """
         Secret 접근을 위한 전체 설정 수행
-        
+
         이 메서드는 한 번의 호출로:
         1. Vault Policy 생성
         2. Vault Role 생성
         3. ServiceAccount 바인딩
         4. (선택적) Workload에 Vault 설정 주입
-        
+
         Args:
             service_account_name: ServiceAccount 이름
             namespace: Namespace
@@ -492,7 +489,7 @@ class SecretManager:
             workload_name: (선택) Workload 이름
             workload_type: (선택) Workload 타입 ("deployment" or "statefulset")
             secret_configs: (선택) Workload에 주입할 Secret 설정
-            
+
         Returns:
             설정 결과
             {
@@ -545,11 +542,11 @@ class SecretManager:
     ) -> bool:
         """
         Secret 접근 설정 전체 제거
-        
+
         Args:
             service_account_name: ServiceAccount 이름
             namespace: Namespace
-            
+
         Returns:
             제거 성공 여부
         """
