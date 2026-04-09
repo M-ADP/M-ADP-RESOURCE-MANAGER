@@ -1,5 +1,6 @@
 """Cloudflare Zero Trust Tunnel Config ingress 규칙 관리"""
 
+import asyncio
 from typing import Optional
 
 import aiohttp
@@ -9,6 +10,8 @@ from src.core.logger import Logger, get_logger
 
 _CF_API_BASE = "https://api.cloudflare.com/client/v4"
 _CATCH_ALL = {"service": "http_status:404"}
+
+_tunnel_config_lock = asyncio.Lock()
 
 
 class CloudflareTunnelClient:
@@ -84,19 +87,20 @@ class CloudflareTunnelClient:
         self.logger.info(f"Tunnel ingress 규칙 upsert: {hostname}")
         new_rule = {"hostname": hostname, "service": self._cfg.gateway_url}
 
-        async with aiohttp.ClientSession() as session:
-            ingress = await self._get_ingress(session)
+        async with _tunnel_config_lock:
+            async with aiohttp.ClientSession() as session:
+                ingress = await self._get_ingress(session)
 
-            for i, rule in enumerate(ingress):
-                if rule.get("hostname") == hostname:
-                    ingress[i] = new_rule
-                    self.logger.info(f"Tunnel ingress 규칙 교체 완료: {hostname}")
-                    await self._put_ingress(session, ingress)
-                    return
+                for i, rule in enumerate(ingress):
+                    if rule.get("hostname") == hostname:
+                        ingress[i] = new_rule
+                        self.logger.info(f"Tunnel ingress 규칙 교체 완료: {hostname}")
+                        await self._put_ingress(session, ingress)
+                        return
 
-            ingress.insert(-1, new_rule)
-            self.logger.info(f"Tunnel ingress 규칙 추가 완료: {hostname}")
-            await self._put_ingress(session, ingress)
+                ingress.insert(-1, new_rule)
+                self.logger.info(f"Tunnel ingress 규칙 추가 완료: {hostname}")
+                await self._put_ingress(session, ingress)
 
     async def remove_ingress_rule(self, hostname: str) -> None:
         """hostname ingress 규칙 삭제. 없으면 성공으로 처리 (idempotent)."""
@@ -109,16 +113,19 @@ class CloudflareTunnelClient:
 
         self.logger.info(f"Tunnel ingress 규칙 삭제 시도: {hostname}")
 
-        async with aiohttp.ClientSession() as session:
-            ingress = await self._get_ingress(session)
-            filtered = [r for r in ingress if r.get("hostname") != hostname]
+        async with _tunnel_config_lock:
+            async with aiohttp.ClientSession() as session:
+                ingress = await self._get_ingress(session)
+                filtered = [r for r in ingress if r.get("hostname") != hostname]
 
-            if len(filtered) == len(ingress):
-                self.logger.info(f"Tunnel ingress 규칙 없음 (이미 삭제됨): {hostname}")
-                return
+                if len(filtered) == len(ingress):
+                    self.logger.info(
+                        f"Tunnel ingress 규칙 없음 (이미 삭제됨): {hostname}"
+                    )
+                    return
 
-            self.logger.info(f"Tunnel ingress 규칙 삭제 완료: {hostname}")
-            await self._put_ingress(session, filtered)
+                self.logger.info(f"Tunnel ingress 규칙 삭제 완료: {hostname}")
+                await self._put_ingress(session, filtered)
 
     async def update_ingress_rule(self, old_hostname: str, new_hostname: str) -> None:
         """hostname 변경. 단일 GET/PUT으로 처리."""
@@ -132,18 +139,19 @@ class CloudflareTunnelClient:
         self.logger.info(f"Tunnel ingress 규칙 변경: {old_hostname} → {new_hostname}")
         new_rule = {"hostname": new_hostname, "service": self._cfg.gateway_url}
 
-        async with aiohttp.ClientSession() as session:
-            ingress = await self._get_ingress(session)
-            updated = False
+        async with _tunnel_config_lock:
+            async with aiohttp.ClientSession() as session:
+                ingress = await self._get_ingress(session)
+                updated = False
 
-            for i, rule in enumerate(ingress):
-                if rule.get("hostname") == old_hostname:
-                    ingress[i] = new_rule
-                    updated = True
-                    break
+                for i, rule in enumerate(ingress):
+                    if rule.get("hostname") == old_hostname:
+                        ingress[i] = new_rule
+                        updated = True
+                        break
 
-            if not updated:
-                ingress.insert(-1, new_rule)
+                if not updated:
+                    ingress.insert(-1, new_rule)
 
-            self.logger.info(f"Tunnel ingress 규칙 변경 완료: {new_hostname}")
-            await self._put_ingress(session, ingress)
+                self.logger.info(f"Tunnel ingress 규칙 변경 완료: {new_hostname}")
+                await self._put_ingress(session, ingress)
