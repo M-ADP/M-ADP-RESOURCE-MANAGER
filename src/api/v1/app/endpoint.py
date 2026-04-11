@@ -151,7 +151,7 @@ async def get_app_deployment_logs(
     since_seconds: Optional[int] = Query(
         default=None, description="최근 N초 동안의 로그만 조회"
     ),
-    timestamps: bool = Query(default=False, description="타임스탬프 포함 여부"),
+    timestamps: bool = Query(default=True, description="타임스탬프 포함 여부"),
     app_deployment_logs_usecase: AppDeploymentLogsUseCase = Depends(
         AppDeploymentLogsUseCase
     ),
