@@ -237,7 +237,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     async def get_pods(self, deployment: Deployment) -> List[Pod]:
         v1_pods = await self._pod_manager.list_pods(
             namespace=deployment.namespace,
-            label_selector=f"app={deployment.name}",
+            label_selector=f"app_deployment={deployment.name}",
         )
         return [self._pod_to_domain(p) for p in v1_pods]
 
