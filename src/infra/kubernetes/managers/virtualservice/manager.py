@@ -134,9 +134,13 @@ class IstioVirtualServiceManager:
         label_patch: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """VirtualService의 hosts와 레이블을 부분 업데이트(patch)."""
-        patch_body: Dict[str, Any] = {"spec": {"hosts": hosts}}
+        patch_body: List[Dict[str, Any]] = [
+            {"op": "replace", "path": "/spec/hosts", "value": hosts}
+        ]
         if label_patch:
-            patch_body["metadata"] = {"labels": label_patch}
+            for key, value in label_patch.items():
+                escaped_key = key.replace("~", "~0").replace("/", "~1")
+                patch_body.append({"op": "replace", "path": f"/metadata/labels/{escaped_key}", "value": value})
 
         try:
             result = await self.k8s_client.custom_objects.patch_namespaced_custom_object(
@@ -146,7 +150,6 @@ class IstioVirtualServiceManager:
                 plural=ISTIO_VS_PLURAL,
                 name=name,
                 body=patch_body,
-                content_type="application/merge-patch+json",
             )
             self.logger.info(f"VirtualService patch 완료: {name} (namespace: {namespace})")
             return result
