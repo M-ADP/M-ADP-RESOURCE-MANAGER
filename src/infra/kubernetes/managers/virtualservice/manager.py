@@ -146,6 +146,7 @@ class IstioVirtualServiceManager:
                 plural=ISTIO_VS_PLURAL,
                 name=name,
                 body=patch_body,
+                content_type="application/merge-patch+json",
             )
             self.logger.info(f"VirtualService patch 완료: {name} (namespace: {namespace})")
             return result
