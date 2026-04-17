@@ -24,11 +24,7 @@ from src.api.v1.app.schemas.response import (
     EnvironmentDeleteResponse,
     AppRestartResponse,
 )
-from src.api.v1.app.schemas.log_response import (
-    AppLogsResponse,
-    JenkinsBuildLogListResponse,
-    JenkinsBuildLogDetailResponse,
-)
+from src.api.v1.app.schemas.log_response import AppLogsResponse
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.app.monitoring.dto import AppResourceStatusResponse
 from src.app.app_deployment.app_deployment_create_use_case import (
@@ -41,9 +37,6 @@ from src.app.app_deployment.app_deployment_revision_use_case import (
     AppDeploymentRevisionUseCase,
 )
 from src.app.app_deployment.app_deployment_logs_use_case import AppDeploymentLogsUseCase
-from src.app.app_deployment.app_deployment_build_logs_use_case import (
-    AppDeploymentBuildLogUseCase,
-)
 from src.app.app_deployment.app_deployment_events_use_case import (
     AppDeploymentEventsUseCase,
 )
@@ -181,56 +174,6 @@ async def get_app_deployment_logs(
 
 
 @app_router.get(
-    "/{project_id}/{name}/build-logs",
-    response_model=SuccessResponse[JenkinsBuildLogListResponse],
-)
-async def get_app_deployment_build_logs(
-    project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름"),
-    build_log_usecase: AppDeploymentBuildLogUseCase = Depends(
-        AppDeploymentBuildLogUseCase
-    ),
-):
-    """App Deployment Jenkins 빌드 로그 목록 조회
-
-    Jenkins 파이프라인의 빌드 이력을 조회합니다.
-    """
-    result = await build_log_usecase.list_builds(
-        project_id=project_id,
-        app_name=name,
-    )
-    return SuccessResponse(
-        message="App deployment build logs retrieved successfully",
-        data=result,
-    )
-
-
-@app_router.get(
-    "/{project_id}/{name}/build-logs/{build_number}",
-    response_model=SuccessResponse[JenkinsBuildLogDetailResponse],
-)
-async def get_app_deployment_build_log_detail(
-    project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름"),
-    build_number: int = Path(..., description="빌드 번호"),
-    build_log_usecase: AppDeploymentBuildLogUseCase = Depends(
-        AppDeploymentBuildLogUseCase
-    ),
-):
-    """App Deployment Jenkins 단일 빌드 로그 상세 조회
-
-    특정 빌드 번호의 전체 콘솔 로그를 조회합니다.
-    """
-    result = await build_log_usecase.get_build_log(
-        build_number=build_number,
-    )
-    return SuccessResponse(
-        message="App deployment build log detail retrieved successfully",
-        data=result,
-    )
-
-
-@app_router.get(
     "/{project_id}/{name}/events", response_model=SuccessResponse[AppEventsResponse]
 )
 async def get_app_deployment_events(
@@ -255,224 +198,210 @@ async def get_app_deployment_events(
 
 
 @app_router.get(
-    "/{project_id}/resource",
-    response_model=SuccessResponse[List[AppResourceStatusResponse]],
+    "/{project_id}/{name}/resource-status",
+    response_model=SuccessResponse[AppResourceStatusResponse],
 )
-async def get_app_deployment_resource(
+async def get_app_resource_status(
     project_id: str = Path(..., description="프로젝트 ID"),
-    names: List[str] = Query(..., description="App 이름 목록 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
     app_resource_status_usecase: AppResourceStatusUseCase = Depends(
         AppResourceStatusUseCase
     ),
 ):
-    """App Deployment 리소스 상태 조회
+    """App 리소스 상태 조회
 
-    여러 Deployment의 리소스 설정(Request/Limit)과 현재 상태(Replicas)를 조회합니다.
-    존재하지 않는 앱은 결과에서 제외됩니다.
+    Deployment의 CPU, Memory 사용량 정보를 조회합니다.
     """
     app_resource_status_result = await app_resource_status_usecase(
+        app_name=name,
         project_id=project_id,
-        app_ids=names,
     )
     return SuccessResponse(
-        message="App deployment resource status retrieved successfully",
+        message="App resource status retrieved successfully",
         data=app_resource_status_result,
     )
 
 
-@app_router.patch(
-    "/{project_id}/{name}/auto-scale", response_model=SuccessResponse[AutoScaleResponse]
+@app_router.post(
+    "/{project_id}/{name}/autoscale", response_model=SuccessResponse[AutoScaleResponse]
 )
-async def set_app_deployment_auto_scale(
+async def update_app_autoscale(
     payload: AutoScaleRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
     app_deployment_autoscale_usecase: AppDeploymentAutoScaleUseCase = Depends(
         AppDeploymentAutoScaleUseCase
     ),
 ):
-    """App Deployment Auto Scale 설정 (HPA 생성/수정)
+    """App 오토스케일링 설정
 
-    Deployment에 HPA(Horizontal Pod Autoscaler)를 설정합니다.
-    - CPU/Memory 사용률 기반 자동 스케일링
-    - 최소/최대 레플리카 수 지정
+    HPA(Horizontal Pod Autoscaler)를 생성하거나 수정합니다.
     """
-    app_deployment_autoscale_result = await app_deployment_autoscale_usecase(
-        app_name=name,
+    result = await app_deployment_autoscale_usecase(
         project_id=project_id,
+        app_name=name,
         payload=payload,
     )
     return SuccessResponse(
-        message="App deployment auto scale configured successfully",
-        data=app_deployment_autoscale_result,
+        message="App autoscale updated successfully",
+        data=result,
     )
 
 
-@app_router.patch(
-    "/{project_id}/{name}/fixed-scale",
+@app_router.post(
+    "/{project_id}/{name}/fixedscale",
     response_model=SuccessResponse[FixedScaleResponse],
 )
-async def set_app_deployment_fixed_scale(
+async def update_app_fixedscale(
     payload: FixedScaleRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
     app_deployment_fixed_scale_usecase: AppDeploymentFixedScaleUseCase = Depends(
         AppDeploymentFixedScaleUseCase
     ),
 ):
-    """App Deployment Fixed Scale 설정 (고정 레플리카)
+    """App 고정 스케일링 설정
 
-    Deployment의 레플리카 수를 고정값으로 설정합니다.
-    - HPA가 존재하면 삭제
-    - 고정 레플리카 수 지정
+    HPA를 제거하고 고정된 레플리카 수를 설정합니다.
     """
-    app_deployment_fixed_scale_result = await app_deployment_fixed_scale_usecase(
-        app_name=name,
+    result = await app_deployment_fixed_scale_usecase(
         project_id=project_id,
+        app_name=name,
         payload=payload,
     )
     return SuccessResponse(
-        message="App deployment fixed scale configured successfully",
-        data=app_deployment_fixed_scale_result,
+        message="App fixed scale updated successfully",
+        data=result,
     )
 
 
 @app_router.post(
     "/{project_id}/{name}/secrets", response_model=SuccessResponse[SecretCreateResponse]
 )
-async def create_app_deployment_secret(
+async def create_app_secret(
     payload: SecretCreateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
     app_deployment_secret_create_usecase: AppDeploymentSecretCreateUseCase = Depends(
         AppDeploymentSecretCreateUseCase
     ),
 ):
-    """App Deployment Secret 생성 및 Vault 설정
+    """App Secret 생성
 
-    Vault에 Secret을 저장하고, Pod가 접근할 수 있도록 Policy와 Role을 자동 설정합니다.
+    Vault와 Kubernetes Secret에 민감 정보를 저장합니다.
     """
-    app_deployment_secret_create_result = await app_deployment_secret_create_usecase(
+    result = await app_deployment_secret_create_usecase(
         project_id=project_id,
         app_name=name,
         payload=payload,
     )
     return SuccessResponse(
-        message="App deployment secret created and configured successfully",
-        data=app_deployment_secret_create_result,
+        message="App secret created successfully",
+        data=result,
     )
 
 
 @app_router.delete(
-    "/{project_id}/{name}/secrets",
+    "/{project_id}/{name}/secrets/{key}",
     response_model=SuccessResponse[SecretDeleteResponse],
 )
-async def delete_app_deployment_secret(
+async def delete_app_secret(
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
+    key: str = Path(..., description="Secret 키"),
     app_deployment_secret_delete_usecase: AppDeploymentSecretDeleteUseCase = Depends(
         AppDeploymentSecretDeleteUseCase
     ),
 ):
-    """App Deployment Secret 삭제
+    """App Secret 삭제
 
-    Vault에서 Secret을 삭제하고, 관련된 Policy와 Role도 함께 정리합니다.
+    Vault와 Kubernetes Secret에서 특정 키의 정보를 삭제합니다.
     """
-    app_deployment_secret_delete_result = await app_deployment_secret_delete_usecase(
+    result = await app_deployment_secret_delete_usecase(
         project_id=project_id,
         app_name=name,
+        key=key,
     )
     return SuccessResponse(
-        message="App deployment secret deleted successfully",
-        data=app_deployment_secret_delete_result,
+        message="App secret deleted successfully",
+        data=result,
     )
 
 
 @app_router.put(
-    "/{project_id}/{name}/environment",
+    "/{project_id}/{name}/environments",
     response_model=SuccessResponse[EnvironmentUpdateResponse],
 )
-async def update_app_deployment_environment(
+async def update_app_environments(
     payload: EnvironmentUpdateRequest,
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
     app_deployment_environment_update_usecase: AppDeploymentEnvironmentUpdateUseCase = Depends(
         AppDeploymentEnvironmentUpdateUseCase
     ),
 ):
-    """App Deployment 환경 변수 설정 (ConfigMap upsert)
+    """App 환경 변수 설정
 
-    App의 환경 변수를 설정합니다.
-    - ConfigMap이 없으면 새로 생성합니다.
-    - ConfigMap이 있으면 데이터를 완전히 교체합니다.
+    Deployment의 환경 변수를 설정합니다. (기존 환경 변수는 유지되거나 업데이트됨)
     """
-    app_deployment_environment_update_result = (
-        await app_deployment_environment_update_usecase(
-            project_id=project_id,
-            app_name=name,
-            payload=payload,
-        )
+    result = await app_deployment_environment_update_usecase(
+        project_id=project_id,
+        app_name=name,
+        payload=payload,
     )
     return SuccessResponse(
-        message="App deployment environment variables updated successfully",
-        data=app_deployment_environment_update_result,
+        message="App environments updated successfully",
+        data=result,
     )
 
 
 @app_router.delete(
-    "/{project_id}/{name}/environment",
+    "/{project_id}/{name}/environments/{key}",
     response_model=SuccessResponse[EnvironmentDeleteResponse],
 )
-async def delete_app_deployment_environment(
+async def delete_app_environment(
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
+    key: str = Path(..., description="환경 변수 키"),
     app_deployment_environment_delete_usecase: AppDeploymentEnvironmentDeleteUseCase = Depends(
         AppDeploymentEnvironmentDeleteUseCase
     ),
 ):
-    """App Deployment 환경 변수 삭제 (ConfigMap 삭제)
+    """App 환경 변수 삭제
 
-    App의 환경 변수 ConfigMap을 삭제합니다.
-    - ConfigMap이 존재하지 않으면 404 에러를 반환합니다.
+    Deployment의 특정 환경 변수를 삭제합니다.
     """
-    app_deployment_environment_delete_result = (
-        await app_deployment_environment_delete_usecase(
-            project_id=project_id,
-            app_name=name,
-        )
+    result = await app_deployment_environment_delete_usecase(
+        project_id=project_id,
+        app_name=name,
+        key=key,
     )
     return SuccessResponse(
-        message="App deployment environment variables deleted successfully",
-        data=app_deployment_environment_delete_result,
+        message="App environment deleted successfully",
+        data=result,
     )
 
 
 @app_router.post(
-    "/{project_id}/{name}/restart", response_model=SuccessResponse[AppRestartResponse]
+    "/{project_id}/{name}/restart",
+    response_model=SuccessResponse[AppRestartResponse],
 )
 async def restart_app_deployment(
     project_id: str = Path(..., description="프로젝트 ID"),
-    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    name: str = Path(..., description="App 이름"),
     app_deployment_restart_usecase: AppDeploymentRestartUseCase = Depends(
         AppDeploymentRestartUseCase
     ),
 ):
-    """App Deployment 재시작 (Rollout Restart)
+    """App 재시작
 
-    Deployment를 롤링 재시작합니다.
-    - kubectl rollout restart 와 동일하게 동작합니다.
-    - Pod 템플릿 어노테이션에 restartedAt 타임스탬프를 패치하여 롤링 업데이트를 트리거합니다.
-    - 기존 Pod는 순서대로 교체되므로 서비스 중단 없이 재시작됩니다.
+    Deployment를 재시작(Rollout Restart)합니다.
     """
     result = await app_deployment_restart_usecase(
-        app_name=name,
         project_id=project_id,
+        app_name=name,
     )
     return SuccessResponse(
-        message="App deployment restart triggered successfully",
-        data=AppRestartResponse(
-            name=result["name"],
-            namespace=result["namespace"],
-            restarted_at=result["restarted_at"],
-        ),
+        message="App deployment restarted successfully",
+        data=result,
     )
