@@ -24,7 +24,11 @@ from src.api.v1.app.schemas.response import (
     EnvironmentDeleteResponse,
     AppRestartResponse,
 )
-from src.api.v1.app.schemas.log_response import AppLogsResponse
+from src.api.v1.app.schemas.log_response import (
+    AppLogsResponse,
+    JenkinsBuildLogListResponse,
+    JenkinsBuildLogDetailResponse,
+)
 from src.api.v1.app.schemas.event_response import AppEventsResponse
 from src.app.monitoring.dto import AppResourceStatusResponse
 from src.app.app_deployment.app_deployment_create_use_case import (
@@ -37,6 +41,9 @@ from src.app.app_deployment.app_deployment_revision_use_case import (
     AppDeploymentRevisionUseCase,
 )
 from src.app.app_deployment.app_deployment_logs_use_case import AppDeploymentLogsUseCase
+from src.app.app_deployment.app_deployment_build_logs_use_case import (
+    AppDeploymentBuildLogUseCase,
+)
 from src.app.app_deployment.app_deployment_events_use_case import (
     AppDeploymentEventsUseCase,
 )
@@ -170,6 +177,56 @@ async def get_app_deployment_logs(
     return SuccessResponse(
         message="App deployment logs retrieved successfully",
         data=app_deployment_logs_result,
+    )
+
+
+@app_router.get(
+    "/{project_id}/{name}/build-logs",
+    response_model=SuccessResponse[JenkinsBuildLogListResponse],
+)
+async def get_app_deployment_build_logs(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    build_log_usecase: AppDeploymentBuildLogUseCase = Depends(
+        AppDeploymentBuildLogUseCase
+    ),
+):
+    """App Deployment Jenkins 빌드 로그 목록 조회
+
+    Jenkins 파이프라인의 빌드 이력을 조회합니다.
+    """
+    result = await build_log_usecase.list_builds(
+        project_id=project_id,
+        app_name=name,
+    )
+    return SuccessResponse(
+        message="App deployment build logs retrieved successfully",
+        data=result,
+    )
+
+
+@app_router.get(
+    "/{project_id}/{name}/build-logs/{build_number}",
+    response_model=SuccessResponse[JenkinsBuildLogDetailResponse],
+)
+async def get_app_deployment_build_log_detail(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    build_number: int = Path(..., description="빌드 번호"),
+    build_log_usecase: AppDeploymentBuildLogUseCase = Depends(
+        AppDeploymentBuildLogUseCase
+    ),
+):
+    """App Deployment Jenkins 단일 빌드 로그 상세 조회
+
+    특정 빌드 번호의 전체 콘솔 로그를 조회합니다.
+    """
+    result = await build_log_usecase.get_build_log(
+        build_number=build_number,
+    )
+    return SuccessResponse(
+        message="App deployment build log detail retrieved successfully",
+        data=result,
     )
 
 
