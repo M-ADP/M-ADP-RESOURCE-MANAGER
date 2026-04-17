@@ -6,8 +6,9 @@ from src.core.project import ProjectId
 from src.app.base_use_case import BaseUseCase
 from src.common.util.unit_converter import UnitConverter
 from src.common.util import NameConverter
-from src.dependencies.kubernetes import get_deployment_manager
+from src.dependencies.kubernetes import get_deployment_manager, get_pvc_manager
 from src.infra.kubernetes.managers.deployment import DeploymentManager
+from src.infra.kubernetes.managers.persistentvolumeclaim import PersistentVolumeClaimManager
 from src.app.monitoring.dto import (
     AppResourceStatusResponse,
     ResourceMetric,
@@ -21,8 +22,10 @@ class AppResourceStatusUseCase(BaseUseCase):
     def __init__(
         self,
         deployment_manager: DeploymentManager = Depends(get_deployment_manager),
+        pvc_manager: PersistentVolumeClaimManager = Depends(get_pvc_manager),
     ):
         self.deployment_manager = deployment_manager
+        self.pvc_manager = pvc_manager
 
     async def __call__(
         self, project_id: str, app_ids: List[str]
@@ -56,8 +59,8 @@ class AppResourceStatusUseCase(BaseUseCase):
             deployment.status.ready_replicas or 0 if deployment.status else 0
         )
 
-        pod_requests = {"cpu": 0, "memory": 0, "storage": 0}
-        pod_limits = {"cpu": 0, "memory": 0, "storage": 0}
+        pod_requests = {"cpu": 0, "memory": 0}
+        pod_limits = {"cpu": 0, "memory": 0}
 
         if deployment.spec.template.spec.containers:
             for container in deployment.spec.template.spec.containers:
@@ -72,9 +75,6 @@ class AppResourceStatusUseCase(BaseUseCase):
                     pod_requests["memory"] += UnitConverter.parse_storage_to_bytes(
                         req.get("memory", "0")
                     )
-                    pod_requests["storage"] += UnitConverter.parse_storage_to_bytes(
-                        req.get("ephemeral-storage", "0")
-                    )
 
                 if container.resources.limits:
                     lim = container.resources.limits
@@ -84,9 +84,10 @@ class AppResourceStatusUseCase(BaseUseCase):
                     pod_limits["memory"] += UnitConverter.parse_storage_to_bytes(
                         lim.get("memory", "0")
                     )
-                    pod_limits["storage"] += UnitConverter.parse_storage_to_bytes(
-                        lim.get("ephemeral-storage", "0")
-                    )
+
+        disk_limit, disk_used = await self._get_pvc_disk_bytes(
+            deployment, namespace
+        )
 
         return AppResourceStatusResponse(
             app_id=original_app_id,
@@ -104,8 +105,8 @@ class AppResourceStatusUseCase(BaseUseCase):
                 1024**3,
             ),
             disk=self._create_resource_metric(
-                pod_limits["storage"] * replicas_limit,
-                pod_requests["storage"] * replicas_used,
+                disk_limit,
+                disk_used,
                 "GiB",
                 1024**3,
             ),
@@ -117,6 +118,44 @@ class AppResourceStatusUseCase(BaseUseCase):
                 else 0.0,
             ),
         )
+
+    async def _get_pvc_disk_bytes(self, deployment, namespace: str):
+        """Deployment volumes에서 PVC를 찾아 limit(요청 용량)과 used(바인딩된 용량)를 반환"""
+        volumes = (
+            deployment.spec.template.spec.volumes
+            if deployment.spec.template.spec
+            else []
+        ) or []
+
+        pvc_names = [
+            v.persistent_volume_claim.claim_name
+            for v in volumes
+            if v.persistent_volume_claim
+        ]
+
+        if not pvc_names:
+            return 0, 0
+
+        pvcs = await asyncio.gather(
+            *[self.pvc_manager.get_pvc(name=name, namespace=namespace) for name in pvc_names],
+            return_exceptions=True,
+        )
+
+        limit_bytes = 0
+        used_bytes = 0
+        for pvc in pvcs:
+            if not pvc or isinstance(pvc, Exception):
+                continue
+            if pvc.spec and pvc.spec.resources and pvc.spec.resources.requests:
+                limit_bytes += UnitConverter.parse_storage_to_bytes(
+                    pvc.spec.resources.requests.get("storage", "0")
+                )
+            if pvc.status and pvc.status.phase == "Bound" and pvc.status.capacity:
+                used_bytes += UnitConverter.parse_storage_to_bytes(
+                    pvc.status.capacity.get("storage", "0")
+                )
+
+        return limit_bytes, used_bytes
 
     def _create_resource_metric(
         self, limit_val: int, used_val: int, unit: str, divider: float
