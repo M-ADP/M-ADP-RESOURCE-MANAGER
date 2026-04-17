@@ -1,6 +1,6 @@
 """App API 라우터"""
 
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 
@@ -198,6 +198,32 @@ async def get_app_deployment_events(
 
 
 @app_router.get(
+    "/{project_id}/resource",
+    response_model=SuccessResponse[List[AppResourceStatusResponse]],
+)
+async def get_apps_resource_status(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    names: Annotated[List[str], Query(description="App 이름 목록")] = [],
+    app_resource_status_usecase: AppResourceStatusUseCase = Depends(
+        AppResourceStatusUseCase
+    ),
+):
+    """App 리소스 상태 일괄 조회
+
+    여러 Deployment의 리소스 상태를 한 번에 조회합니다.
+    존재하지 않는 앱은 결과에서 제외됩니다.
+    """
+    result = await app_resource_status_usecase(
+        project_id=project_id,
+        app_ids=names,
+    )
+    return SuccessResponse(
+        message="App resource status retrieved successfully",
+        data=result,
+    )
+
+
+@app_router.get(
     "/{project_id}/{name}/resource-status",
     response_model=SuccessResponse[AppResourceStatusResponse],
 )
@@ -212,13 +238,13 @@ async def get_app_resource_status(
 
     Deployment의 CPU, Memory 사용량 정보를 조회합니다.
     """
-    app_resource_status_result = await app_resource_status_usecase(
-        app_name=name,
+    results = await app_resource_status_usecase(
         project_id=project_id,
+        app_ids=[name],
     )
     return SuccessResponse(
         message="App resource status retrieved successfully",
-        data=app_resource_status_result,
+        data=results[0] if results else None,
     )
 
 
