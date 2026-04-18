@@ -1,5 +1,6 @@
 """Node 리소스 관리 클래스"""
 
+import ast
 import json
 import time
 from typing import Optional, List, Dict, Tuple
@@ -112,7 +113,13 @@ class NodeManager:
             response = await self.k8s_client.core_v1.connect_get_node_proxy_with_path(
                 node_name, "stats/summary"
             )
-            data = json.loads(response) if isinstance(response, str) else response
+            if isinstance(response, str):
+                try:
+                    data = json.loads(response)
+                except json.JSONDecodeError:
+                    data = ast.literal_eval(response)
+            else:
+                data = response
             _STATS_CACHE[node_name] = (time.monotonic(), data)
             return data
         except Exception as e:
