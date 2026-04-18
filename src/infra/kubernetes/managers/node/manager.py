@@ -1,6 +1,8 @@
 """Node 리소스 관리 클래스"""
 
-from typing import Optional, List, Dict
+import json
+import time
+from typing import Optional, List, Dict, Tuple
 from kubernetes_asyncio.client import V1Node
 from kubernetes_asyncio.client.exceptions import ApiException
 
@@ -8,6 +10,9 @@ from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core.logger import Logger, get_logger
 from src.common.util.unit_converter import UnitConverter
 from .exceptions import NodeReadException, NodeListException
+
+_STATS_CACHE: Dict[str, Tuple[float, dict]] = {}  # {node_name: (timestamp, data)}
+_CACHE_TTL = 30.0
 
 
 class NodeManager:
@@ -90,6 +95,29 @@ class NodeManager:
         except Exception as e:
             self.logger.logger.error(f"Node 조회 중 예외 발생: {name} - {str(e)}")
             raise NodeReadException(node_name=name, reason=str(e))
+
+    async def get_node_volume_stats(self, node_name: str) -> dict:
+        """kubelet stats/summary API로 노드의 Pod 볼륨 사용량 조회 (30초 캐시)
+
+        Returns:
+            kubelet stats summary 원본 dict. 실패 시 빈 dict.
+        """
+        cached = _STATS_CACHE.get(node_name)
+        if cached:
+            cached_at, data = cached
+            if time.monotonic() - cached_at < _CACHE_TTL:
+                return data
+
+        try:
+            response = await self.k8s_client.core_v1.connect_get_node_proxy_with_path(
+                node_name, "stats/summary"
+            )
+            data = json.loads(response) if isinstance(response, str) else response
+            _STATS_CACHE[node_name] = (time.monotonic(), data)
+            return data
+        except Exception as e:
+            self.logger.warning(f"Node stats 조회 실패: {node_name} - {e}")
+            return {}
 
     async def get_cluster_allocatable_resources(self) -> Dict[str, int]:
         """클러스터 전체 할당 가능한 리소스 합계 조회
