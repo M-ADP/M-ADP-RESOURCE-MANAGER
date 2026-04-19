@@ -183,6 +183,25 @@ class IstioVirtualServiceManager:
         except Exception as e:
             raise VirtualServiceReadException(name="(label-search)", namespace="*", reason=str(e))
 
+    async def list_by_label(self, label_selector: str) -> List[Dict[str, Any]]:
+        """label_selector로 클러스터 전체에서 VirtualService 전체 목록 조회."""
+        try:
+            result = await self.k8s_client.custom_objects.list_cluster_custom_object(
+                group=ISTIO_VS_GROUP,
+                version=ISTIO_VS_VERSION,
+                plural=ISTIO_VS_PLURAL,
+                label_selector=label_selector,
+            )
+            return result.get("items", [])
+        except ApiException as e:
+            self.logger.error(f"VirtualService label 목록 조회 실패: {label_selector} - {e.reason}")
+            raise VirtualServiceReadException(
+                name="(label-search)", namespace="*", reason=e.reason or str(e),
+                detail={"status": e.status},
+            )
+        except Exception as e:
+            raise VirtualServiceReadException(name="(label-search)", namespace="*", reason=str(e))
+
     async def delete_virtualservice(self, name: str, namespace: str) -> bool:
         """VirtualService 삭제. 없으면 성공으로 처리 (멱등성)."""
         self.logger.info(f"VirtualService 삭제 시도: {name} (namespace: {namespace})")
