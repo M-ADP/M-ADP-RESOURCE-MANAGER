@@ -20,6 +20,7 @@ from src.api.v1.app.schemas.response import (
     FixedScaleResponse,
     SecretCreateResponse,
     SecretDeleteResponse,
+    SecretKeyDeleteResponse,
     EnvironmentUpdateResponse,
     EnvironmentDeleteResponse,
     AppRestartResponse,
@@ -329,7 +330,7 @@ async def create_app_secret(
 
 @app_router.delete(
     "/{project_id}/{name}/secrets/{key}",
-    response_model=SuccessResponse[SecretDeleteResponse],
+    response_model=SuccessResponse[SecretKeyDeleteResponse],
 )
 async def delete_app_secret(
     project_id: str = Path(..., description="프로젝트 ID"),
@@ -339,9 +340,9 @@ async def delete_app_secret(
         AppDeploymentSecretDeleteUseCase
     ),
 ):
-    """App Secret 삭제
+    """App Secret 키 단위 삭제
 
-    Vault와 Kubernetes Secret에서 특정 키의 정보를 삭제합니다.
+    Vault에서 특정 키만 제거하고 나머지 키는 유지합니다.
     """
     result = await app_deployment_secret_delete_usecase(
         project_id=project_id,
@@ -349,7 +350,7 @@ async def delete_app_secret(
         key=key,
     )
     return SuccessResponse(
-        message="App secret deleted successfully",
+        message="App secret key deleted successfully",
         data=result,
     )
 

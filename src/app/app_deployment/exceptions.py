@@ -44,3 +44,11 @@ class ConfigMapNotFoundException(NotFoundException):
 
     def __init__(self, name: str, namespace: str):
         super().__init__(f"ConfigMap '{name}' not found in namespace '{namespace}'")
+
+
+class SecretKeyNotFoundException(NotFoundException):
+    """Secret 키 미발견"""
+    detail = "Secret key not found"
+
+    def __init__(self, key: str):
+        super().__init__(f"Secret key '{key}' not found")

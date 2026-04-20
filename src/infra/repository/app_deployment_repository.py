@@ -431,6 +431,10 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     async def list_app_secrets(self, deployment: Deployment) -> List[str]:
         return await self._vault_client.list_secrets(deployment.vault_secrets_prefix())
 
+    async def remove_secret_entry(self, deployment: Deployment, key: str) -> bool:
+        secret_path = deployment.vault_secret_path(deployment.vault_secret_name)
+        return await self._vault_client.remove_secret_key(path=secret_path, key=key)
+
     async def revoke_secret(self, deployment: Deployment) -> bool:
         secret_name = deployment.vault_secret_name
         await self._vault_client.delete_secret(

@@ -3,16 +3,16 @@
 from fastapi import Depends
 from src.core.project import ProjectId
 
-from src.api.v1.app.schemas.response import SecretDeleteResponse
+from src.api.v1.app.schemas.response import SecretKeyDeleteResponse
 from src.app.base_use_case import BaseUseCase
 from src.common.util import NameConverter
-from src.app.app_deployment.exceptions import DeploymentNotFoundException
+from src.app.app_deployment.exceptions import DeploymentNotFoundException, SecretKeyNotFoundException
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository
 
 
 class AppDeploymentSecretDeleteUseCase(BaseUseCase):
-    """App Deployment Secret 삭제 Use Case"""
+    """App Deployment Secret 키 단위 삭제 Use Case"""
 
     def __init__(
         self,
@@ -26,8 +26,9 @@ class AppDeploymentSecretDeleteUseCase(BaseUseCase):
         self,
         project_id: str,
         app_name: str,
-    ) -> SecretDeleteResponse:
-        """App Secret 삭제 및 Vault 접근 구조 전체 정리"""
+        key: str,
+    ) -> SecretKeyDeleteResponse:
+        """Secret에서 특정 키만 제거"""
 
         namespace = ProjectId(project_id).namespace
         app_name = NameConverter.to_k8s_name(app_name)
@@ -36,12 +37,14 @@ class AppDeploymentSecretDeleteUseCase(BaseUseCase):
         if not deployment:
             raise DeploymentNotFoundException(app_name, namespace)
 
-        policy_cleaned = await self.app_deployment_repo.revoke_secret(deployment)
+        removed = await self.app_deployment_repo.remove_secret_entry(deployment, key)
+        if not removed:
+            raise SecretKeyNotFoundException(key)
 
         mount_point = self.app_deployment_repo.secret_mount_point
-        secret_path = deployment.vault_secret_path()
+        secret_path = deployment.vault_secret_path(deployment.vault_secret_name)
 
-        return SecretDeleteResponse(
+        return SecretKeyDeleteResponse(
             path=f"{mount_point}/data/{secret_path}",
-            policy_cleaned=policy_cleaned,
+            key=key,
         )

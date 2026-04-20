@@ -126,6 +126,13 @@ class SecretDeleteResponse(BaseModel):
     policy_cleaned: bool = Field(..., description="Policy 및 Role 정리 여부")
 
 
+class SecretKeyDeleteResponse(BaseModel):
+    """Secret 키 단위 삭제 응답 모델"""
+
+    path: str = Field(..., description="Vault 경로")
+    key: str = Field(..., description="삭제된 키")
+
+
 class EnvironmentUpdateResponse(BaseModel):
     """환경 변수 수정 응답 모델"""
 

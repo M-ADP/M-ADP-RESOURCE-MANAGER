@@ -455,6 +455,20 @@ class VaultClient:
         existing = await self.get_secret(path, mount_point) or {}
         return await self.create_secret(path, {**existing, **data}, mount_point)
 
+    async def remove_secret_key(
+        self,
+        path: str,
+        key: str,
+        mount_point: Optional[str] = None,
+    ) -> bool:
+        """Secret에서 특정 키만 제거하고 나머지는 유지"""
+        existing = await self.get_secret(path, mount_point)
+        if existing is None or key not in existing:
+            return False
+        updated = {k: v for k, v in existing.items() if k != key}
+        await self.create_secret(path, updated, mount_point)
+        return True
+
     async def delete_secret(
         self,
         path: str,
