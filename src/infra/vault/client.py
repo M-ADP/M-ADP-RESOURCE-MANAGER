@@ -445,6 +445,16 @@ class VaultClient:
                 reason=str(e),
             )
 
+    async def patch_secret(
+        self,
+        path: str,
+        data: Dict[str, Any],
+        mount_point: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """기존 Secret에 데이터를 병합하여 저장 (없으면 새로 생성)"""
+        existing = await self.get_secret(path, mount_point) or {}
+        return await self.create_secret(path, {**existing, **data}, mount_point)
+
     async def delete_secret(
         self,
         path: str,

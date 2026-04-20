@@ -400,7 +400,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     ) -> str:
         secret_name = deployment.vault_secret_name
         secret_path = deployment.vault_secret_path(secret_name)
-        await self._vault_client.create_secret(path=secret_path, secret=data)
+        await self._vault_client.patch_secret(path=secret_path, data=data)
 
         mount_point = self._vault_client.secret_mount_point
         policy_path = f"{mount_point}/data/{deployment.namespace}/{deployment.name}/*"
