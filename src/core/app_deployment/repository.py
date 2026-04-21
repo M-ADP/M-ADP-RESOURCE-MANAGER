@@ -104,6 +104,7 @@ class AppDeploymentRepository(ABC):
         self,
         pod_name: str,
         namespace: str,
+        container_name: Optional[str] = None,
         tail_lines: Optional[int] = None,
         since_seconds: Optional[int] = None,
         timestamps: bool = False,

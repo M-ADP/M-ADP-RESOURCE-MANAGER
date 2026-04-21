@@ -43,11 +43,13 @@ class AppDeploymentLogsUseCase:
         pods = await self.app_deployment_repo.get_pods(deployment)
 
         # 3. 각 Pod 로그 수집
+        main_container = deployment.containers[0].name if deployment.containers else None
         pod_logs = []
         for pod in pods:
             logs = await self.app_deployment_repo.get_pod_logs(
                 pod_name=pod.name,
                 namespace=deployment.namespace,
+                container_name=main_container,
                 tail_lines=tail_lines,
                 since_seconds=since_seconds,
                 timestamps=timestamps,

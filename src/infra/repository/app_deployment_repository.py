@@ -245,6 +245,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         self,
         pod_name: str,
         namespace: str,
+        container_name: Optional[str] = None,
         tail_lines: Optional[int] = None,
         since_seconds: Optional[int] = None,
         timestamps: bool = False,
@@ -252,6 +253,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         logs = await self._pod_manager.get_pod_logs(
             name=pod_name,
             namespace=namespace,
+            container=container_name,
             tail_lines=tail_lines,
             since_seconds=since_seconds,
             timestamps=timestamps,
