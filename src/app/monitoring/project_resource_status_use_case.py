@@ -1,11 +1,14 @@
+import asyncio
 from typing import Dict, Any, Optional
 from fastapi import Depends
 from src.core.project import ProjectId
 
 from src.app.base_use_case import BaseUseCase
 from src.common.util.unit_converter import UnitConverter
-from src.dependencies.kubernetes import get_resource_quota_manager
+from src.dependencies.kubernetes import get_resource_quota_manager, get_pod_manager, get_node_manager
 from src.infra.kubernetes.managers.resourcequota import ResourceQuotaManager
+from src.infra.kubernetes.managers.pod import PodManager
+from src.infra.kubernetes.managers.node import NodeManager
 from src.app.monitoring.dto import ProjectResourceStatusResponse, ResourceMetric, InstanceMetric
 from src.app.project.exceptions import ProjectNotFoundException
 
@@ -16,8 +19,12 @@ class ProjectResourceStatusUseCase(BaseUseCase):
     def __init__(
         self,
         resource_quota_manager: ResourceQuotaManager = Depends(get_resource_quota_manager),
+        pod_manager: PodManager = Depends(get_pod_manager),
+        node_manager: NodeManager = Depends(get_node_manager),
     ):
         self.resource_quota_manager = resource_quota_manager
+        self.pod_manager = pod_manager
+        self.node_manager = node_manager
 
     async def __call__(self, project_id: str) -> ProjectResourceStatusResponse:
         """프로젝트 리소스 상태 조회"""
@@ -30,26 +37,29 @@ class ProjectResourceStatusUseCase(BaseUseCase):
         # 여기서는 project_id(namespace)와 동일한 이름의 ResourceQuota를 찾는다고 가정하거나,
         # 해당 namespace의 모든 ResourceQuota를 합산해야 함.
         
-        # 안전하게 list_resource_quotas 사용
+        namespace = ProjectId(project_id).namespace
         try:
-            quotas = await self.resource_quota_manager.list_resource_quotas(namespace=ProjectId(project_id).namespace)
+            quotas = await self.resource_quota_manager.list_resource_quotas(namespace=namespace)
         except Exception:
-            # 네임스페이스가 없거나 권한 문제 등
             raise ProjectNotFoundException()
 
         if not quotas:
-            # 쿼터가 없는 경우 (무제한)
             return self._create_empty_response(project_id)
 
-        # 여러 Quota가 있을 수 있으므로 합산 (보통 1개)
         total_hard = {}
         total_used = {}
-        
+
         for rq in quotas:
             if rq.spec and rq.spec.hard:
                 self._accumulate_resources(total_hard, rq.spec.hard)
             if rq.status and rq.status.used:
                 self._accumulate_resources(total_used, rq.status.used)
+
+        disk_limit, disk_used = await self._get_disk_bytes(namespace, total_hard)
+
+        disk_limit_display = round(disk_limit / 1024**3, 2) if disk_limit else 0
+        disk_used_display = round(disk_used / 1024**3, 2) if disk_used else 0
+        disk_percentage = round((disk_used / disk_limit) * 100, 2) if disk_limit > 0 else 0.0
 
         return ProjectResourceStatusResponse(
             project_id=project_id,
@@ -59,11 +69,60 @@ class ProjectResourceStatusUseCase(BaseUseCase):
             memory=self._create_resource_metric(
                 total_hard, total_used, "memory", UnitConverter.parse_storage_to_bytes, "GiB", 1024**3
             ),
-            disk=self._create_resource_metric(
-                total_hard, total_used, "requests.storage", UnitConverter.parse_storage_to_bytes, "GiB", 1024**3
+            disk=ResourceMetric(
+                limit=str(disk_limit_display) if disk_limit else "Unlimited",
+                used=str(disk_used_display),
+                percentage=disk_percentage,
+                unit="GiB",
             ),
             instance=self._create_instance_metric(total_hard, total_used, "pods"),
         )
+
+    async def _get_disk_bytes(self, namespace: str, total_hard: Dict[str, Any]):
+        """네임스페이스 내 모든 파드의 볼륨 실사용량 집계.
+
+        1순위: kubelet stats/summary
+        2순위: ResourceQuota hard limit 값 그대로 (limit=used fallback)
+        """
+        limit_bytes = total_hard.get("requests.storage", 0) or total_hard.get("storage", 0)
+
+        pods = await self.pod_manager.list_pods(namespace=namespace)
+        running_pods = [
+            p for p in pods
+            if p.status and p.status.phase == "Running" and p.spec and p.spec.node_name
+        ]
+
+        if not running_pods:
+            return limit_bytes, 0
+
+        node_pods: Dict[str, list] = {}
+        for pod in running_pods:
+            node_pods.setdefault(pod.spec.node_name, []).append(pod)
+
+        stats_list = await asyncio.gather(
+            *[self.node_manager.get_node_volume_stats(n) for n in node_pods],
+            return_exceptions=True,
+        )
+
+        used_bytes = 0
+        for node_name, node_stats in zip(node_pods, stats_list):
+            if isinstance(node_stats, Exception) or not node_stats:
+                continue
+
+            pod_stats_index = {
+                (s["podRef"]["name"], s["podRef"]["namespace"]): s
+                for s in node_stats.get("pods", [])
+                if "podRef" in s
+            }
+
+            for pod in node_pods[node_name]:
+                pod_stat = pod_stats_index.get((pod.metadata.name, pod.metadata.namespace))
+                if not pod_stat:
+                    continue
+                for vol in pod_stat.get("volume", []):
+                    used_bytes += vol.get("usedBytes", 0)
+
+        return limit_bytes, used_bytes
 
     def _accumulate_resources(self, target: Dict[str, Any], source: Dict[str, Any]):
         """리소스 합산 (단위 변환 필요 없음, 문자열 그대로 처리 불가하므로 변환 후 합산해야 함)"""
