@@ -55,6 +55,13 @@ class ProjectResourceStatusUseCase(BaseUseCase):
             if rq.status and rq.status.used:
                 self._accumulate_resources(total_used, rq.status.used)
 
+        # 실시간 CPU/Memory: metrics-server 우선, 실패 시 ResourceQuota status.used fallback
+        pod_metrics = await self.pod_manager.get_namespace_pod_metrics(namespace=namespace)
+        if pod_metrics is not None:
+            real_used = {"cpu": pod_metrics["cpu_millicores"], "memory": pod_metrics["memory_bytes"]}
+        else:
+            real_used = total_used
+
         disk_limit, disk_used = await self._get_disk_bytes(namespace, total_hard)
 
         disk_limit_display = round(disk_limit / 1024**3, 2) if disk_limit else 0
@@ -64,10 +71,10 @@ class ProjectResourceStatusUseCase(BaseUseCase):
         return ProjectResourceStatusResponse(
             project_id=project_id,
             cpu=self._create_resource_metric(
-                total_hard, total_used, "cpu", UnitConverter.parse_cpu_to_millicores, "cores", 1000.0
+                total_hard, real_used, "cpu", UnitConverter.parse_cpu_to_millicores, "cores", 1000.0
             ),
             memory=self._create_resource_metric(
-                total_hard, total_used, "memory", UnitConverter.parse_storage_to_bytes, "GiB", 1024**3
+                total_hard, real_used, "memory", UnitConverter.parse_storage_to_bytes, "GiB", 1024**3
             ),
             disk=ResourceMetric(
                 limit=str(disk_limit_display) if disk_limit else "Unlimited",

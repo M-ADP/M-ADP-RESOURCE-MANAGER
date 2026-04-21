@@ -11,6 +11,13 @@ from src.common.util import NameConverter
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository
 
+_PHASE_MESSAGES = {
+    "Pending": "파드가 아직 시작되지 않았습니다",
+    "Running": "로그가 없습니다",
+    "Succeeded": "파드 실행이 완료되었습니다 (컨테이너 종료됨)",
+    "Failed": "파드가 실패 상태입니다",
+}
+
 
 class AppDeploymentLogsUseCase:
     """App Deployment 로그 조회 UseCase"""
@@ -42,6 +49,14 @@ class AppDeploymentLogsUseCase:
         # 2. Pod 목록 조회 (deployment 객체 전달)
         pods = await self.app_deployment_repo.get_pods(deployment)
 
+        if not pods:
+            return AppLogsResponse(
+                deployment_name=deployment.name,
+                namespace=deployment.namespace,
+                pod_logs=[],
+                message="앱이 아직 시작되지 않았습니다",
+            )
+
         # 3. 각 Pod 로그 수집
         main_container = deployment.containers[0].name if deployment.containers else None
         pod_logs = []
@@ -54,10 +69,11 @@ class AppDeploymentLogsUseCase:
                 since_seconds=since_seconds,
                 timestamps=timestamps,
             )
-            pod_logs.append(PodLogInfo(
-                pod_name=pod.name,
-                logs=logs.logs if logs else "",
-            ))
+            if logs:
+                pod_logs.append(PodLogInfo(pod_name=pod.name, logs=logs.logs))
+            else:
+                msg = _PHASE_MESSAGES.get(pod.phase or "Pending", "로그를 조회할 수 없습니다")
+                pod_logs.append(PodLogInfo(pod_name=pod.name, logs="", message=msg))
 
         return AppLogsResponse(
             deployment_name=deployment.name,

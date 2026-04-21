@@ -1,11 +1,12 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class PodLogInfo(BaseModel):
     """Pod 로그 정보"""
     pod_name: str
     logs: str
+    message: Optional[str] = None
 
 
 class AppLogsResponse(BaseModel):
@@ -13,3 +14,4 @@ class AppLogsResponse(BaseModel):
     deployment_name: str
     namespace: str
     pod_logs: List[PodLogInfo]
+    message: Optional[str] = None

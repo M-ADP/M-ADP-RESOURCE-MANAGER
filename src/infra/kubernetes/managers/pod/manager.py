@@ -7,6 +7,7 @@ from kubernetes_asyncio.stream import WsApiClient
 
 from src.infra.kubernetes.client import KubernetesClientImpl
 from src.core.logger import Logger, get_logger
+from src.common.util.unit_converter import UnitConverter
 from .exceptions import (
     PodCreationException,
     PodReadException,
@@ -428,7 +429,12 @@ class PodManager:
             return logs
 
         except ApiException as e:
-            if e.status == 404:
+            if e.status in (400, 404):
+                # 400: 컨테이너가 아직 시작되지 않음 (ContainerCreating, Pending 등)
+                # 404: 파드 또는 컨테이너 없음
+                self.logger.warning(
+                    f"Pod 로그 조회 불가 (status={e.status}): {name} - {e.reason}"
+                )
                 return None
 
             self.logger.logger.error(
@@ -494,6 +500,36 @@ class PodManager:
         except Exception as e:
             self.logger.error(f"Pod exec 예외: {pod_name} - {e}")
             raise PodReadException(pod_name=pod_name, namespace=namespace, reason=str(e))
+
+    async def get_namespace_pod_metrics(
+        self,
+        namespace: str,
+    ) -> Optional[Dict[str, int]]:
+        """metrics-server에서 네임스페이스 내 파드 실시간 CPU/Memory 합산 조회.
+
+        Returns:
+            {"cpu_millicores": int, "memory_bytes": int} 또는 metrics-server 미사용 시 None
+        """
+        try:
+            result = await self.k8s_client.custom_objects.list_namespaced_custom_object(
+                group="metrics.k8s.io",
+                version="v1beta1",
+                namespace=namespace,
+                plural="pods",
+            )
+        except Exception as e:
+            self.logger.warning(f"metrics-server 조회 실패 ({namespace}): {e}")
+            return None
+
+        total_cpu_mc = 0
+        total_mem_bytes = 0
+        for item in result.get("items", []):
+            for container in item.get("containers", []):
+                usage = container.get("usage", {})
+                total_cpu_mc += UnitConverter.parse_cpu_to_millicores(usage.get("cpu", "0"))
+                total_mem_bytes += UnitConverter.parse_storage_to_bytes(usage.get("memory", "0"))
+
+        return {"cpu_millicores": total_cpu_mc, "memory_bytes": total_mem_bytes}
 
     async def list_pods_by_owner(
         self,
