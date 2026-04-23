@@ -65,6 +65,20 @@ from src.app.app_deployment.app_deployment_restart_use_case import (
 )
 from src.core.response import SuccessResponse
 
+from src.api.v1.app.schemas.security_response import (
+    AppSecurityConfigResponse,
+    AppVulnerabilityResponse,
+)
+from src.app.app_deployment.app_security_events_use_case import (
+    AppSecurityEventsUseCase,
+)
+from src.app.app_deployment.app_security_config_use_case import (
+    AppSecurityConfigUseCase,
+)
+from src.app.app_deployment.app_security_vulnerabilities_use_case import (
+    AppSecurityVulnerabilitiesUseCase,
+)
+
 app_router = APIRouter(prefix="/apps", tags=["apps"])
 
 
@@ -432,3 +446,46 @@ async def restart_app_deployment(
         message="App deployment restarted successfully",
         data=result,
     )
+
+
+@app_router.get(
+    "/{project_id}/{name}/security/events",
+    response_model=SuccessResponse[AppEventsResponse],
+)
+async def get_app_security_events(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    since_seconds: int = Query(default=60, description="조회할 시간 범위(초)"),
+    use_case: AppSecurityEventsUseCase = Depends(AppSecurityEventsUseCase),
+):
+    """App 보안 관련 최근 이벤트 조회 (RuntimeSecurityAgent)"""
+    result = await use_case(app_name=name, project_id=project_id, since_seconds=since_seconds)
+    return SuccessResponse(message="Security events retrieved successfully", data=result)
+
+
+@app_router.get(
+    "/{project_id}/{name}/security/config",
+    response_model=SuccessResponse[AppSecurityConfigResponse],
+)
+async def get_app_security_config(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    use_case: AppSecurityConfigUseCase = Depends(AppSecurityConfigUseCase),
+):
+    """App 보안 설정 및 리소스 조회 (ConfigSecurityAgent)"""
+    result = await use_case(app_name=name, project_id=project_id)
+    return SuccessResponse(message="Security config retrieved successfully", data=result)
+
+
+@app_router.get(
+    "/{project_id}/{name}/security/vulnerabilities",
+    response_model=SuccessResponse[List[AppVulnerabilityResponse]],
+)
+async def get_app_vulnerabilities(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    use_case: AppSecurityVulnerabilitiesUseCase = Depends(AppSecurityVulnerabilitiesUseCase),
+):
+    """App 이미지 취약점 스캔 결과 조회 (ImageSecurityAgent)"""
+    result = await use_case(app_name=name, project_id=project_id)
+    return SuccessResponse(message="Vulnerabilities retrieved successfully", data=result)

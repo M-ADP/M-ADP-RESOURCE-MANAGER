@@ -14,6 +14,17 @@ class Volume:
 
 
 @dataclass(frozen=True)
+class SecurityContext:
+    """Kubernetes SecurityContext 정의"""
+
+    privileged: Optional[bool] = None
+    run_as_non_root: Optional[bool] = None
+    allow_privilege_escalation: Optional[bool] = None
+    read_only_root_filesystem: Optional[bool] = None
+    capabilities_add: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class Container:
     """Kubernetes Container 정의"""
 
@@ -22,6 +33,7 @@ class Container:
     ports: List[Dict[str, Any]] = field(default_factory=list)
     env: List[Dict[str, Any]] = field(default_factory=list)
     resources: Optional[Dict[str, Any]] = None
+    security_context: Optional[SecurityContext] = None
     volume_mounts: List[Dict[str, Any]] = field(default_factory=list)
     command: Optional[List[str]] = None
     args: Optional[List[str]] = None
@@ -49,6 +61,7 @@ class Deployment:
     labels: Dict[str, str] = field(default_factory=dict)
     annotations: Dict[str, str] = field(default_factory=dict)
     selector_labels: Dict[str, str] = field(default_factory=dict)
+    security_context: Optional[SecurityContext] = None
     service_account_name: Optional[str] = None
     image_pull_secrets: List[str] = field(default_factory=list)
     status: Optional[DeploymentStatus] = None

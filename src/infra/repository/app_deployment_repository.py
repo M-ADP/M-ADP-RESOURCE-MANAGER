@@ -262,21 +262,39 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             return None
         return PodLogs(pod_name=pod_name, namespace=namespace, logs=logs)
 
-    async def get_events(self, deployment: Deployment) -> List[Event]:
+    async def get_events(
+        self, deployment: Deployment, since_seconds: Optional[int] = None
+    ) -> List[Event]:
         result = await self._pod_manager.k8s_client.core_v1.list_namespaced_event(
             namespace=deployment.namespace,
         )
         events = []
+        now = datetime.now(timezone.utc)
+
         for event in result.items:
+            # 1. 대상 필터링 (Deployment, ReplicaSet, Pod)
             obj = event.involved_object
+            is_related = False
             if obj.kind == "Deployment" and obj.name == deployment.name:
-                events.append(self._event_to_domain(event))
-            elif obj.kind == "ReplicaSet" and obj.name.startswith(
-                f"{deployment.name}-"
-            ):
-                events.append(self._event_to_domain(event))
+                is_related = True
+            elif obj.kind == "ReplicaSet" and obj.name.startswith(f"{deployment.name}-"):
+                is_related = True
             elif obj.kind == "Pod" and obj.name.startswith(f"{deployment.name}-"):
-                events.append(self._event_to_domain(event))
+                is_related = True
+
+            if not is_related:
+                continue
+
+            # 2. 시간 필터링
+            if since_seconds:
+                event_time = (
+                    event.last_timestamp or event.event_time or event.first_timestamp
+                )
+                if event_time:
+                    if (now - event_time).total_seconds() > since_seconds:
+                        continue
+
+            events.append(self._event_to_domain(event))
 
         _epoch = datetime.min.replace(tzinfo=timezone.utc)
         events.sort(
@@ -489,8 +507,16 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
     def _deployment_to_domain(self, v1_dep: V1Deployment) -> Deployment:
         containers = []
         volumes = []
+        pod_security_context = None
+
         if v1_dep.spec and v1_dep.spec.template and v1_dep.spec.template.spec:
-            for c in v1_dep.spec.template.spec.containers or []:
+            spec = v1_dep.spec.template.spec
+            if spec.security_context:
+                pod_security_context = self._security_context_to_domain(
+                    spec.security_context
+                )
+
+            for c in spec.containers or []:
                 resources = None
                 if c.resources:
                     resources = {}
@@ -514,11 +540,16 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
                         name=c.name,
                         image=c.image,
                         resources=resources,
+                        security_context=self._security_context_to_domain(
+                            c.security_context
+                        )
+                        if c.security_context
+                        else None,
                         volume_mounts=volume_mounts,
                     )
                 )
 
-            for v in v1_dep.spec.template.spec.volumes or []:
+            for v in spec.volumes or []:
                 pvc_name = None
                 if v.persistent_volume_claim:
                     pvc_name = v.persistent_volume_claim.claim_name
@@ -548,8 +579,24 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             selector_labels=v1_dep.spec.selector.match_labels
             if v1_dep.spec and v1_dep.spec.selector
             else {},
+            security_context=pod_security_context,
             service_account_name=service_account_name,
             status=status,
+        )
+
+    def _security_context_to_domain(self, sc) -> "SecurityContext":
+        from src.core.kubernetes.deployment.model import SecurityContext
+
+        capabilities_add = []
+        if hasattr(sc, "capabilities") and sc.capabilities and sc.capabilities.add:
+            capabilities_add = list(sc.capabilities.add)
+
+        return SecurityContext(
+            privileged=getattr(sc, "privileged", None),
+            run_as_non_root=getattr(sc, "run_as_non_root", None),
+            allow_privilege_escalation=getattr(sc, "allow_privilege_escalation", None),
+            read_only_root_filesystem=getattr(sc, "read_only_root_filesystem", None),
+            capabilities_add=capabilities_add,
         )
 
     def _pvc_to_domain(self, v1_pvc: V1PersistentVolumeClaim) -> PersistentVolumeClaim:

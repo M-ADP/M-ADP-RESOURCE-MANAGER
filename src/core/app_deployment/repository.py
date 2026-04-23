@@ -112,7 +112,9 @@ class AppDeploymentRepository(ABC):
         """Pod 로그 조회"""
 
     @abstractmethod
-    async def get_events(self, deployment: Deployment) -> List[Event]:
+    async def get_events(
+        self, deployment: Deployment, since_seconds: Optional[int] = None
+    ) -> List[Event]:
         """Deployment 관련 이벤트 조회"""
 
     # ── Environment (ConfigMap) ──────────────────────────────────────────────

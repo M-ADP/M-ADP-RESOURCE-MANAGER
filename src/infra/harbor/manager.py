@@ -82,6 +82,19 @@ class HarborManager:
         await self._request("DELETE", f"/projects/{project_name}")
         return True
 
+    async def get_artifact_vulnerabilities(
+        self, project_name: str, repository_name: str, reference: str
+    ) -> Dict[str, Any]:
+        """아티팩트(이미지) 취약점 스캔 결과 조회"""
+        # repository_name에 /가 포함된 경우 (예: "my-app/backend") URL 인코딩 필요할 수 있음
+        repo_path = repository_name.replace("/", "%2F")
+        path = f"/projects/{project_name}/repositories/{repo_path}/artifacts/{reference}/additions/vulnerabilities"
+        try:
+            return await self._request("GET", path)
+        except Exception as e:
+            self.logger.warning(f"Harbor 취약점 조회 실패: {project_name}/{repository_name}:{reference} - {str(e)}")
+            return {}
+
     async def project_exists(self, project_name: str) -> bool:
         """프로젝트 존재 여부 확인"""
         project = await self.get_project(project_name)
