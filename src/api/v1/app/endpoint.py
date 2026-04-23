@@ -450,7 +450,7 @@ async def restart_app_deployment(
 
 @app_router.get(
     "/{project_id}/{name}/security/events",
-    response_model=SuccessResponse[AppEventsResponse],
+    response_model=None,
 )
 async def get_app_security_events(
     project_id: str = Path(..., description="프로젝트 ID"),
@@ -465,7 +465,7 @@ async def get_app_security_events(
 
 @app_router.get(
     "/{project_id}/{name}/security/config",
-    response_model=SuccessResponse[AppSecurityConfigResponse],
+    response_model=None,
 )
 async def get_app_security_config(
     project_id: str = Path(..., description="프로젝트 ID"),
@@ -479,7 +479,7 @@ async def get_app_security_config(
 
 @app_router.get(
     "/{project_id}/{name}/security/vulnerabilities",
-    response_model=SuccessResponse[List[AppVulnerabilityResponse]],
+    response_model=None,
 )
 async def get_app_vulnerabilities(
     project_id: str = Path(..., description="프로젝트 ID"),
