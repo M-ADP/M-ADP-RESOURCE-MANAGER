@@ -13,11 +13,11 @@ class HarborManager:
 
     def __init__(
         self,
-        harbor_config: HarborConfig = Depends(HarborConfig),
-        logger: Logger = Depends(get_logger),
+        harbor_config: Optional[HarborConfig] = None,
+        logger: Optional[Logger] = None,
     ):
-        self._config = harbor_config
-        self._logger = logger
+        self._config = harbor_config or HarborConfig()
+        self._logger = logger or get_logger()
 
     @property
     def base_url(self) -> str:
@@ -104,3 +104,10 @@ class HarborManager:
     @property
     def logger(self) -> Logger:
         return self._logger
+
+def get_harbor_manager(
+    config: HarborConfig = Depends(HarborConfig),
+    logger: Logger = Depends(get_logger),
+) -> HarborManager:
+    """HarborManager 인스턴스 반환 (의존성 주입용)"""
+    return HarborManager(harbor_config=config, logger=logger)

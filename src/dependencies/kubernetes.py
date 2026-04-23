@@ -40,8 +40,8 @@ _k8s_client_instance: Optional[KubernetesClientImpl] = None
 
 
 async def get_kubernetes_client(
-    k8s_config: KubernetesConfig = Depends(KubernetesConfig),
-    logger: Logger = Depends(get_logger),
+    k8s_config: Optional[KubernetesConfig] = None, 
+    logger: Optional[Logger] = None
 ) -> KubernetesClientImpl:
     """
     Kubernetes 클라이언트 인스턴스 반환 (비동기 의존성 주입용)
@@ -56,7 +56,12 @@ async def get_kubernetes_client(
     global _k8s_client_instance
 
     if _k8s_client_instance is None:
-        _k8s_client_instance = KubernetesClientImpl(k8s_config, logger)
+        from src.common.config.kubernetes import KubernetesConfig
+        from src.core.logger import get_logger
+
+        config = k8s_config or KubernetesConfig()
+        log = logger or get_logger()
+        _k8s_client_instance = KubernetesClientImpl(config, log)
         await _k8s_client_instance.initialize()
 
     return _k8s_client_instance

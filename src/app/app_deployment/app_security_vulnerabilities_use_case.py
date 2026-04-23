@@ -8,7 +8,7 @@ from src.app.app_deployment.exceptions import DeploymentNotFoundException
 from src.common.util import NameConverter
 from src.core.app_deployment import AppDeploymentRepository
 from src.dependencies.kubernetes import get_app_deployment_repository
-from src.infra.harbor.manager import HarborManager
+from src.infra.harbor.manager import HarborManager, get_harbor_manager
 
 
 class AppSecurityVulnerabilitiesUseCase:
@@ -17,7 +17,7 @@ class AppSecurityVulnerabilitiesUseCase:
     def __init__(
         self,
         app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
-        harbor_manager: HarborManager = Depends(HarborManager),
+        harbor_manager: HarborManager = Depends(get_harbor_manager),
     ):
         self.app_deployment_repo = app_deployment_repo
         self.harbor_manager = harbor_manager
