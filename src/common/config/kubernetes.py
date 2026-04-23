@@ -38,6 +38,7 @@ class KubernetesConfig(BaseSettings):
     pvc_cluster_role_name: str = "resource-manager-pvc-manager"
 
     # Watch 설정 (기본 비활성 — 수평 확장 환경에서 인스턴스 하나만 켤 것)
-    watch_enabled: bool = False
+    watch_enabled: bool = True
     watch_namespace_prefix: str = "project-"
     watch_failure_ttl_seconds: int = 3600
+    watch_performops_url: Optional[str] = None  # e.g. "http://orchestrator:8000"

@@ -22,6 +22,7 @@ class WatchStatusResponse(BaseModel):
     is_running: bool
     event_watcher: WatcherStatusResponse
     pod_watcher: WatcherStatusResponse
+    deployment_watcher: WatcherStatusResponse
 
 
 class FailureRecordResponse(BaseModel):
@@ -63,12 +64,14 @@ async def get_watch_status():
             is_running=False,
             event_watcher=_DISABLED_STATE,
             pod_watcher=_DISABLED_STATE,
+            deployment_watcher=_DISABLED_STATE,
         )
 
     return WatchStatusResponse(
         is_running=manager.is_running,
         event_watcher=_watcher_state_to_response(manager.event_watcher_state),
         pod_watcher=_watcher_state_to_response(manager.pod_watcher_state),
+        deployment_watcher=_watcher_state_to_response(manager.deployment_watcher_state),
     )
 
 
