@@ -1,10 +1,11 @@
 from typing import Optional
+from fastapi import Depends
 
 from src.common.config.kubernetes import KubernetesConfig
 from src.core.app_deployment import AppDeploymentRepository
 from src.core.cloud_db import CloudDbRepository
 from src.core.project import ProjectRepository
-from src.core.logger import Logger
+from src.core.logger import Logger, get_logger
 from src.infra.kubernetes import KubernetesClientImpl
 from src.infra.kubernetes.managers.gateway import IstioGatewayManager
 from src.infra.kubernetes.managers.virtualservice import IstioVirtualServiceManager
@@ -39,7 +40,8 @@ _k8s_client_instance: Optional[KubernetesClientImpl] = None
 
 
 async def get_kubernetes_client(
-    k8s_config: Optional[KubernetesConfig] = None, logger: Optional[Logger] = None
+    k8s_config: KubernetesConfig = Depends(KubernetesConfig),
+    logger: Logger = Depends(get_logger),
 ) -> KubernetesClientImpl:
     """
     Kubernetes 클라이언트 인스턴스 반환 (비동기 의존성 주입용)
@@ -54,12 +56,7 @@ async def get_kubernetes_client(
     global _k8s_client_instance
 
     if _k8s_client_instance is None:
-        from src.common.config.kubernetes import KubernetesConfig
-        from src.core.logger import get_logger
-
-        config = k8s_config or KubernetesConfig()
-        log = logger or get_logger()
-        _k8s_client_instance = KubernetesClientImpl(config, log)
+        _k8s_client_instance = KubernetesClientImpl(k8s_config, logger)
         await _k8s_client_instance.initialize()
 
     return _k8s_client_instance

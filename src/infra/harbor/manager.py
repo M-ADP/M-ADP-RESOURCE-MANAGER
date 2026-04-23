@@ -2,6 +2,7 @@
 
 import aiohttp
 from typing import Optional, Dict, Any
+from fastapi import Depends
 
 from src.common.config.harbor import HarborConfig
 from src.core.logger import Logger, get_logger
@@ -12,11 +13,11 @@ class HarborManager:
 
     def __init__(
         self,
-        harbor_config: Optional[HarborConfig] = None,
-        logger: Optional[Logger] = None,
+        harbor_config: HarborConfig = Depends(HarborConfig),
+        logger: Logger = Depends(get_logger),
     ):
-        self._config = harbor_config or HarborConfig()
-        self._logger = logger or get_logger()
+        self._config = harbor_config
+        self._logger = logger
 
     @property
     def base_url(self) -> str:
