@@ -137,7 +137,10 @@ class BaseWatcher(ABC):
     async def _init_resource_version(self) -> None:
         """현재 리소스 목록에서 resourceVersion을 가져온다. limit=1로 트래픽 최소화."""
         result = await self._list_current()
-        self._resource_version = result.metadata.resource_version
+        if isinstance(result, dict):
+            self._resource_version = result.get("metadata", {}).get("resourceVersion", "")
+        else:
+            self._resource_version = result.metadata.resource_version
         self._logger.info(
             f"[{self.state.name}] 초기 resourceVersion 확보: {self._resource_version}"
         )
