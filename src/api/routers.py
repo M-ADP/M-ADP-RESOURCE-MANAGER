@@ -9,6 +9,7 @@ def register_routers(app: FastAPI) -> None:
     from src.api.v1.app.endpoint import app_router
     from src.api.v1.app.dns.endpoint import dns_router
     from src.api.v1.cloud_db.endpoint import cloud_db_router
+    from src.api.v1.watch.endpoint import watch_router
 
     v1_router = APIRouter()  # prefix="/v1")
     v1_router.include_router(project_router)
@@ -17,6 +18,7 @@ def register_routers(app: FastAPI) -> None:
     )  # Register DNS router before app router to avoid path collision
     v1_router.include_router(app_router)
     v1_router.include_router(cloud_db_router)
+    v1_router.include_router(watch_router)
 
     root_router = APIRouter()
     # 등록할 라우터는 최종적으로 여기서 조립

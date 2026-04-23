@@ -36,3 +36,8 @@ class KubernetesConfig(BaseSettings):
 
     # project namespace에 부여할 ClusterRole 이름
     pvc_cluster_role_name: str = "resource-manager-pvc-manager"
+
+    # Watch 설정 (기본 비활성 — 수평 확장 환경에서 인스턴스 하나만 켤 것)
+    watch_enabled: bool = False
+    watch_namespace_prefix: str = "project-"
+    watch_failure_ttl_seconds: int = 3600
