@@ -75,20 +75,21 @@ class BaseWatcher(ABC):
                         return
 
                     event_type: str = raw_event.get("type", "")
-                    obj = raw_event.get("object")
+                    # raw_object는 kubernetes-asyncio가 항상 dict로 보장한다.
+                    # "object"는 역직렬화 실패 시 dict가 될 수 있어 신뢰할 수 없다.
+                    raw_obj: dict = raw_event.get("raw_object") or {}
 
-                    # BOOKMARK는 resource_version 갱신만 하고 처리 생략.
-                    # 이를 통해 410 Gone 발생 위험이 낮아진다.
+                    rv = raw_obj.get("metadata", {}).get("resourceVersion", "")
                     if event_type == "BOOKMARK":
-                        if obj and obj.metadata and obj.metadata.resource_version:
-                            self._resource_version = obj.metadata.resource_version
+                        if rv:
+                            self._resource_version = rv
                         continue
 
-                    if obj and obj.metadata and obj.metadata.resource_version:
-                        self._resource_version = obj.metadata.resource_version
+                    if rv:
+                        self._resource_version = rv
                         self.state.last_event_at = datetime.now(timezone.utc)
 
-                    record = self._handle_event(event_type, obj)
+                    record = self._handle_event(event_type, raw_obj)
                     if record is not None:
                         try:
                             self._queue.put_nowait(record)
@@ -165,6 +166,6 @@ class BaseWatcher(ABC):
         ...
 
     @abstractmethod
-    def _handle_event(self, event_type: str, obj) -> Optional[FailureRecord]:
-        """이벤트 처리. 실패 레코드를 반환하거나 None 반환."""
+    def _handle_event(self, event_type: str, obj: dict) -> Optional[FailureRecord]:
+        """이벤트 처리. raw_object dict를 받아 실패 레코드를 반환하거나 None 반환."""
         ...

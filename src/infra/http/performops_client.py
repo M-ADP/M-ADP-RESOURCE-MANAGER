@@ -1,4 +1,3 @@
-import re
 from typing import Optional
 
 import aiohttp
@@ -9,30 +8,40 @@ from src.infra.kubernetes.watch.models import FailureRecord
 _NAMESPACE_PREFIX = "project-"
 _TIMEOUT = aiohttp.ClientTimeout(total=10)
 
-# ReplicaSet 이름에서 Deployment 이름 추출 패턴
-# RS: {deployment}-{pod-template-hash(9~10 chars)}
-# Pod: {deployment}-{pod-template-hash}-{random(5 chars)}
-_RS_SUFFIX = re.compile(r'^(.+)-[a-z0-9]{9,10}$')
-_POD_SUFFIX = re.compile(r'^(.+)-[a-z0-9]{9,10}-[a-z0-9]{5}$')
-
 
 def _extract_deployment_name(record: FailureRecord) -> Optional[str]:
     """FailureRecord에서 Deployment 이름을 추출한다.
 
-    Pod 이벤트는 app 레이블을 우선 사용하고, ReplicaSet/Pod 이름에서 해시를 제거해 폴백한다.
+    우선순위:
+    1. app_label — PodWatcher가 Pod labels에서 직접 추출한 값
+    2. object_kind == Deployment — object_name 자체가 Deployment 이름
+    3. object_kind == ReplicaSet — {deployment}-{hash} 에서 마지막 세그먼트 제거
+    4. object_kind == Pod — {deployment}-{hash}-{suffix} 에서 마지막 두 세그먼트 제거
+
+    정규식 대신 rsplit을 사용한다.
+    K8s hash charset(bcdfghjklmnpqrstvwxz2456789)은 고정되지 않아 정규식이 불안정하다.
     """
     if record.app_label:
         return record.app_label
 
     name = record.object_name
+    if not name:
+        return None
+
+    if record.object_kind == "Deployment":
+        return name
+
     if record.object_kind == "ReplicaSet":
-        m = _RS_SUFFIX.match(name)
-        if m:
-            return m.group(1)
-    elif record.object_kind == "Pod":
-        m = _POD_SUFFIX.match(name)
-        if m:
-            return m.group(1)
+        # {deployment-name}-{pod-template-hash}
+        parts = name.rsplit("-", 1)
+        if len(parts) == 2 and parts[0]:
+            return parts[0]
+
+    if record.object_kind == "Pod":
+        # {deployment-name}-{pod-template-hash}-{random-suffix}
+        parts = name.rsplit("-", 2)
+        if len(parts) == 3 and parts[0]:
+            return parts[0]
 
     return None
 
