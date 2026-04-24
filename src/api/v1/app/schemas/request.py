@@ -243,6 +243,16 @@ class SecretCreateRequest(BaseModel):
     data: Dict[str, str] = Field(..., description="Secret 데이터")
 
 
+class SecurityContextPatchRequest(BaseModel):
+    """보안 컨텍스트 패치 요청 모델 (None 필드는 변경하지 않음)"""
+
+    run_as_non_root: Optional[bool] = Field(default=None, description="non-root 실행 강제")
+    allow_privilege_escalation: Optional[bool] = Field(default=None, description="권한 상승 허용 여부")
+    read_only_root_filesystem: Optional[bool] = Field(default=None, description="루트 파일시스템 읽기 전용")
+    privileged: Optional[bool] = Field(default=None, description="privileged 모드")
+    capabilities_drop: Optional[List[str]] = Field(default=None, description="제거할 capabilities (예: [\"ALL\"])")
+
+
 class EnvironmentUpdateRequest(BaseModel):
     """환경 변수 수정 요청 모델 (ConfigMap 데이터 교체)"""
 

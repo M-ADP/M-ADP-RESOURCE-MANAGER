@@ -117,6 +117,22 @@ class AppDeploymentRepository(ABC):
     ) -> List[Event]:
         """Deployment 관련 이벤트 조회"""
 
+    @abstractmethod
+    async def kill_pod(self, deployment: Deployment, pod_name: str) -> bool:
+        """특정 Pod 강제 종료 (Deployment 소속 검증 후 삭제)"""
+
+    @abstractmethod
+    async def patch_security_context(
+        self,
+        deployment: Deployment,
+        run_as_non_root: Optional[bool] = None,
+        allow_privilege_escalation: Optional[bool] = None,
+        read_only_root_filesystem: Optional[bool] = None,
+        privileged: Optional[bool] = None,
+        capabilities_drop: Optional[List[str]] = None,
+    ) -> Deployment:
+        """모든 컨테이너의 securityContext 패치"""
+
     # ── Environment (ConfigMap) ──────────────────────────────────────────────
 
     @abstractmethod

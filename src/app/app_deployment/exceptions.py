@@ -52,3 +52,11 @@ class SecretKeyNotFoundException(NotFoundException):
 
     def __init__(self, key: str):
         super().__init__(f"Secret key '{key}' not found")
+
+
+class PodNotFoundException(NotFoundException):
+    """Pod 미발견 또는 해당 Deployment 소속 아님"""
+    detail = "Pod not found"
+
+    def __init__(self, pod_name: str, deployment_name: str):
+        super().__init__(f"Pod '{pod_name}' not found in deployment '{deployment_name}'")

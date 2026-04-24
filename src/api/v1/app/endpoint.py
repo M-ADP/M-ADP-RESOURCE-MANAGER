@@ -11,6 +11,7 @@ from src.api.v1.app.schemas.request import (
     FixedScaleRequest,
     SecretCreateRequest,
     EnvironmentUpdateRequest,
+    SecurityContextPatchRequest,
 )
 from src.api.v1.app.schemas.response import (
     AppCreateResponse,
@@ -68,6 +69,9 @@ from src.core.response import SuccessResponse
 from src.api.v1.app.schemas.security_response import (
     AppSecurityConfigResponse,
     AppVulnerabilityResponse,
+    AppPodKillResponse,
+    AppSecurityContextPatchResponse,
+    AppSecurityAuditResponse,
 )
 from src.app.app_deployment.app_security_events_use_case import (
     AppSecurityEventsUseCase,
@@ -78,6 +82,11 @@ from src.app.app_deployment.app_security_config_use_case import (
 from src.app.app_deployment.app_security_vulnerabilities_use_case import (
     AppSecurityVulnerabilitiesUseCase,
 )
+from src.app.app_deployment.app_pod_kill_use_case import AppPodKillUseCase
+from src.app.app_deployment.app_security_context_patch_use_case import (
+    AppSecurityContextPatchUseCase,
+)
+from src.app.app_deployment.app_security_audit_use_case import AppSecurityAuditUseCase
 
 app_router = APIRouter(prefix="/apps", tags=["apps"])
 
@@ -446,6 +455,69 @@ async def restart_app_deployment(
         message="App deployment restarted successfully",
         data=result,
     )
+
+
+@app_router.post(
+    "/{project_id}/{name}/pods/{pod_name}/kill",
+    response_model=SuccessResponse[AppPodKillResponse],
+)
+async def kill_app_pod(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    pod_name: str = Path(..., description="종료할 Pod 이름"),
+    use_case: AppPodKillUseCase = Depends(AppPodKillUseCase),
+):
+    """특정 Pod 강제 종료
+
+    Deployment 소속 Pod를 강제 종료합니다. Deployment 컨트롤러가 자동으로 새 Pod를 생성합니다.
+    """
+    result = await use_case(app_name=name, project_id=project_id, pod_name=pod_name)
+    return SuccessResponse(message="Pod killed successfully", data=result)
+
+
+@app_router.patch(
+    "/{project_id}/{name}/security/context",
+    response_model=SuccessResponse[AppSecurityContextPatchResponse],
+)
+async def patch_app_security_context(
+    payload: SecurityContextPatchRequest,
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    use_case: AppSecurityContextPatchUseCase = Depends(AppSecurityContextPatchUseCase),
+):
+    """App 보안 컨텍스트 패치
+
+    Deployment 전체 컨테이너의 securityContext를 강제 적용합니다.
+    None 필드는 변경하지 않습니다.
+    """
+    result = await use_case(
+        app_name=name,
+        project_id=project_id,
+        run_as_non_root=payload.run_as_non_root,
+        allow_privilege_escalation=payload.allow_privilege_escalation,
+        read_only_root_filesystem=payload.read_only_root_filesystem,
+        privileged=payload.privileged,
+        capabilities_drop=payload.capabilities_drop,
+    )
+    return SuccessResponse(message="Security context patched successfully", data=result)
+
+
+@app_router.post(
+    "/{project_id}/{name}/security/audit",
+    response_model=SuccessResponse[AppSecurityAuditResponse],
+)
+async def audit_app_security(
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름"),
+    use_case: AppSecurityAuditUseCase = Depends(AppSecurityAuditUseCase),
+):
+    """App 보안 감사 (읽기 전용)
+
+    현재 securityContext를 보안 정책 기준으로 검증합니다.
+    CRITICAL/HIGH 항목이 있으면 passed=false를 반환합니다.
+    """
+    result = await use_case(app_name=name, project_id=project_id)
+    return SuccessResponse(message="Security audit completed", data=result)
 
 
 @app_router.get(

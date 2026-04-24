@@ -466,6 +466,55 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
 
         return True
 
+    async def kill_pod(self, deployment: Deployment, pod_name: str) -> bool:
+        v1_pods = await self._pod_manager.list_pods(
+            namespace=deployment.namespace,
+            label_selector=f"app_deployment={deployment.name}",
+        )
+        if pod_name not in {p.metadata.name for p in v1_pods}:
+            return False
+        await self._pod_manager.delete_pod(pod_name, deployment.namespace)
+        return True
+
+    async def patch_security_context(
+        self,
+        deployment: Deployment,
+        run_as_non_root: Optional[bool] = None,
+        allow_privilege_escalation: Optional[bool] = None,
+        read_only_root_filesystem: Optional[bool] = None,
+        privileged: Optional[bool] = None,
+        capabilities_drop: Optional[List[str]] = None,
+    ) -> Deployment:
+        sc_patch: dict = {}
+        if run_as_non_root is not None:
+            sc_patch["runAsNonRoot"] = run_as_non_root
+        if allow_privilege_escalation is not None:
+            sc_patch["allowPrivilegeEscalation"] = allow_privilege_escalation
+        if read_only_root_filesystem is not None:
+            sc_patch["readOnlyRootFilesystem"] = read_only_root_filesystem
+        if privileged is not None:
+            sc_patch["privileged"] = privileged
+        if capabilities_drop:
+            sc_patch["capabilities"] = {"drop": capabilities_drop}
+
+        existing = await self._deployment_manager.get_deployment(
+            deployment.name, deployment.namespace
+        )
+        containers = existing.spec.template.spec.containers or []
+        patch_containers = [{"name": c.name, "securityContext": sc_patch} for c in containers]
+
+        body = {"spec": {"template": {"spec": {"containers": patch_containers}}}}
+        await self._deployment_manager.k8s_client.apps_v1.patch_namespaced_deployment(
+            name=deployment.name,
+            namespace=deployment.namespace,
+            body=body,
+        )
+
+        updated = await self._deployment_manager.get_deployment(
+            deployment.name, deployment.namespace
+        )
+        return self._deployment_to_domain(updated)
+
     # ── 변환 헬퍼 ────────────────────────────────────────────────────────────
 
     def _build_v1_container(self, c: Container) -> V1Container:

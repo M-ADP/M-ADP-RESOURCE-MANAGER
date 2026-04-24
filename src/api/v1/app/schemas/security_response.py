@@ -40,3 +40,34 @@ class AppVulnerabilityResponse(BaseModel):
     image: str
     vulnerabilities: List[VulnerabilityInfo]
     summary: dict  # {"Critical": 1, "High": 5, ...}
+
+
+class AppPodKillResponse(BaseModel):
+    """Pod 강제 종료 응답"""
+    pod_name: str
+    namespace: str
+
+
+class AppSecurityContextPatchResponse(BaseModel):
+    """보안 컨텍스트 패치 응답"""
+    deployment_name: str
+    namespace: str
+    patched_containers: List[str]
+    configs: List[SecurityConfigInfo]
+
+
+class AuditFinding(BaseModel):
+    """보안 감사 발견 항목"""
+    container_name: str
+    severity: str  # CRITICAL, HIGH, MEDIUM, LOW
+    check: str
+    detail: str
+    recommendation: str
+
+
+class AppSecurityAuditResponse(BaseModel):
+    """보안 감사 응답"""
+    deployment_name: str
+    namespace: str
+    passed: bool
+    findings: List[AuditFinding]
