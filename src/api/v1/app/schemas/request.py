@@ -253,6 +253,21 @@ class SecurityContextPatchRequest(BaseModel):
     capabilities_drop: Optional[List[str]] = Field(default=None, description="제거할 capabilities (예: [\"ALL\"])")
 
 
+class ContainerImageSpec(BaseModel):
+    """컨테이너 이미지 변경 스펙"""
+
+    name: str = Field(..., description="컨테이너 이름")
+    image: str = Field(..., min_length=1, description="새 컨테이너 이미지", examples=["nginx:1.25"])
+
+
+class AppImageUpdateRequest(BaseModel):
+    """App 이미지 변경 요청 모델"""
+
+    containers: List[ContainerImageSpec] = Field(
+        ..., min_length=1, description="이미지를 변경할 컨테이너 목록"
+    )
+
+
 class EnvironmentUpdateRequest(BaseModel):
     """환경 변수 수정 요청 모델 (ConfigMap 데이터 교체)"""
 

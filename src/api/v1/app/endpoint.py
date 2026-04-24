@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from src.api.v1.app.schemas.request import (
     AppCreateRequest,
     AppRevisionRequest,
+    AppImageUpdateRequest,
     AutoScaleRequest,
     FixedScaleRequest,
     SecretCreateRequest,
@@ -17,6 +18,7 @@ from src.api.v1.app.schemas.response import (
     AppCreateResponse,
     AppDeleteResponse,
     AppRevisionResponse,
+    AppImageUpdateResponse,
     AutoScaleResponse,
     FixedScaleResponse,
     SecretCreateResponse,
@@ -63,6 +65,9 @@ from src.app.app_deployment.app_deployment_environment_delete_use_case import (
 )
 from src.app.app_deployment.app_deployment_restart_use_case import (
     AppDeploymentRestartUseCase,
+)
+from src.app.app_deployment.app_deployment_image_update_use_case import (
+    AppDeploymentImageUpdateUseCase,
 )
 from src.core.response import SuccessResponse
 
@@ -455,6 +460,25 @@ async def restart_app_deployment(
         message="App deployment restarted successfully",
         data=result,
     )
+
+
+@app_router.patch(
+    "/{project_id}/{name}/image",
+    response_model=SuccessResponse[AppImageUpdateResponse],
+)
+async def update_app_image(
+    payload: AppImageUpdateRequest,
+    project_id: str = Path(..., description="프로젝트 ID"),
+    name: str = Path(..., description="App 이름 (Deployment 이름)"),
+    use_case: AppDeploymentImageUpdateUseCase = Depends(AppDeploymentImageUpdateUseCase),
+):
+    """App 컨테이너 이미지 변경
+
+    지정한 컨테이너의 이미지를 변경하고 RollingUpdate로 반영합니다.
+    변경하지 않을 컨테이너는 요청에서 제외합니다.
+    """
+    result = await use_case(project_id=project_id, app_name=name, payload=payload)
+    return SuccessResponse(message="App image updated successfully", data=result)
 
 
 @app_router.post(

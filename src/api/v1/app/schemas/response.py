@@ -157,3 +157,11 @@ class AppRestartResponse(BaseModel):
     name: str = Field(..., description="재시작된 Deployment 이름")
     namespace: str = Field(..., description="네임스페이스")
     restarted_at: str = Field(..., description="재시작 트리거 시각 (UTC ISO-8601)")
+
+
+class AppImageUpdateResponse(BaseModel):
+    """App 이미지 변경 응답 모델"""
+
+    name: str = Field(..., description="Deployment 이름")
+    namespace: str = Field(..., description="네임스페이스")
+    containers: List[ContainerInfo] = Field(..., description="변경 후 컨테이너 목록")
