@@ -13,6 +13,11 @@ def get_failure_store() -> FailureStore:
     return _failure_store_instance
 
 
+def set_failure_store(store: FailureStore) -> None:
+    global _failure_store_instance
+    _failure_store_instance = store
+
+
 def get_watch_manager():
     return _watch_manager
 

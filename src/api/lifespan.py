@@ -17,13 +17,14 @@ async def lifespan(app: FastAPI):
     performops_client = None
     if k8s_config.watch_enabled:
         from src.dependencies.kubernetes import get_kubernetes_client
-        from src.dependencies.watch import get_failure_store, set_watch_manager
+        from src.dependencies.watch import get_failure_store, set_failure_store, set_watch_manager
         from src.infra.kubernetes.watch.watch_manager import WatchManager
         from src.app.watch.failure_store import FailureStore
         from src.infra.http.performops_client import PerformopsClient
 
         k8s_client = await get_kubernetes_client()
-        failure_store = FailureStore(ttl_seconds=k8s_config.watch_failure_ttl_seconds)
+        set_failure_store(FailureStore(ttl_seconds=k8s_config.watch_failure_ttl_seconds))
+        failure_store = get_failure_store()
 
         if k8s_config.watch_performops_url:
             performops_client = PerformopsClient(
