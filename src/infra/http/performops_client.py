@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 
 import aiohttp
@@ -6,7 +7,7 @@ from src.core.logger import Logger
 from src.infra.kubernetes.watch.models import FailureRecord
 
 _NAMESPACE_PREFIX = "project-"
-_TIMEOUT = aiohttp.ClientTimeout(total=10)
+_TIMEOUT = aiohttp.ClientTimeout(total=60)
 
 
 def _extract_deployment_name(record: FailureRecord) -> Optional[str]:
@@ -53,6 +54,7 @@ class PerformopsClient:
         self._base_url = base_url.rstrip("/")
         self._logger = logger
         self._session: Optional[aiohttp.ClientSession] = None
+        self._inflight: set[str] = set()
 
     async def start(self) -> None:
         self._session = aiohttp.ClientSession(timeout=_TIMEOUT)
@@ -63,6 +65,11 @@ class PerformopsClient:
             self._session = None
 
     async def notify(self, record: FailureRecord) -> None:
+        """실패 알림을 비동기로 발송한다.
+
+        같은 (project_id, deployment_name) 조합으로 이미 요청이 처리 중이면
+        새 요청을 차단해 PerformOps DB 커넥션 풀 고갈을 방지한다.
+        """
         if self._session is None:
             return
 
@@ -76,8 +83,21 @@ class PerformopsClient:
             )
             return
 
-        url = f"{self._base_url}/performops/{project_id}/{deployment_name}"
+        key = f"{project_id}/{deployment_name}"
+        if key in self._inflight:
+            self._logger.info(
+                f"[performops] 중복 요청 차단 — {key} 이미 처리 중"
+            )
+            return
 
+        self._inflight.add(key)
+        asyncio.create_task(
+            self._send(key, project_id, deployment_name, record.failure_type),
+            name=f"performops-{key}",
+        )
+
+    async def _send(self, key: str, project_id: str, deployment_name: str, failure_type) -> None:
+        url = f"{self._base_url}/performops/{project_id}/{deployment_name}"
         try:
             async with self._session.post(url) as resp:
                 if resp.status >= 400:
@@ -90,8 +110,9 @@ class PerformopsClient:
                     self._logger.info(
                         f"[performops] 호출 성공 {resp.status} — "
                         f"project={project_id} app={deployment_name} "
-                        f"failure={record.failure_type}"
+                        f"failure={failure_type}"
                     )
         except Exception as e:
-            # 알림 실패가 Watch 루프를 멈춰선 안 된다.
             self._logger.error(f"[performops] 호출 실패: {e}")
+        finally:
+            self._inflight.discard(key)

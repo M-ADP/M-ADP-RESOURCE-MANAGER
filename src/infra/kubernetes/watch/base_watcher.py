@@ -144,6 +144,11 @@ class BaseWatcher(ABC):
         self._logger.info(
             f"[{self.state.name}] 초기 resourceVersion 확보: {self._resource_version}"
         )
+        self._on_resource_version_reset()
+
+    def _on_resource_version_reset(self) -> None:
+        """resourceVersion이 새로 초기화될 때 호출된다. 서브클래스에서 중복 추적 상태를 초기화한다."""
+        pass
 
     async def _sleep_with_backoff(self, base: float) -> None:
         jitter = random.uniform(0, base * _BACKOFF_JITTER_RATIO)
