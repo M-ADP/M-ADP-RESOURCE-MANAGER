@@ -21,6 +21,11 @@ _TERMINATED_REASON_MAP: dict[str, FailureType] = {
 class PodWatcher(BaseWatcher):
     """
     클러스터 전체 Pod 상태 변화를 구독해 ImagePullBackOff / OOMKilled / CrashLoopBackOff를 감지한다.
+
+    중복 알림 방지:
+        실패 상태로 진입한 Pod는 _failing_pods 셋에 기록한다.
+        회복(실패 상태 해소)되면 셋에서 제거해 재진입 시 재감지한다.
+        resourceVersion 초기화 시 셋을 초기화해 장기 실패가 재감지될 수 있도록 한다.
     """
 
     def __init__(
@@ -32,6 +37,10 @@ class PodWatcher(BaseWatcher):
     ):
         super().__init__("pod-watcher", queue, namespace_prefix, logger)
         self._core_v1 = k8s_client.core_v1
+        self._failing_pods: set[str] = set()
+
+    def _on_resource_version_reset(self) -> None:
+        self._failing_pods.clear()
 
     @property
     def _api_func(self):
@@ -41,15 +50,21 @@ class PodWatcher(BaseWatcher):
         return await self._core_v1.list_pod_for_all_namespaces(limit=1)
 
     def _handle_event(self, event_type: str, obj: dict) -> Optional[FailureRecord]:
+        metadata = obj.get("metadata") or {}
+        namespace = metadata.get("namespace", "")
+        pod_name = metadata.get("name", "")
+        key = f"{namespace}/{pod_name}"
+
+        if event_type == "DELETED":
+            self._failing_pods.discard(key)
+            return None
+
         if event_type not in ("ADDED", "MODIFIED"):
             return None
 
-        metadata = obj.get("metadata") or {}
-        namespace = metadata.get("namespace", "")
         if not self._is_target_namespace(namespace):
             return None
 
-        pod_name = metadata.get("name", "")
         app_label = (metadata.get("labels") or {}).get("app")
 
         for cs in (obj.get("status") or {}).get("containerStatuses") or []:
@@ -58,6 +73,9 @@ class PodWatcher(BaseWatcher):
             reason = waiting.get("reason", "")
             failure_type = _WAITING_REASON_MAP.get(reason)
             if failure_type:
+                if key in self._failing_pods:
+                    return None  # 이미 감지한 건 — 중복 알림 방지
+                self._failing_pods.add(key)
                 return FailureRecord(
                     namespace=namespace,
                     failure_type=failure_type,
@@ -73,6 +91,9 @@ class PodWatcher(BaseWatcher):
             reason = terminated.get("reason", "")
             failure_type = _TERMINATED_REASON_MAP.get(reason)
             if failure_type:
+                if key in self._failing_pods:
+                    return None  # 이미 감지한 건 — 중복 알림 방지
+                self._failing_pods.add(key)
                 return FailureRecord(
                     namespace=namespace,
                     failure_type=failure_type,
@@ -83,4 +104,6 @@ class PodWatcher(BaseWatcher):
                     app_label=app_label,
                 )
 
+        # 실패 상태 해소 → 셋에서 제거해 재진입 시 재감지 가능
+        self._failing_pods.discard(key)
         return None
