@@ -15,9 +15,10 @@ from src.api.v1.app.dns.schemas.response import DnsUpdateResponse
 from src.app.base_use_case import BaseUseCase
 from src.app.dns.exceptions import DnsRecordNotFoundException
 from src.common.config.cloudflare import CloudflareConfig
+from src.common.config.istio import IstioConfig
 from src.core.dns import DnsProvider
 from src.core.project import ProjectId
-from src.dependencies.dns import get_dns_provider, get_tunnel_client
+from src.dependencies.dns import get_dns_provider, get_istio_config, get_tunnel_client
 from src.dependencies.kubernetes import get_virtualservice_manager
 from src.infra.dns.cloudflare_tunnel_client import CloudflareTunnelClient
 from src.infra.kubernetes.managers.virtualservice import IstioVirtualServiceManager
@@ -34,11 +35,13 @@ class DnsUpdateUseCase(BaseUseCase):
         virtualservice_manager: IstioVirtualServiceManager = Depends(get_virtualservice_manager),
         dns_provider: DnsProvider = Depends(get_dns_provider),
         tunnel_client: CloudflareTunnelClient = Depends(get_tunnel_client),
+        istio_config: IstioConfig = Depends(get_istio_config),
     ):
         self.virtualservice_manager = virtualservice_manager
         self.dns_provider = dns_provider
         self.tunnel_client = tunnel_client
         self._cf = CloudflareConfig()
+        self._istio = istio_config
 
     async def __call__(self, dns_id: str, payload: DnsUpdateRequest) -> DnsUpdateResponse:
         namespace = ProjectId(payload.project_id).namespace
@@ -67,7 +70,7 @@ class DnsUpdateUseCase(BaseUseCase):
         # 4. VirtualService hosts + 레이블 patch
         await self.virtualservice_manager.patch_virtualservice(
             name=vs_name,
-            namespace="istio-ingress",
+            namespace=self._istio.gateway_namespace,
             hosts=[new_full_domain],
             label_patch={_DNS_SUBDOMAIN_LABEL: new_subdomain},
         )

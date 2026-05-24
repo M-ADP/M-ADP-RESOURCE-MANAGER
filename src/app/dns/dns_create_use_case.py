@@ -17,10 +17,11 @@ from src.app.dns.exceptions import (
     ServicePortNotFoundException,
 )
 from src.common.config.cloudflare import CloudflareConfig
+from src.common.config.istio import IstioConfig
 from src.common.const import DefaultLabel
 from src.core.dns import DnsProvider
 from src.core.project import ProjectId
-from src.dependencies.dns import get_dns_provider, get_tunnel_client
+from src.dependencies.dns import get_dns_provider, get_istio_config, get_tunnel_client
 from src.dependencies.kubernetes import (
     get_deployment_manager,
     get_service_manager,
@@ -49,6 +50,7 @@ class DnsCreateUseCase(BaseUseCase):
         ),
         dns_provider: DnsProvider = Depends(get_dns_provider),
         tunnel_client: CloudflareTunnelClient = Depends(get_tunnel_client),
+        istio_config: IstioConfig = Depends(get_istio_config),
     ):
         self.deployment_manager = deployment_manager
         self.service_manager = service_manager
@@ -56,6 +58,7 @@ class DnsCreateUseCase(BaseUseCase):
         self.dns_provider = dns_provider
         self.tunnel_client = tunnel_client
         self._cf = CloudflareConfig()
+        self._istio = istio_config
         self.logger = get_logger()
 
     async def __call__(self, payload: DnsCreateRequest) -> DnsCreateResponse:
@@ -105,13 +108,12 @@ class DnsCreateUseCase(BaseUseCase):
             **DefaultLabel.MANAGED_BY_LABEL,
         }
         vs_name = f"{k8s_name}-{subdomain}-vs"
-        gateway_ref = "istio-ingress/ingressgateway"
 
         await self.virtualservice_manager.create_virtualservice(
             name=vs_name,
-            namespace="istio-ingress",
+            namespace=self._istio.gateway_namespace,
             hosts=[full_domain],
-            gateways=[gateway_ref],
+            gateways=[self._istio.gateway_ref],
             http_routes=[
                 {
                     "route": [
