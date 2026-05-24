@@ -1,9 +1,41 @@
+import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 
 from src.core.logger import get_logger
 
 logger = get_logger()
+
+_SECRETS_FILE = Path("/vault/secrets/.env")
+_WATCH_INTERVAL = 30  # seconds
+
+
+async def _watch_vault_secrets() -> None:
+    """Vault Agent가 갱신하는 시크릿 파일 변경 감지 후 설정 자동 리로드"""
+    try:
+        last_mtime = _SECRETS_FILE.stat().st_mtime
+    except FileNotFoundError:
+        last_mtime = None
+
+    while True:
+        await asyncio.sleep(_WATCH_INTERVAL)
+        try:
+            mtime = _SECRETS_FILE.stat().st_mtime
+            if mtime != last_mtime:
+                last_mtime = mtime
+                logger.info(f"Secrets file changed, reloading configs: {_SECRETS_FILE}")
+                _reload_secrets()
+        except FileNotFoundError:
+            pass
+
+
+def _reload_secrets() -> None:
+    """변경된 시크릿 파일로부터 싱글톤 config 재초기화"""
+    import src.common.config.vault as vault_module
+    vault_module.VAULT_CONFIG = vault_module.VaultConfig()
+    logger.info("VAULT_CONFIG reloaded")
 
 
 def _validate_resource_defaults() -> None:
@@ -70,7 +102,11 @@ async def lifespan(app: FastAPI):
         set_watch_manager(watch_manager)
         await watch_manager.start()
 
+    secrets_watcher = asyncio.create_task(_watch_vault_secrets())
+
     yield
+
+    secrets_watcher.cancel()
 
     if k8s_config.watch_enabled:
         from src.dependencies.watch import get_watch_manager
