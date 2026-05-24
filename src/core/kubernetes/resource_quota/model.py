@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+from src.common.config.project import ProjectConfig
+
+_config = ProjectConfig()
+
 
 @dataclass(frozen=True)
 class ResourceQuotaLimits:
@@ -9,12 +13,14 @@ class ResourceQuotaLimits:
     cpu: str
     memory: str
     disk: str
+    request_cpu: str = _config.default_request_cpu
+    request_memory: str = _config.default_request_memory
 
     def to_dict(self) -> Dict[str, str]:
         return {
-            "requests.cpu": "100m",
+            "requests.cpu": self.request_cpu,
             "limits.cpu": self.cpu,
-            "requests.memory": "512Mi",
+            "requests.memory": self.request_memory,
             "limits.memory": self.memory,
             "requests.storage": self.disk,
             "linstor-pv-fast.storageclass.storage.k8s.io/requests.storage": self.disk,

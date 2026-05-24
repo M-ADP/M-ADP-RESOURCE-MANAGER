@@ -4,15 +4,19 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from src.common.config.project import ProjectConfig
+
+_config = ProjectConfig()
+
 
 class ProjectCreateRequest(BaseModel):
     """Project 생성 요청 모델"""
 
     id: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
-    cpu: str = "100m"
-    memory: str = "32Mi"
-    disk: str = "32Mi"
+    cpu: str = _config.default_cpu
+    memory: str = _config.default_memory
+    disk: str = _config.default_disk
 
 
 class ProjectResourceUpdateRequest(BaseModel):
