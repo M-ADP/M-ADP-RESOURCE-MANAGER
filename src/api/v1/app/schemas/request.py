@@ -5,6 +5,10 @@ from typing import Optional, List, Dict, Annotated
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.common.config.app_deployment import AppDeploymentConfig
+
+_config = AppDeploymentConfig()
+
 
 def _parse_memory_bytes(memory: str) -> int:
     """메모리 문자열을 바이트로 변환 (예: '512Mi' → 536870912)"""
@@ -26,16 +30,16 @@ def _parse_memory_bytes(memory: str) -> int:
     return int(value * units.get(unit, 1))
 
 
-MIN_CPU_REQUEST = "100m"
-MIN_MEMORY_REQUEST = "128Mi"
+MIN_CPU_REQUEST = _config.min_cpu_request
+MIN_MEMORY_REQUEST = _config.min_memory_request
 
 
 class ContainerResourceRequest(BaseModel):
     """컨테이너 리소스 제한 모델 (limits)"""
 
-    cpu: str = Field(default="500m", description="CPU 제한 (예: 500m, 1)")
+    cpu: str = Field(default=_config.default_cpu_limit, description="CPU 제한 (예: 500m, 1)")
     memory: str = Field(
-        default="256Mi", description="메모리 제한 (예: 256Mi, 512Mi, 1Gi)"
+        default=_config.default_memory_limit, description="메모리 제한 (예: 256Mi, 512Mi, 1Gi)"
     )
 
     @field_validator("memory")
