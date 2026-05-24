@@ -1,4 +1,5 @@
 from src.common.config.cloudflare import CloudflareConfig
+from src.common.config.istio import IstioConfig
 from src.core.dns import DnsProvider
 from src.infra.dns.cloudflare_dns_provider import CloudflareDnsProvider
 from src.infra.dns.cloudflare_tunnel_client import CloudflareTunnelClient
@@ -12,3 +13,8 @@ def get_dns_provider() -> DnsProvider:
 def get_tunnel_client() -> CloudflareTunnelClient:
     """CloudflareTunnelClient 의존성 주입"""
     return CloudflareTunnelClient(CloudflareConfig())
+
+
+def get_istio_config() -> IstioConfig:
+    """IstioConfig 의존성 주입"""
+    return IstioConfig()
