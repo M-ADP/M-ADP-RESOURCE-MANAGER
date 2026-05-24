@@ -11,7 +11,7 @@ class ProjectConfig(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    default_cpu: str = "100m"
+    default_cpu: str = "1"
     default_memory: str = "2Gi"
     default_disk: str = "32Mi"
     default_request_cpu: str = "100m"

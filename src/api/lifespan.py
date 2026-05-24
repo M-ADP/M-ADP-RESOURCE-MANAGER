@@ -6,10 +6,37 @@ from src.core.logger import get_logger
 logger = get_logger()
 
 
+def _validate_resource_defaults() -> None:
+    """앱 기본 자원 제한이 프로젝트 자원 제한을 초과하지 않는지 검증"""
+    from src.common.config.app_deployment import AppDeploymentConfig
+    from src.common.config.project import ProjectConfig
+    from src.common.util.unit_converter import UnitConverter
+
+    app_cfg = AppDeploymentConfig()
+    proj_cfg = ProjectConfig()
+
+    app_memory = UnitConverter.parse_storage_to_bytes(app_cfg.default_memory_limit)
+    proj_memory = UnitConverter.parse_storage_to_bytes(proj_cfg.default_memory)
+    if app_memory > proj_memory:
+        raise ValueError(
+            f"APP_DEFAULT_MEMORY_LIMIT({app_cfg.default_memory_limit}) "
+            f"이 PROJECT_DEFAULT_MEMORY({proj_cfg.default_memory})를 초과합니다."
+        )
+
+    app_cpu = UnitConverter.parse_cpu_to_millicores(app_cfg.default_cpu_limit)
+    proj_cpu = UnitConverter.parse_cpu_to_millicores(proj_cfg.default_cpu)
+    if app_cpu > proj_cpu:
+        raise ValueError(
+            f"APP_DEFAULT_CPU_LIMIT({app_cfg.default_cpu_limit}) "
+            f"이 PROJECT_DEFAULT_CPU({proj_cfg.default_cpu})를 초과합니다."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 수명 주기 관리"""
     logger.info("Application starting up...")
+    _validate_resource_defaults()
 
     from src.common.config.kubernetes import KubernetesConfig
     k8s_config = KubernetesConfig()
