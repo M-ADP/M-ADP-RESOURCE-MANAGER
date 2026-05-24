@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Dict
 
+from src.common.config.project import ProjectConfig
+
+_config = ProjectConfig()
+
 
 @dataclass(frozen=True)
 class ProjectId:
@@ -21,9 +25,9 @@ class Project:
     id: str
     name: str
     user_id: str
-    cpu: str = "100m"
-    memory: str = "32Mi"
-    disk: str = "32Mi"
+    cpu: str = _config.default_cpu
+    memory: str = _config.default_memory
+    disk: str = _config.default_disk
 
     # save 후 채워지는 결과 필드
     resource_quota_id: str = ""
