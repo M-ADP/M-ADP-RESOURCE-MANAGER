@@ -49,3 +49,4 @@ class AppDeployment:
     replicas: int = 1
     labels: Dict[str, str] = field(default_factory=dict)
     annotations: Dict[str, str] = field(default_factory=dict)
+    fs_group: Optional[int] = None  # 이미지에서 자동 탐지된 GID

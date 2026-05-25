@@ -6,7 +6,6 @@ from functools import partial
 import hvac
 from hvac.exceptions import VaultError, InvalidPath
 
-from src.common.config.vault import VAULT_CONFIG
 from src.core.logger import Logger, get_logger
 from .exceptions import (
     VaultRoleException,
@@ -24,29 +23,21 @@ class VaultClient:
 
     def __init__(
         self,
-        vault_addr: str = VAULT_CONFIG.addr,
-        vault_token: Optional[str] = VAULT_CONFIG.token,
-        vault_namespace: Optional[str] = VAULT_CONFIG.namespace,
-        kubernetes_auth_path: str = VAULT_CONFIG.kubernetes_auth_path,
-        secret_mount_point: str = VAULT_CONFIG.secret_mount_point,
+        vault_addr: Optional[str] = None,
+        vault_token: Optional[str] = None,
+        vault_namespace: Optional[str] = None,
+        kubernetes_auth_path: Optional[str] = None,
+        secret_mount_point: Optional[str] = None,
         logger: Optional[Logger] = None,
     ):
-        """
-        VaultClient 초기화
+        from src.common.config.vault import VaultConfig
+        _cfg = VaultConfig()
 
-        Args:
-            vault_addr: Vault 서버 주소 (예: http://vault.default.svc.cluster.local:8200)
-            vault_token: Vault 토큰 (옵션)
-            vault_namespace: Vault Namespace (Enterprise 기능, 옵션)
-            kubernetes_auth_path: Kubernetes Auth Mount Path
-            secret_mount_point: KV Secret Engine Mount Point
-            logger: 로거 인스턴스
-        """
-        self.vault_addr = vault_addr.rstrip("/")
-        self.vault_token = vault_token
-        self.vault_namespace = vault_namespace
-        self.kubernetes_auth_path = kubernetes_auth_path
-        self.secret_mount_point = secret_mount_point
+        self.vault_addr = (vault_addr or _cfg.addr).rstrip("/")
+        self.vault_token = vault_token if vault_token is not None else _cfg.token
+        self.vault_namespace = vault_namespace if vault_namespace is not None else _cfg.namespace
+        self.kubernetes_auth_path = kubernetes_auth_path or _cfg.kubernetes_auth_path
+        self.secret_mount_point = secret_mount_point or _cfg.secret_mount_point
         self.logger = logger or get_logger()
 
         # hvac 클라이언트 초기화
