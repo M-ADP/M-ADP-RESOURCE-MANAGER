@@ -21,10 +21,11 @@ from src.common.const import DefaultLabel
 from src.common.util import NameConverter
 from src.api.v1.app.schemas.request import MIN_CPU_REQUEST, MIN_MEMORY_REQUEST
 from src.core.app_deployment import AppContainer, AppContainerDisk, AppDeployment, AppDeploymentRepository
-from src.core.kubernetes.deployment import Container, Deployment, Volume
+from src.core.kubernetes.deployment import Container, Deployment, PodSecurityContext, Volume
 from src.core.kubernetes.persistent_volume_claim import PersistentVolumeClaim
 from src.core.kubernetes.service_account import ServiceAccount
 from src.dependencies.kubernetes import get_app_deployment_repository, get_service_manager
+from src.infra.harbor.manager import HarborManager, get_harbor_manager
 from src.infra.kubernetes.managers.namespace.exceptions import NamespaceNotFoundException
 from src.infra.kubernetes.managers.service import ServiceManager
 
@@ -36,9 +37,11 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             self,
             app_deployment_repo: AppDeploymentRepository = Depends(get_app_deployment_repository),
             service_manager: ServiceManager = Depends(get_service_manager),
+            harbor_manager: HarborManager = Depends(get_harbor_manager),
     ):
         self.app_deployment_repo = app_deployment_repo
         self.service_manager = service_manager
+        self.harbor_manager = harbor_manager
         self._harbor = HarborConfig()
 
     async def __call__(
@@ -122,6 +125,15 @@ class AppDeploymentCreateUseCase(BaseUseCase):
                 ))
 
         # 4. Deployment 배포
+        # disk를 가진 컨테이너 이미지에서 실행 유저 GID를 탐지해 fsGroup 설정
+        pod_sc = None
+        for container in app_deployment.containers:
+            if container.disk:
+                gid = await self.harbor_manager.get_image_fs_group(container.full_image)
+                if gid is not None:
+                    pod_sc = PodSecurityContext(fs_group=gid)
+                break
+
         deployment = Deployment(
             name=app_deployment.name,
             namespace=app_deployment.namespace,
@@ -132,6 +144,7 @@ class AppDeploymentCreateUseCase(BaseUseCase):
             annotations=app_deployment.annotations,
             service_account_name=_name_ref.sa_name,
             image_pull_secrets=[self._harbor.pull_secret_name],
+            security_context=pod_sc,
         )
 
         saved_deployment = await self.app_deployment_repo.deploy(deployment)

@@ -12,6 +12,7 @@ from kubernetes_asyncio.client import (
     V1ConfigMapEnvSource,
     V1PersistentVolumeClaim,
     V1PersistentVolumeClaimVolumeSource,
+    V1PodSecurityContext,
     V1ResourceRequirements,
     V1ServiceAccount,
     V1Volume,
@@ -25,6 +26,7 @@ from src.core.kubernetes.deployment import (
     Container,
     Deployment,
     DeploymentStatus,
+    PodSecurityContext,
     Volume,
 )
 from src.core.kubernetes.hpa import (
@@ -102,6 +104,16 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
                 for v in deployment.volumes
             ]
 
+        pod_sc = None
+        if deployment.security_context:
+            sc = deployment.security_context
+            pod_sc = V1PodSecurityContext(
+                fs_group=sc.fs_group,
+                run_as_user=sc.run_as_user,
+                run_as_group=sc.run_as_group,
+                run_as_non_root=sc.run_as_non_root,
+            )
+
         v1_dep = await self._deployment_manager.create_deployment(
             name=deployment.name,
             namespace=deployment.namespace,
@@ -113,6 +125,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             volumes=volumes,
             service_account_name=deployment.service_account_name,
             image_pull_secrets=deployment.image_pull_secrets or None,
+            pod_security_context=pod_sc,
         )
         return self._deployment_to_domain(v1_dep)
 
@@ -561,7 +574,7 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
         if v1_dep.spec and v1_dep.spec.template and v1_dep.spec.template.spec:
             spec = v1_dep.spec.template.spec
             if spec.security_context:
-                pod_security_context = self._security_context_to_domain(
+                pod_security_context = self._pod_security_context_to_domain(
                     spec.security_context
                 )
 
@@ -631,6 +644,14 @@ class K8sAppDeploymentRepository(AppDeploymentRepository):
             security_context=pod_security_context,
             service_account_name=service_account_name,
             status=status,
+        )
+
+    def _pod_security_context_to_domain(self, sc) -> PodSecurityContext:
+        return PodSecurityContext(
+            fs_group=getattr(sc, "fs_group", None),
+            run_as_user=getattr(sc, "run_as_user", None),
+            run_as_group=getattr(sc, "run_as_group", None),
+            run_as_non_root=getattr(sc, "run_as_non_root", None),
         )
 
     def _security_context_to_domain(self, sc) -> "SecurityContext":

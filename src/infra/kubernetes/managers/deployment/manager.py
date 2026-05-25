@@ -9,6 +9,7 @@ from kubernetes_asyncio.client import (
     V1DeploymentStrategy,
     V1LabelSelector,
     V1LocalObjectReference,
+    V1PodSecurityContext,
     V1PodTemplateSpec,
     V1PodSpec,
     V1Container,
@@ -52,6 +53,7 @@ class DeploymentManager:
         volumes: Optional[List[V1Volume]] = None,
         service_account_name: Optional[str] = None,
         image_pull_secrets: Optional[List[str]] = None,
+        pod_security_context: Optional[V1PodSecurityContext] = None,
     ) -> V1Deployment:
         """Deployment 비동기 생성
 
@@ -122,6 +124,7 @@ class DeploymentManager:
                         ]
                         if image_pull_secrets
                         else None,
+                        security_context=pod_security_context,
                     ),
                 ),
             ),

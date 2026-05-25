@@ -14,8 +14,18 @@ class Volume:
 
 
 @dataclass(frozen=True)
+class PodSecurityContext:
+    """Kubernetes Pod-level SecurityContext 정의 (spec.template.spec.securityContext)"""
+
+    fs_group: Optional[int] = None
+    run_as_user: Optional[int] = None
+    run_as_group: Optional[int] = None
+    run_as_non_root: Optional[bool] = None
+
+
+@dataclass(frozen=True)
 class SecurityContext:
-    """Kubernetes SecurityContext 정의"""
+    """Kubernetes Container-level SecurityContext 정의 (spec.template.spec.containers[].securityContext)"""
 
     privileged: Optional[bool] = None
     run_as_non_root: Optional[bool] = None
@@ -61,7 +71,7 @@ class Deployment:
     labels: Dict[str, str] = field(default_factory=dict)
     annotations: Dict[str, str] = field(default_factory=dict)
     selector_labels: Dict[str, str] = field(default_factory=dict)
-    security_context: Optional[SecurityContext] = None
+    security_context: Optional[PodSecurityContext] = None
     service_account_name: Optional[str] = None
     image_pull_secrets: List[str] = field(default_factory=list)
     status: Optional[DeploymentStatus] = None
