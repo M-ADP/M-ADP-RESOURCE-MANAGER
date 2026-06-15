@@ -255,8 +255,12 @@ class HarborManager:
     def logger(self) -> Logger:
         return self._logger
 
+def get_harbor_config() -> HarborConfig:
+    return HarborConfig()
+
+
 def get_harbor_manager(
-    config: HarborConfig = Depends(HarborConfig),
+    config: HarborConfig = Depends(get_harbor_config),
     logger: Logger = Depends(get_logger),
 ) -> HarborManager:
     """HarborManager 인스턴스 반환 (의존성 주입용)"""
